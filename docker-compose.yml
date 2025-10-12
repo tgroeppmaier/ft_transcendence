@@ -1,0 +1,11 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: transcendence-web:latest
+    ports:
+      # Accessible to LAN (default 0.0.0.0)
+      - "8080:443"
+      # Optional: publish HTTP for redirect defined in nginx.conf
+      - "8081:80"
