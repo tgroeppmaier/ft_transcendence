@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => { // wait until Browser has 
   let x = canvas.width / 2;
   let y = canvas.height / 2;
   let vx = 3;
-  let vy = 2.5;
+  let vy = 3;
 
   function step() {
     // Update position
