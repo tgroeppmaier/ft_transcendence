@@ -3,7 +3,9 @@
     "target": "ES2020",
     "module": "ES2020",
     "strict": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "rootDir": "src",
+    "outDir": "dist"
   },
-  "include": ["script.ts"]
+  "include": ["src/**/*.ts"]
 }
