@@ -1,5 +1,5 @@
 # Stage 1: Build TypeScript
-FROM node:20-alpine AS builder
+FROM node:alpine AS builder
 WORKDIR /app
 
 # Only what's needed to install and build
