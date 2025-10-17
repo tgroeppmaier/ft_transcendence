@@ -7,5 +7,5 @@
     "rootDir": "src",
     "outDir": "dist"
   },
-  "include": ["src/**/*.ts", "frontend/src/script.ts", "server.ts"]
+  "include": ["src/**/*.ts", "frontend/src/main.ts", "server.ts"]
 }
