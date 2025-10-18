@@ -1,11 +1,13 @@
 {
   "compilerOptions": {
-    "target": "es2020",
-    "module": "commonjs",
-    "outDir": "dist",
-    "rootDir": "src",
-    "strict": true,
-    "esModuleInterop": true,
+    "target": "es2020",                // JS features output
+    "module": "commonjs",              // Node’s module system
+    "lib": ["es2020"],                 // standard libs to include
+    "outDir": "dist",                  // compiled JS output folder
+    "rootDir": "src",                  // where your .ts source lives
+    "strict": true,                    // strict type checking
+    "esModuleInterop": true,           // allow `import x from "pkg"`
     "skipLibCheck": true
-  }
+  },
+  "include": ["src"]
 }
