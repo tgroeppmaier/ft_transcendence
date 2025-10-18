@@ -95,26 +95,41 @@ curl -kI https://localhost:<host_https_port>
 
 ---
 
-## Architecture overview
+## Architecture and Dataflow
 
-- Nginx
-  - Entry point, serves SPA (index.html + assets), terminates HTTPS.
-  - Proxies to backend (and WS upgrades) if configured.
+This project is a microservices-based application composed of four main services orchestrated by Docker Compose: `nginx`, `frontend`, `backend`, and `engine`.
 
-- Backend (e.g., Fastify)
-  - REST API, WebSocket hub, orchestrates game engine, DB access.
+### Services
 
-- Server-Side Pong engine
-  - Game logic (physics, scoring), talks only to the backend.
+*   **`nginx`**: Acts as the entry point for the application. It's a reverse proxy that serves the frontend application and forwards API requests to the backend.
+    *   Listens on port 80.
+    *   Serves the static files (HTML, CSS, JS) of the frontend application.
+    *   Routes all requests starting with `/api/` to the `backend` service.
 
-- SQLite
-  - Persistent store for users, matches, stats; accessed by backend.
+*   **`frontend`**: A single-page application (SPA) built with TypeScript.
+    *   The user interface of the application.
+    *   It communicates with the `backend` service through the `/api` endpoint.
+    *   In the current implementation, it features a button that, when clicked, fetches data from the backend and displays it.
 
-### Data flow (simplified)
-```
-Browser (SPA) ⇄ HTTPS/WSS ⇄ Nginx ⇄ Backend (API + WS) ⇄ Pong Engine
-                                       │
-                                       └── SQLite (file/volume)
-```
+*   **`backend`**: A Node.js application built with Fastify.
+    *   Acts as a bridge between the `frontend` and the `engine`.
+    *   Exposes a REST API at `/api`.
+    *   When it receives a request at `/api/hello`, it calls the `engine` service to get the current game state.
+
+*   **`engine`**: A Node.js application built with Fastify.
+    *   Manages the game logic.
+    *   In the current implementation, it simulates a bouncing ball and exposes an endpoint at `/state` to get the ball's current position and velocity.
+
+### Data Flow
+
+1.  The user's browser sends a request to the application's main URL.
+2.  `nginx` receives the request and serves the `frontend`'s `index.html` and its assets.
+3.  The user clicks the "Fetch from API" button on the webpage.
+4.  The `frontend` sends a GET request to `/api/hello`.
+5.  `nginx` receives the request and, because the path starts with `/api/`, it forwards the request to the `backend` service.
+6.  The `backend` service receives the request at `/api/hello` and calls the `engine` service's `/state` endpoint.
+7.  The `engine` service returns the current game state (the ball's position and velocity) to the `backend`.
+8.  The `backend` service wraps the engine's state in a JSON object and returns it to the `frontend`.
+9.  The `frontend` receives the JSON response and displays the data on the page.
 
 ---
