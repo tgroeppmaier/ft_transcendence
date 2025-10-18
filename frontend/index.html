@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -20,5 +20,27 @@
 
   <script type="module" src="dist/main.js"></script>
   
+</body>
+</html> -->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ft_transcendence Demo</title>
+</head>
+<body>
+  <h1>ft_transcendence demo</h1>
+  <button id="fetch">Fetch from API</button>
+  <pre id="output"></pre>
+
+  <script>
+    document.getElementById("fetch").onclick = async () => {
+      const res = await fetch("/api/hello");
+      const data = await res.json();
+      document.getElementById("output").textContent = JSON.stringify(data, null, 2);
+    };
+  </script>
 </body>
 </html>
