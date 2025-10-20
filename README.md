@@ -102,7 +102,7 @@ This project is a microservices-based application composed of four main services
 ### Services
 
 *   **`nginx`**: Acts as the entry point for the application. It's a reverse proxy that serves the frontend application and forwards API requests to the backend.
-    *   Listens on port 80.
+    *   Listens on port 80 (and 443 for HTTPS).
     *   Serves the static files (HTML, CSS, JS) of the frontend application.
     *   Routes all requests starting with `/api/` to the `backend` service.
 
@@ -117,19 +117,148 @@ This project is a microservices-based application composed of four main services
     *   When it receives a request at `/api/hello`, it calls the `engine` service to get the current game state.
 
 *   **`engine`**: A Node.js application built with Fastify.
-    *   Manages the game logic.
-    *   In the current implementation, it simulates a bouncing ball and exposes an endpoint at `/state` to get the ball's current position and velocity.
+    *   Manages the game logic and state.
+    *   Simulates a bouncing ball within a [-1, 1] coordinate system and updates its position every 100ms.
+    *   Exposes an endpoint at `/state` that returns the ball's current position (x, y) and velocity (vx, vy).
 
-### Data Flow
+### Data Flow (Detailed)
 
-1.  The user's browser sends a request to the application's main URL.
-2.  `nginx` receives the request and serves the `frontend`'s `index.html` and its assets.
-3.  The user clicks the "Fetch from API" button on the webpage.
-4.  The `frontend` sends a GET request to `/api/hello`.
-5.  `nginx` receives the request and, because the path starts with `/api/`, it forwards the request to the `backend` service.
-6.  The `backend` service receives the request at `/api/hello` and calls the `engine` service's `/state` endpoint.
-7.  The `engine` service returns the current game state (the ball's position and velocity) to the `backend`.
-8.  The `backend` service wraps the engine's state in a JSON object and returns it to the `frontend`.
-9.  The `frontend` receives the JSON response and displays the data on the page.
+#### 1. User Opens Website
+```
+Browser → http://localhost:8080 (or 8443 for HTTPS)
+```
+
+#### 2. Nginx Receives Request
+- **nginx** container (port 8080/8443) receives the request
+- Checks the path: `/` is not `/api/`, so it serves static files
+- Returns `frontend/index.html` + assets (style.css, dist/main.js)
+
+#### 3. Frontend Loads in Browser
+- Browser parses HTML and loads `frontend/index.html`
+- Shows button "Fetch from API" and `<pre id="output"></pre>`
+
+#### 4. User Clicks "Fetch from API" Button
+```javascript
+fetch("/api/hello")  // Relative URL → goes to nginx
+```
+
+#### 5. Nginx Routes to Backend
+- **nginx** sees `/api/` prefix
+- Forwards request to `http://backend:3000/api/hello` (via nginx.conf proxy_pass)
+- Uses internal Docker network `transnet` to reach **backend** container
+
+#### 6. Backend Receives Request
+`backend/src/index.ts`:
+```typescript
+app.get("/api/hello", async () => {
+  const res = await fetch("http://engine:4000/state");  // Calls engine
+  const state = await res.json();
+  return { from: "backend", engineState: state };
+});
+```
+
+#### 7. Backend Calls Engine
+- **backend** makes HTTP request to `http://engine:4000/state`
+- Uses internal Docker network `transnet` to reach **engine** container
+
+#### 8. Engine Returns Ball State
+`engine/src/index.ts`:
+```typescript
+let ball = { x: 0, y: 0, vx: 0.01, vy: 0.008 };
+
+setInterval(() => {
+  ball.x += ball.vx;   // Simulates movement
+  ball.y += ball.vy;
+  if (ball.x > 1 || ball.x < -1) ball.vx *= -1;  // Bounces
+  if (ball.y > 1 || ball.y < -1) ball.vy *= -1;
+}, 100);
+
+app.get("/state", async () => ball);  // Returns current state
+```
+
+**Engine responds with:**
+```json
+{ "x": 0.005, "y": 0.004, "vx": 0.01, "vy": 0.008 }
+```
+
+#### 9. Backend Wraps and Returns
+**Backend responds with:**
+```json
+{
+  "from": "backend",
+  "engineState": { "x": 0.005, "y": 0.004, "vx": 0.01, "vy": 0.008 }
+}
+```
+
+#### 10. Nginx Passes Response Back
+- Response travels back through nginx to the browser
+
+#### 11. Frontend Displays Data
+```javascript
+document.getElementById("output").textContent = JSON.stringify(data, null, 2);
+```
+
+**Browser shows:**
+```json
+{
+  "from": "backend",
+  "engineState": {
+    "x": 0.005,
+    "y": 0.004,
+    "vx": 0.01,
+    "vy": 0.008
+  }
+}
+```
+
+### Container Communication Diagram
+
+```
+┌─────────────────────────────────────────────────────┐
+│                    Host Machine                      │
+│   Port 8080 (HTTP) / 8443 (HTTPS)                  │
+└─────────────────┬───────────────────────────────────┘
+                  │
+        ┌─────────▼─────────┐
+        │     nginx:80      │
+        │   (reverse proxy)  │
+        └────────┬──────────┘
+                 │
+      ┌──────────┼──────────┐
+      │          │          │
+      │    /  (static)  /api/ (proxy)
+      │     [index.html]    │
+      │     [style.css]     │
+      │     [main.js]       │
+      │                     │
+      │          ┌──────────▼────────┐
+      │          │   backend:3000    │
+      │          │   (API server)     │
+      │          └────────┬──────────┘
+      │                   │
+      │                   │ fetch("http://engine:4000/state")
+      │                   │
+      │          ┌────────▼──────────┐
+      │          │   engine:4000     │
+      │          │ (game simulation)  │
+      │          │  ball state loop   │
+      │          └───────────────────┘
+      │
+      └──────────────────────────────┐
+                                     │
+                          ┌──────────▼────────┐
+                          │ Frontend (Browser) │
+                          │  [index.html]      │
+                          │ Shows: JSON data   │
+                          └────────────────────┘
+```
+
+### Key Points
+
+- **All 3 backend services** communicate via the `transnet` bridge network (internal Docker DNS)
+- **Frontend only talks to nginx** (not directly to backend or engine)
+- **Engine continuously simulates** the ball bouncing every 100ms
+- **State is stateless**: each request fetches the current ball position at that moment
+- **Only frontend is exposed**: backend and engine are hidden behind nginx; only nginx is reachable from the host
 
 ---
