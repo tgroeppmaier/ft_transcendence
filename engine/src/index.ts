@@ -18,7 +18,7 @@ setInterval(() => {
   
   // Bounce off vertical walls (y bounds: -1 to 1)
   if (ball.y > 1 || ball.y < -1) ball.vy *= -1;
-}, 100);
+}, 1000 / 60);
 
 // Register GET endpoint /state that returns the current ball object
 // Fastify automatically converts it to JSON in the response
