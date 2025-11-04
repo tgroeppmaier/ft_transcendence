@@ -23,3 +23,4 @@ app.get("/api/hello", async () => {
 // Start the server listening on all interfaces (0.0.0.0) on port 3000
 // This server waits for incoming HTTP requests from the frontend (via nginx)
 app.listen({ host: "0.0.0.0", port: 3000 });
+ 

@@ -1,15 +1,19 @@
 {
   "name": "pong-engine",
   "version": "1.0.0",
+  "type": "module",
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "fastify": "^4.27.0"
+    "fastify": "^4.29.1",
+    "@fastify/websocket": "^9.0.0",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
-    "typescript": "^5.4.0",
-    "@types/node": "^20.11.30"
+    "typescript": "^5.6.0",
+    "@types/node": "^20.11.30",
+    "@types/ws": "^8.18.1"
   }
 }
