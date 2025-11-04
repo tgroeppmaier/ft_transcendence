@@ -1,26 +1,46 @@
 import Fastify from "fastify";
+import websocket from "@fastify/websocket";
+import type * as FastifyWebsocket from "@fastify/websocket";
+import { WebSocket } from "ws";
 
-// Create Fastify server instance with logging enabled
-const app = Fastify({ logger: true });
+const backend = Fastify({ logger: true });
 
-// Register GET endpoint /api/hello
-// When a request arrives, fetch the current ball state from the engine service
-// and wrap it in a response object before returning to the client
-app.get("/api/hello", async () => {
-  // Make an HTTP request to the engine service at http://engine:4000/state
-  // (engine is resolved via Docker's internal DNS on the transnet bridge network)
-  const res = await fetch("http://engine:4000/state");
-  
-  // Parse the response body as JSON
-  // Result: { x: number, y: number, vx: number, vy: number }
-  const state = await res.json();
-  
-  // Return a wrapped response object
-  // Fastify automatically converts this to JSON and sends it to the client
-  return { from: "backend", engineState: state };
+// Register WS support
+await backend.register(websocket);
+
+// Track connected frontend clients
+const clients = new Set<WebSocket>();
+
+// Connect to engine WS
+// const engine_socket = new WebSocket("ws://host.docker.internal:4000/ws");
+const engine_socket = new WebSocket("ws://engine:4000/ws");
+
+// Forward every message from engine to all connected clients
+engine_socket.on("message", (data) => {
+  for (const client of clients) {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(data);
+    } else {
+      clients.delete(client);
+    }
+  }
 });
 
-// Start the server listening on all interfaces (0.0.0.0) on port 3000
-// This server waits for incoming HTTP requests from the frontend (via nginx)
-app.listen({ host: "0.0.0.0", port: 3000 });
- 
+engine_socket.on("open", () => backend.log.info("Connected to engine WS"));
+engine_socket.on("close", () => backend.log.warn("Engine WS closed"));
+engine_socket.on("error", (err) => backend.log.error({ err }, "Engine WS error"));
+
+type SocketStream = FastifyWebsocket.SocketStream;
+
+// Frontend WS endpoint
+backend.get("/ws", { websocket: true }, (connection: SocketStream) => {
+  const client_socket = connection.socket;
+  clients.add(client_socket);
+
+  client_socket.on("close", () => {
+    clients.delete(client_socket);
+  });
+});
+
+// Start server (port 3000 for backend)
+await backend.listen({ host: "0.0.0.0", port: 3000 });
