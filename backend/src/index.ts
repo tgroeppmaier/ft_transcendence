@@ -13,32 +13,34 @@ const clients = new Set<WebSocket>();
 
 // Connect to engine WS
 // const engine_socket = new WebSocket("ws://host.docker.internal:4000/ws");
-const engine_socket = new WebSocket("ws://engine:4000/ws");
+const engineSocket = new WebSocket("ws://engine:4000/ws");
 
 // Forward every message from engine to all connected clients
-engine_socket.on("message", (data) => {
+engineSocket.on("message", (data) => {
+  const payload = Buffer.from(data as any).toString("utf8");
+
   for (const client of clients) {
     if (client.readyState === WebSocket.OPEN) {
-      client.send(data);
+      client.send(payload);
     } else {
       clients.delete(client);
     }
   }
 });
 
-engine_socket.on("open", () => backend.log.info("Connected to engine WS"));
-engine_socket.on("close", () => backend.log.warn("Engine WS closed"));
-engine_socket.on("error", (err) => backend.log.error({ err }, "Engine WS error"));
+engineSocket.on("open", () => backend.log.info("Connected to engine WS"));
+engineSocket.on("close", () => backend.log.warn("Engine WS closed"));
+engineSocket.on("error", (err) => backend.log.error({ err }, "Engine WS error"));
 
 type SocketStream = FastifyWebsocket.SocketStream;
 
 // Frontend WS endpoint
-backend.get("/ws", { websocket: true }, (connection: SocketStream) => {
-  const client_socket = connection.socket;
-  clients.add(client_socket);
+backend.get("/api/ws", { websocket: true }, (connection: SocketStream) => {
+  const ClientSocket = connection.socket;
+  clients.add(ClientSocket);
 
-  client_socket.on("close", () => {
-    clients.delete(client_socket);
+  ClientSocket.on("close", () => {
+    clients.delete(ClientSocket);
   });
 });
 

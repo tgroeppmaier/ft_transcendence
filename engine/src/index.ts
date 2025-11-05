@@ -23,7 +23,7 @@ setInterval(() => {
       clients.delete(socket);
     }
   }
-}, 1000 / 60);
+}, 100);
 
 type SocketStream = FastifyWebsocket.SocketStream;
 
