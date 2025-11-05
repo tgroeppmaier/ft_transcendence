@@ -6,15 +6,17 @@
 </head>
 <body>
   <h1>ft_transcendence demo</h1>
-  <button id="fetch">Fetch from API</button>
+  <button id="fetch">Simulation</button>
   <pre id="output"></pre>
-
   <script>
-    document.getElementById("fetch").onclick = async () => {
-      const res = await fetch("/api/hello");
-      const data = await res.json();
-      document.getElementById("output").textContent = JSON.stringify(data, null, 2);
+    const out = document.getElementById("output");
+    document.getElementById("fetch").onclick = () => {
+      const ws = new WebSocket("/api/ws");
+      ws.onmessage = (e) => (out.textContent = e.data);
+      ws.onopen = () => console.log("WS open");
+      ws.onclose = () => console.log("WS closed");
+      ws.onerror = (err) => console.error("WS error", err);
     };
-  </script>
+    </script>
 </body>
 </html>
