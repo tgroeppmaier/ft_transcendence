@@ -1,9 +1,9 @@
 services:
-  nginx:
+  caddy:
     build:
       context: .
-      dockerfile: ./nginx/Dockerfile
-    container_name: transcendence-nginx
+      dockerfile: ./caddy/Dockerfile
+    container_name: transcendence-caddy
     ports:
       - "8080:80"
       - "8443:443"
