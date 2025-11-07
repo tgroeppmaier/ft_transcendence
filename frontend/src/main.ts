@@ -1,3 +1,22 @@
+const out = document.getElementById("output") as HTMLPreElement;
+let ws: WebSocket | undefined;
+
+document.getElementById("fetch")!.onclick = () => {
+  // Only create if not already open or connecting
+  if (!ws || ws.readyState === WebSocket.CLOSED) {
+    ws = new WebSocket("/api/ws");
+    ws.onmessage = (e) => (out.textContent = e.data);
+    ws.onopen = () => console.log("WS open");
+    ws.onclose = () => console.log("WS closed");
+    ws.onerror = (err) => console.error("WS error", err);
+  } else {
+    console.log("WS already connected");
+  }
+  // var c = document.getElementById("board")
+};
+
+
+
 // currently not in use
 
 // class Paddle {
