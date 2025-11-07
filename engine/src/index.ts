@@ -8,6 +8,7 @@ await engine.register(websocket);
 
 let ball = { x: 0, y: 0, vx: 0.01, vy: 0.008 };
 const clients = new Set<WebSocket>();
+const tickRate = 1000 / 60;
 
 setInterval(() => {
   ball.x += ball.vx;
@@ -23,7 +24,7 @@ setInterval(() => {
       clients.delete(socket);
     }
   }
-}, 100);
+}, tickRate);
 
 type SocketStream = FastifyWebsocket.SocketStream;
 
