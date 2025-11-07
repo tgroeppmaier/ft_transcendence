@@ -10,13 +10,20 @@
   <pre id="output"></pre>
   <script>
     const out = document.getElementById("output");
+    let ws;
+
     document.getElementById("fetch").onclick = () => {
-      const ws = new WebSocket("/api/ws");
-      ws.onmessage = (e) => (out.textContent = e.data);
-      ws.onopen = () => console.log("WS open");
-      ws.onclose = () => console.log("WS closed");
-      ws.onerror = (err) => console.error("WS error", err);
+      // Only create if not already open or connecting
+      if (!ws || ws.readyState === WebSocket.CLOSED) {
+        ws = new WebSocket("/api/ws");
+        ws.onmessage = (e) => (out.textContent = e.data);
+        ws.onopen = () => console.log("WS open");
+        ws.onclose = () => console.log("WS closed");
+        ws.onerror = (err) => console.error("WS error", err);
+      } else {
+        console.log("WS already connected");
+      }
     };
-    </script>
+  </script>
 </body>
 </html>
