@@ -1,3 +1,5 @@
+import { Paddle } from "./Paddle.js"
+
 const out = document.getElementById("output") as HTMLPreElement;
 // let ws: WebSocket | undefined;
 const ws = new WebSocket("/api/ws");
@@ -13,12 +15,9 @@ if (!ctx) {
 }
 const ctxSafe = ctx as CanvasRenderingContext2D;
 
-// ...existing code...
-const paddleW = 0.1;
-const paddleH = 0.2;
-const paddleY = -paddleH / 2;
+let paddle = new Paddle("left");
 
-function renderBall(ball: { x: number; y: number; vx: number; vy: number }) {
+function renderFrame(ball: { x: number; y: number; vx: number; vy: number }) {
   ctxSafe.clearRect(0, 0, canvas.width, canvas.height);
 
   // Draw the ball
@@ -32,13 +31,11 @@ function renderBall(ball: { x: number; y: number; vx: number; vy: number }) {
 
   // Draw the left paddle with same dimensions
   ctxSafe.fillStyle = "blue";
-  const paddleLeft = 0; // Left edge of canvas (x = -1 in normalized)
-  const paddleTop = (paddleY + 1) * 0.5 * canvas.height;
-  const paddleWidth = paddleW * 0.5 * canvas.width;
-  const paddleHeight = paddleH * 0.5 * canvas.height;
-  ctxSafe.fillRect(paddleLeft, paddleTop, paddleWidth, paddleHeight);
+  const paddleTop = (paddle.y + 1) * 0.5 * canvas.height;
+  const paddleWidth = Paddle.PADDLE_W * 0.5 * canvas.width;
+  const paddleHeight = Paddle.PADDLE_H * 0.5 * canvas.height;
+  ctxSafe.fillRect(paddle.x, paddleTop, paddleWidth, paddleHeight);
 }
-// ...existing code...
 
 document.getElementById("fetch")!.onclick = () => {
   // Only create if not already open or connecting
@@ -46,7 +43,7 @@ document.getElementById("fetch")!.onclick = () => {
     // ws.onmessage = (e) => (out.textContent = e.data);
     ws.onmessage = (e) => {
       const parsedBall = JSON.parse(e.data);
-      renderBall(parsedBall);
+      renderFrame(parsedBall);
     }
     ws.onopen = () => console.log("WS open");
     ws.onclose = () => console.log("WS closed");

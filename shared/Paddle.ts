@@ -1,6 +1,6 @@
 export class Paddle {
   // scaling factor
-  static PADDLE_W = 0.05;
+  static PADDLE_W = 0.02;
   static PADDLE_H = 0.4;
 
   // x and y position on the -1 to 1 grid
