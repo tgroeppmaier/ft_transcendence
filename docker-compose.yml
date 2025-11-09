@@ -18,7 +18,9 @@ services:
     networks: [transnet]
 
   engine:
-    build: ./engine
+    build:
+      context: .
+      dockerfile: ./engine/Dockerfile
     container_name: transcendence-engine
     networks: [transnet]
 
