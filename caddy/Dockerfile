@@ -9,6 +9,7 @@ RUN npm ci || npm install
 # Compile TS
 COPY ./frontend/tsconfig.json ./
 COPY ./frontend/src ./src
+COPY ./shared/Paddle.ts ./src
 RUN npm run build
 
 # Stage 2: serve with Caddy
