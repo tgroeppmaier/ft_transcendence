@@ -1,5 +1,3 @@
-import { Paddle } from "./Paddle.js"
-
 const out = document.getElementById("output") as HTMLPreElement;
 // let ws: WebSocket | undefined;
 const ws = new WebSocket("/api/ws");
@@ -15,7 +13,9 @@ if (!ctx) {
 }
 const ctxSafe = ctx as CanvasRenderingContext2D;
 
-let paddle = new Paddle("left");
+// must match the values used by the engine
+const PADDLE_W = 0.02;
+const PADDLE_H = 0.4;
 
 function renderFrame(ball: { x: number; y: number; vx: number; vy: number }) {
   ctxSafe.clearRect(0, 0, canvas.width, canvas.height);
@@ -31,10 +31,10 @@ function renderFrame(ball: { x: number; y: number; vx: number; vy: number }) {
 
   // Draw the left paddle with same dimensions
   ctxSafe.fillStyle = "blue";
-  const paddleTop = (paddle.y + 1) * 0.5 * canvas.height;
-  const paddleWidth = Paddle.PADDLE_W * 0.5 * canvas.width;
-  const paddleHeight = Paddle.PADDLE_H * 0.5 * canvas.height;
-  ctxSafe.fillRect(paddle.x, paddleTop, paddleWidth, paddleHeight);
+  const paddleTop = (-PADDLE_H / 2 + 1) * 0.5 * canvas.height;
+  const paddleWidth = PADDLE_W * 0.5 * canvas.width;
+  const paddleHeight = PADDLE_H * 0.5 * canvas.height;
+  ctxSafe.fillRect(-1, paddleTop, paddleWidth, paddleHeight);
 }
 
 document.getElementById("fetch")!.onclick = () => {
