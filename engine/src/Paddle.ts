@@ -4,9 +4,9 @@ export class Paddle {
   readonly h: number = 0.4;
   readonly speed: number = 0.01;
 
-  // x and y position on the -1 to 1 grid
+  // x and y position on the 0 to 1 grid
   readonly x: number;
-  private _y: number = -this.h / 2;
+  private _y: number = 0.5 - this.h / 2;
 
   get y(): number {
     return this._y;
@@ -15,12 +15,12 @@ export class Paddle {
   constructor(
     side: 'left' | 'right',
   ) {
-    this.x = side === 'left' ? -1 : 1 - this.w;
+    this.x = side === 'left' ? 0 : 1 - this.w;
   }
 
   // Move the paddle up (decrease y, clamped to top)
   moveUp() {
-    Math.max(-1, this._y - this.speed);
+    this._y = Math.max(0, this._y - this.speed);
   }
 
   // Move the paddle down (increase y, clamped to bottom)

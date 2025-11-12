@@ -1,5 +1,4 @@
 const out = document.getElementById("output") as HTMLPreElement;
-// let ws: WebSocket | undefined;
 const ws = new WebSocket("/api/ws");
 
 const canvasElement = document.getElementById("board");
@@ -13,28 +12,29 @@ if (!ctx) {
 }
 const ctxSafe = ctx as CanvasRenderingContext2D;
 
-// must match the values used by the engine
-const PADDLE_W = 0.02;
-const PADDLE_H = 0.4;
+type Ball = { x: number; y: number; vx: number; vy: number };
+type Paddle = { x: number; y: number; w: number; h: number };
+type GameData = { ball: Ball; leftPaddle: Paddle};
 
-function renderFrame(ball: { x: number; y: number; vx: number; vy: number }) {
+
+function renderFrame(data: GameData) {
   ctxSafe.clearRect(0, 0, canvas.width, canvas.height);
+
+  const ball: Ball = data.ball;
+  const leftPaddle: Paddle = data.leftPaddle;
 
   // Draw the ball
   ctxSafe.fillStyle = "green";
-  const px = (ball.x + 1) * 0.5 * canvas.width;
-  const py = (ball.y + 1) * 0.5 * canvas.height;
-  const radius = 0.04 * (canvas.width / 2);
+  const px = ball.x * canvas.width;
+  const py = ball.y * canvas.height;
+  const radius = 0.04 * canvas.width;
   ctxSafe.beginPath();
   ctxSafe.arc(px, py, radius, 0, Math.PI * 2);
   ctxSafe.fill();
 
-  // Draw the left paddle with same dimensions
+  // Draw the left paddle
   ctxSafe.fillStyle = "blue";
-  const paddleTop = (-PADDLE_H / 2 + 1) * 0.5 * canvas.height;
-  const paddleWidth = PADDLE_W * 0.5 * canvas.width;
-  const paddleHeight = PADDLE_H * 0.5 * canvas.height;
-  ctxSafe.fillRect(-1, paddleTop, paddleWidth, paddleHeight);
+  ctxSafe.fillRect(leftPaddle.x, leftPaddle.y * canvas.height, leftPaddle.w * canvas.width, leftPaddle.h *canvas.height);
 }
 
 document.getElementById("fetch")!.onclick = () => {
@@ -42,8 +42,8 @@ document.getElementById("fetch")!.onclick = () => {
   // if (!ws || ws.readyState === WebSocket.CLOSED) {
     // ws.onmessage = (e) => (out.textContent = e.data);
     ws.onmessage = (e) => {
-      const parsedBall = JSON.parse(e.data);
-      renderFrame(parsedBall);
+      const data: GameData = JSON.parse(e.data);
+      renderFrame(data);
     }
     ws.onopen = () => console.log("WS open");
     ws.onclose = () => console.log("WS closed");
