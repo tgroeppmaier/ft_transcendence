@@ -13,9 +13,9 @@ export class Paddle {
   }
 
   constructor(
-    side: 'left' | 'right',
+    side: "left" | "right",
   ) {
-    this.x = side === 'left' ? 0 : 1 - this.w;
+    this.x = side === "left" ? 0 : 1 - this.w;
   }
 
   // Move the paddle up (decrease y, clamped to top)
