@@ -1,9 +1,9 @@
 services:
-  nginx:
+  caddy:
     build:
       context: .
-      dockerfile: ./nginx/Dockerfile
-    container_name: transcendence-nginx
+      dockerfile: ./caddy/Dockerfile
+    container_name: transcendence-caddy
     ports:
       - "8080:80"
       - "8443:443"
@@ -15,12 +15,37 @@ services:
     container_name: transcendence-backend
     depends_on:
       - engine
+      - database
     networks: [transnet]
+    volumes:
+      - db-volume:/data   # mount same volume as database
+    ports:
+      - "3000:3000"   # <-- map container 3000 to host 3000
+
+  database:
+    build:
+      context: ./database
+      dockerfile: Dockerfile
+    container_name: transcendence-database
+    volumes:
+      - db-volume:/data
+    networks: [transnet]
+    restart: always
 
   engine:
-    build: ./engine
+    build:
+      context: .
+      dockerfile: ./engine/Dockerfile
     container_name: transcendence-engine
     networks: [transnet]
+
+volumes:
+  db-volume:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /Users/yumzhana/data/sqlite
 
 networks:
   transnet:

@@ -1,67 +1,103 @@
-# ft_transcendence
+# Transcendence
 
-## Contents
-- Frontend: TypeScript dev setup (src → dist)
-- Local dev server
-- Docker + Nginx (how to open the site)
-- Architecture overview (containers and data flow)
-- Notes
+A microservices-based web application simulating a bouncing ball game, built with TypeScript, Node.js, Fastify, and Docker. It features real-time WebSocket communication between frontend, backend, and engine services, orchestrated via Caddy as a reverse proxy.
+
+## Table of Contents
+- [Transcendence](#transcendence)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+    - [Frontend](#frontend)
+    - [Backend](#backend)
+    - [Engine](#engine)
+  - [Setup](#setup)
+    - [Frontend: TypeScript Dev Setup](#frontend-typescript-dev-setup)
+    - [Local Dev Server (Serve over HTTP)](#local-dev-server-serve-over-http)
+    - [Docker + Caddy (Production-like Serve)](#docker--caddy-production-like-serve)
+  - [Architecture and Dataflow](#architecture-and-dataflow)
+    - [Services](#services)
+    - [Data Flow (Detailed)](#data-flow-detailed)
+      - [1. User Opens Website](#1-user-opens-website)
+      - [2. Caddy Receives Request](#2-caddy-receives-request)
+      - [3. Frontend Loads in Browser](#3-frontend-loads-in-browser)
+      - [4. Caddy Routes WebSocket Connection](#4-caddy-routes-websocket-connection)
+      - [5. Backend Receives WebSocket Connection](#5-backend-receives-websocket-connection)
+      - [6. Engine Broadcasts Ball State](#6-engine-broadcasts-ball-state)
+      - [7. Backend Forwards Ball State](#7-backend-forwards-ball-state)
+      - [8. Frontend Displays Data](#8-frontend-displays-data)
+    - [Container Communication Diagram](#container-communication-diagram)
+    - [Key Points](#key-points)
+  - [Useful commands](#useful-commands)
+    - [Docker](#docker)
 
 ---
 
-## Frontend: TypeScript dev setup
+## Overview
 
+This project demonstrates a full-stack application with separated concerns: a user interface, API bridge, and game logic engine, all communicating via WebSockets for real-time updates.
+
+### Frontend
+A single-page application (SPA) built with TypeScript, auto-compiled from `src/` to `dist/` as ES modules. It renders the UI and establishes WebSocket connections to the backend for real-time ball state updates.
+
+### Backend
+A Node.js application using Fastify, acting as a WebSocket proxy between the frontend and engine. It exposes `/api/ws` and forwards engine messages to connected clients.
+
+### Engine
+A Node.js application using Fastify for game simulation. It maintains ball state (position and velocity) in a [-1, 1] coordinate system, updating every 100ms and broadcasting via WebSocket at `/ws`.
+
+---
+
+## Setup
+
+### Frontend: TypeScript Dev Setup
 Auto-compile TypeScript from `frontend/src/` to `frontend/dist/` and load it in the browser as ES modules.
 
-1) Install Node.js (includes npm)
-- macOS: `brew install node`
+1. Install Node.js (includes npm)
+   - macOS: `brew install node`
 
-2) Init and install TypeScript (inside `frontend/`)
-```
-cd frontend
-npm init -y
-npm i -D typescript
-```
+2. Init and install TypeScript (inside `frontend/`)
+   ```
+   cd frontend
+   npm init -y
+   npm i -D typescript
+   ```
 
-3) Add npm scripts to package.json
-```
-{
-  "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch --preserveWatchOutput"
-  }
-}
-```
+3. Add npm scripts to package.json
+   ```
+   {
+     "scripts": {
+       "build": "tsc",
+       "dev": "tsc --watch --preserveWatchOutput"
+     }
+   }
+   ```
 
-4) Create tsconfig.json (src → dist)
-```
-{
-  "compilerOptions": {
-    "target": "ES2020",
-    "module": "ES2020",
-    "strict": true,
-    "sourceMap": true,
-    "rootDir": "src",
-    "outDir": "dist"
-  },
-  "include": ["src/**/*.ts"]
-}
-```
+4. Create tsconfig.json (src → dist)
+   ```
+   {
+     "compilerOptions": {
+       "target": "ES2020",
+       "module": "ES2020",
+       "strict": true,
+       "sourceMap": true,
+       "rootDir": "src",
+       "outDir": "dist"
+     },
+     "include": ["src/**/*.ts"]
+   }
+   ```
 
-5) Reference the built file from HTML
-- In `frontend/index.html`:
-```
-<script type="module" src="dist/script.js"></script>
-```
+5. Reference the built file from HTML
+   - In `frontend/index.html`:
+   ```
+   <script type="module" src="dist/script.js"></script>
+   ```
 
-6) Start auto compilation (in `frontend/`)
-```
-npm run dev
-```
+6. Start auto compilation (in `frontend/`)
+   ```
+   npm run dev
+   ```
 
----
-
-## Local dev server (serve over HTTP)
+### Local Dev Server (Serve over HTTP)
 Use any static server while `npm run dev` is watching:
 - VS Code Live Server (recommended), or
 - From `frontend/`: `python3 -m http.server 8000` → open http://localhost:8000
@@ -72,17 +108,14 @@ Notes:
 - Add `frontend/dist/` and `node_modules/` to `.gitignore`.
 - Do not ignore `package.json` or `package-lock.json`.
 
----
-
-## Docker + Nginx (production-like serve)
-
+### Docker + Caddy (Production-like Serve)
 - Build and run (via Compose at repo root):
-```
-docker compose up --build -d
-docker compose ps
-```
+  ```
+  docker compose up --build -d
+  docker compose ps
+  ```
 - Open the published ports shown by `docker compose ps`.
-  - Nginx listens on container ports 80 (HTTP → redirects to HTTPS) and 443 (HTTPS).
+  - Caddy listens on container ports 80 (HTTP → redirects to HTTPS) and 443 (HTTPS).
   - Example: if mapped to host `8080:80` and `8443:443`, open:
     - HTTP (redirects): http://localhost:8080
     - HTTPS (self-signed): https://localhost:8443
@@ -97,29 +130,28 @@ curl -kI https://localhost:<host_https_port>
 
 ## Architecture and Dataflow
 
-This project is a microservices-based application composed of four main services orchestrated by Docker Compose: `nginx`, `frontend`, `backend`, and `engine`.
+This project is a microservices-based application composed of four main services orchestrated by Docker Compose: `caddy`, `frontend`, `backend`, and `engine`.
 
 ### Services
 
-*   **`nginx`**: Acts as the entry point for the application. It's a reverse proxy that serves the frontend application and forwards API requests to the backend.
+*   **`caddy`**: Acts as the entry point for the application. It's a reverse proxy that serves the frontend application and forwards API requests to the backend.
     *   Listens on port 80 (and 443 for HTTPS).
     *   Serves the static files (HTML, CSS, JS) of the frontend application.
     *   Routes all requests starting with `/api/` to the `backend` service.
 
 *   **`frontend`**: A single-page application (SPA) built with TypeScript.
     *   The user interface of the application.
-    *   It communicates with the `backend` service through the `/api` endpoint.
-    *   In the current implementation, it features a button that, when clicked, fetches data from the backend and displays it.
+    *   It communicates with the `backend` service through a WebSocket connection.
 
 *   **`backend`**: A Node.js application built with Fastify.
     *   Acts as a bridge between the `frontend` and the `engine`.
-    *   Exposes a REST API at `/api`.
-    *   When it receives a request at `/api/hello`, it calls the `engine` service to get the current game state.
+    *   Exposes a WebSocket endpoint at `/api/ws`.
+    *   Forwards messages from the `engine` to all connected `frontend` clients.
 
 *   **`engine`**: A Node.js application built with Fastify.
     *   Manages the game logic and state.
     *   Simulates a bouncing ball within a [-1, 1] coordinate system and updates its position every 100ms.
-    *   Exposes an endpoint at `/state` that returns the ball's current position (x, y) and velocity (vx, vy).
+    *   Exposes a WebSocket endpoint at `/ws` that broadcasts the ball's current position (x, y) and velocity (vx, vy) to all connected clients.
 
 ### Data Flow (Detailed)
 
@@ -128,88 +160,35 @@ This project is a microservices-based application composed of four main services
 Browser → http://localhost:8080 (or 8443 for HTTPS)
 ```
 
-#### 2. Nginx Receives Request
-- **nginx** container (port 8080/8443) receives the request
+#### 2. Caddy Receives Request
+- **caddy** container (port 8080/8443) receives the request
 - Checks the path: `/` is not `/api/`, so it serves static files
 - Returns `frontend/index.html` + assets (style.css, dist/main.js)
 
 #### 3. Frontend Loads in Browser
 - Browser parses HTML and loads `frontend/index.html`
-- Shows button "Fetch from API" and `<pre id="output"></pre>`
+- The frontend JavaScript establishes a WebSocket connection to `wss://localhost:8443/api/ws`.
 
-#### 4. User Clicks "Fetch from API" Button
-```javascript
-fetch("/api/hello")  // Relative URL → goes to nginx
-```
+#### 4. Caddy Routes WebSocket Connection
+- **caddy** sees the `/api/ws` path and upgrades the connection to a WebSocket connection.
+- Forwards the WebSocket connection to `backend:3000/api/ws`.
+- Uses the internal Docker network `transnet` to reach the **backend** container.
 
-#### 5. Nginx Routes to Backend
-- **nginx** sees `/api/` prefix
-- Forwards request to `http://backend:3000/api/hello` (via nginx.conf proxy_pass)
-- Uses internal Docker network `transnet` to reach **backend** container
+#### 5. Backend Receives WebSocket Connection
+- The **backend** service accepts the WebSocket connection.
+- The backend has already established a WebSocket connection to the **engine** service at `ws://engine:4000/ws`.
 
-#### 6. Backend Receives Request
-`backend/src/index.ts`:
-```typescript
-app.get("/api/hello", async () => {
-  const res = await fetch("http://engine:4000/state");  // Calls engine
-  const state = await res.json();
-  return { from: "backend", engineState: state };
-});
-```
+#### 6. Engine Broadcasts Ball State
+- The **engine** service simulates the ball's movement.
+- Every 100ms, it sends the current ball state as a JSON payload to all its connected clients (in this case, the **backend** service).
 
-#### 7. Backend Calls Engine
-- **backend** makes HTTP request to `http://engine:4000/state`
-- Uses internal Docker network `transnet` to reach **engine** container
+#### 7. Backend Forwards Ball State
+- The **backend** service receives the ball state from the **engine**.
+- It then forwards this state to all of its connected clients (the **frontend** applications).
 
-#### 8. Engine Returns Ball State
-`engine/src/index.ts`:
-```typescript
-let ball = { x: 0, y: 0, vx: 0.01, vy: 0.008 };
-
-setInterval(() => {
-  ball.x += ball.vx;   // Simulates movement
-  ball.y += ball.vy;
-  if (ball.x > 1 || ball.x < -1) ball.vx *= -1;  // Bounces
-  if (ball.y > 1 || ball.y < -1) ball.vy *= -1;
-}, 100);
-
-app.get("/state", async () => ball);  // Returns current state
-```
-
-**Engine responds with:**
-```json
-{ "x": 0.005, "y": 0.004, "vx": 0.01, "vy": 0.008 }
-```
-
-#### 9. Backend Wraps and Returns
-**Backend responds with:**
-```json
-{
-  "from": "backend",
-  "engineState": { "x": 0.005, "y": 0.004, "vx": 0.01, "vy": 0.008 }
-}
-```
-
-#### 10. Nginx Passes Response Back
-- Response travels back through nginx to the browser
-
-#### 11. Frontend Displays Data
-```javascript
-document.getElementById("output").textContent = JSON.stringify(data, null, 2);
-```
-
-**Browser shows:**
-```json
-{
-  "from": "backend",
-  "engineState": {
-    "x": 0.005,
-    "y": 0.004,
-    "vx": 0.01,
-    "vy": 0.008
-  }
-}
-```
+#### 8. Frontend Displays Data
+- The **frontend** receives the ball state through its WebSocket connection.
+- It then updates the UI to display the new position of the ball.
 
 ### Container Communication Diagram
 
@@ -220,23 +199,23 @@ document.getElementById("output").textContent = JSON.stringify(data, null, 2);
 └─────────────────┬───────────────────────────────────┘
                   │
         ┌─────────▼─────────┐
-        │     nginx:80      │
+        │     caddy:80      │
         │   (reverse proxy)  │
         └────────┬──────────┘
                  │
       ┌──────────┼──────────┐
       │          │          │
-      │    /  (static)  /api/ (proxy)
+      │    /  (static)  /api/ws (WebSocket)
       │     [index.html]    │
       │     [style.css]     │
       │     [main.js]       │
       │                     │
       │          ┌──────────▼────────┐
       │          │   backend:3000    │
-      │          │   (API server)     │
+      │          │ (WebSocket proxy) │
       │          └────────┬──────────┘
       │                   │
-      │                   │ fetch("http://engine:4000/state")
+      │                   │ WebSocket to engine:4000/ws
       │                   │
       │          ┌────────▼──────────┐
       │          │   engine:4000     │
@@ -249,16 +228,38 @@ document.getElementById("output").textContent = JSON.stringify(data, null, 2);
                           ┌──────────▼────────┐
                           │ Frontend (Browser) │
                           │  [index.html]      │
-                          │ Shows: JSON data   │
+                          │  WebSocket conn.   │
                           └────────────────────┘
 ```
 
 ### Key Points
 
-- **All 3 backend services** communicate via the `transnet` bridge network (internal Docker DNS)
-- **Frontend only talks to nginx** (not directly to backend or engine)
-- **Engine continuously simulates** the ball bouncing every 100ms
-- **State is stateless**: each request fetches the current ball position at that moment
-- **Only frontend is exposed**: backend and engine are hidden behind nginx; only nginx is reachable from the host
+- **All 3 backend services** communicate via the `transnet` bridge network (internal Docker DNS).
+- **Frontend only talks to caddy** (not directly to backend or engine).
+- **Engine continuously simulates** the ball bouncing every 100ms and broadcasts the state via WebSockets.
+- **Backend acts as a WebSocket proxy**, forwarding the engine's state to the frontend.
+- **Caddy handles HTTPS and WebSocket connections**, providing a secure and real-time communication channel.
+- **Only the frontend is exposed**: backend and engine are hidden behind caddy; only caddy is reachable from the host.
 
 ---
+
+## Useful commands
+
+### Docker
+
+- Build and run (via Compose at repo root):
+  ```
+  docker compose up --build -d
+  docker compose ps
+  ```
+- Open the published ports shown by `docker compose ps`.
+  - Caddy listens on container ports 80 (HTTP → redirects to HTTPS) and 443 (HTTPS).
+  - Example: if mapped to host `8080:80` and `8443:443`, open:
+    - HTTP (redirects): http://localhost:8080
+    - HTTPS (self-signed): https://localhost:8443
+
+Quick checks:
+```
+curl -I http://localhost:<host_http_port>
+curl -kI https://localhost:<host_https_port>
+```

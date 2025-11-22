@@ -1,20 +1,79 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>ft_transcendence Demo</title>
+  <meta charset="UTF-8">
+  <title>Ft_transcendence</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-  <h1>ft_transcendence demo</h1>
-  <button id="fetch">Fetch from API</button>
-  <pre id="output"></pre>
+<body class="bg-gray-900 flex items-center justify-center min-h-screen">
 
-  <script>
-    document.getElementById("fetch").onclick = async () => {
-      const res = await fetch("/api/hello");
-      const data = await res.json();
-      document.getElementById("output").textContent = JSON.stringify(data, null, 2);
-    };
-  </script>
+  <!-- Minimal Top Menu for simulation -->
+  <div id="topMenu" class="hidden fixed top-0 w-full p-4 bg-gray-900 text-white flex justify-between items-center z-50">
+    <span>Ft_transcendence</span>
+    <button id="exitSimulation" class="px-4 py-2 bg-gray-700 rounded hover:bg-gray-600">Exit</button>
+  </div>
+
+  <!-- Login/Register Card -->
+  <div id="uiWrapper" class="w-full max-w-md p-8 bg-white rounded-2xl shadow-xl flex flex-col items-center">
+
+    <h1 class="text-3xl font-extrabold text-gray-900 mb-2 text-center">
+      Welcome to the Ping Pong Game!
+    </h1>
+    
+    <p class="text-gray-700 text-center mb-6 text-lg">
+      Register or Login to start your adventure! ⚡
+    </p>
+
+    <!-- Toggle buttons: show Register/Login -->
+    <div class="flex justify-center gap-4 mb-6 w-full">
+      <button id="showRegister" class="flex-1 px-4 py-2 bg-gray-900 text-white rounded-lg">Register</button>
+      <button id="showLogin" class="flex-1 px-4 py-2 bg-gray-700 text-white rounded-lg">Login</button>
+    </div>
+
+    <!-- Registration Form -->
+    <form id="registration" class="w-full flex flex-col gap-4">
+      <input id="regUsername" type="text" placeholder="Username" required
+        class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900">
+      <input id="regPassword" type="password" placeholder="Password" required
+        class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900">
+      <button type="submit"
+        class="w-full py-3 bg-gray-900 text-white rounded-lg font-semibold hover:bg-gray-700 transition transform hover:scale-105">
+        Register
+      </button>
+    </form>
+
+    <!-- Login Form -->
+    <form id="login" class="w-full flex flex-col gap-4 hidden">
+      <input id="loginUsername" type="text" placeholder="Username" required
+        class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900">
+      <input id="loginPassword" type="password" placeholder="Password" required
+        class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900">
+      <button type="submit"
+        class="w-full py-3 bg-gray-900 text-white rounded-lg font-semibold hover:bg-gray-700 transition transform hover:scale-105">
+        Login
+      </button>
+    </form>
+
+    <p id="output" class="mt-4 text-sm text-gray-700 text-center"></p>
+
+    <!-- Menu (after login) -->
+    <div id="menu" class="hidden w-full flex flex-col gap-3 mt-6">
+      <button id="playGame" class="w-full py-2 bg-gray-900 text-white rounded-lg font-semibold hover:bg-gray-700 transition">Play Game</button>
+      <button id="profile" class="w-full py-2 bg-gray-700 text-white rounded-lg font-semibold hover:bg-gray-500 transition">Profile</button>
+      <button id="logout" class="w-full py-2 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-400 transition">Logout</button>
+    </div>
+
+    <!-- Profile Info -->
+    <div id="profileInfo" class="hidden w-full p-6 border border-gray-300 rounded-lg bg-white shadow-md mt-6 flex flex-col items-start gap-4">
+      <p id="usernameDisplay" class="text-lg font-medium text-gray-900"></p>
+      <button id="backToMenu" class="w-full py-2 bg-gray-900 text-white rounded-lg font-semibold hover:bg-gray-700 transition">Back to Menu</button>
+    </div>
+
+  </div>
+
+  <!-- Game Canvas -->
+  <canvas id="board" width="800" height="600" class="hidden mt-16 border border-black"></canvas>
+
+  <script type="module" src="/dist/index.js"></script>
 </body>
 </html>
