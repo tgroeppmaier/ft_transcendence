@@ -1,14 +1,41 @@
 body {
   font-family: Verdana, Geneva, Tahoma, sans-serif;
   margin: 0;
-  overflow: hidden;
+  background-color: #f0f0f0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
 }
 
-#gameBoard {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  max-width: 70%;
-  max-height: 70%;
+#app {
+  text-align: center;
+}
+
+.main-menu {
+  margin-bottom: 33vh; /* Pushes the element up from the center */
+}
+
+#game-mode-selector button {
+  font-size: 1.2em;
+  padding: 10px 20px;
+  margin: 10px;
+  cursor: pointer;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background-color: #fff;
+}
+
+#back-to-main {
+  margin-bottom: 10px;
+  font-size: 1em;
+  padding: 5px 10px;
+  cursor: pointer;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background-color: #fff;
+}
+
+#board {
+  background-color: #000;
 }
