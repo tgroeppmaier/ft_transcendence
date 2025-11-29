@@ -1,18 +1,16 @@
-import { navigateTo } from './router.js';
-import './router.js'; // This will initialize the router
+import { navigateTo } from "./router.js";
+import "./router.js"; // This will initialize the router
 
-const app = document.getElementById('app');
+const app = document.getElementById("app");
 if (app) {
-  app.addEventListener('click', (e) => {
+  app.addEventListener("click", (e) => {
     const target = e.target as HTMLElement;
-    if (target.id === 'local-game') {
+    if (target.id === "local-game") {
       e.preventDefault();
-      navigateTo('/local-game');
-    }
-    if (target.id === 'remote-game') {
+      navigateTo("/local-game");
+    } else if (target.id === "tournament") {
       e.preventDefault();
-      // For now, just navigate to the main menu
-      navigateTo('/');
+      navigateTo("/tournament");
     }
   });
 }
