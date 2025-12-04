@@ -1,6 +1,7 @@
 import { MainMenu } from "./views/MainMenu.js";
 import { LocalGame } from "./views/LocalGame.js";
 import { Tournament } from "./views/Tournament.js";
+import { LocalGameLobby } from "./views/localPlayLobby.js";
 
 // Each view now returns a component and a cleanup function.
 type View = {
@@ -10,6 +11,7 @@ type View = {
 
 const routes: { [key: string]: () => View } = {
   "/": MainMenu,
+  "/local-game-lobby": LocalGameLobby,
   "/local-game": LocalGame,
   "/tournament": Tournament,
 };

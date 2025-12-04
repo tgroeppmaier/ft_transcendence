@@ -11,6 +11,15 @@ if (app) {
     } else if (target.id === "tournament") {
       e.preventDefault();
       navigateTo("/tournament");
+    } else if (target.id === "local-game-lobby")
+    {
+      e.preventDefault();
+      navigateTo("/local-game-lobby");
+    }
+    else if (target.id === "LobbyButton")
+    {
+      e.preventDefault();
+      navigateTo("/local-game");
     }
   });
 }
