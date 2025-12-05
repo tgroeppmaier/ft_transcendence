@@ -35,6 +35,7 @@ export function LocalGame() {
   let rightScore = 0;
   let countdown = 5;
   let gameStarted = false;
+  let gameFinished = false;
   let intervalId: any;
 
 
@@ -50,6 +51,12 @@ export function LocalGame() {
   function gameLoop() {
     if (!gameStarted) return;
 
+    if ((leftScore >= 11 || rightScore >= 11) &&
+        (leftScore - rightScore >= 2 || rightScore - leftScore >= 2))
+    {
+      gameFinished = true;
+      return;
+    }
     // Move paddles
     if (keys.w && leftPaddle.y > 0) {
       leftPaddle.y -= 8;
