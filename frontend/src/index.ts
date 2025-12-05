@@ -11,6 +11,9 @@ if (app) {
     } else if (target.id === "tournament") {
       e.preventDefault();
       navigateTo("/tournament");
+    } else if (target.id === "remote-game") {
+      e.preventDefault();
+      navigateTo("/remote-game");
     }
   });
 }

@@ -1,6 +1,7 @@
 import { MainMenu } from "./views/MainMenu.js";
 import { LocalGame } from "./views/LocalGame.js";
 import { Tournament } from "./views/Tournament.js";
+import { Remote1v1 } from "./views/Remote1v1.js";
 
 // Each view now returns a component and a cleanup function.
 type View = {
@@ -12,6 +13,7 @@ const routes: { [key: string]: () => View } = {
   "/": MainMenu,
   "/local-game": LocalGame,
   "/tournament": Tournament,
+  "/remote-game": Remote1v1
 };
 
 const root = document.getElementById("app");
@@ -41,5 +43,5 @@ window.onpopstate = () => {
   render(window.location.pathname);
 };
 
-// Initial render
+// Initial render with current URL, could be something else than main menu
 render(window.location.pathname);

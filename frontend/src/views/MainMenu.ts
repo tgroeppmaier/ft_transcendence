@@ -6,6 +6,7 @@ export function MainMenu() {
     <div id="game-mode-selector">
       <button id="local-game">Local Game</button>
       <button id="tournament">Tournament</button>
+      <button id="remote-game">Remote Game</button>
     </div>
   `;
   return { component: mainMenu };

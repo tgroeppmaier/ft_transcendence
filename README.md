@@ -26,6 +26,18 @@ A microservices-based web application simulating a bouncing ball game, built wit
       - [8. Frontend Displays Data](#8-frontend-displays-data)
     - [Container Communication Diagram](#container-communication-diagram)
     - [Key Points](#key-points)
+  - [Routing System](#routing-system)
+    - [Overview](#overview-1)
+    - [How Routing Works (Step by Step)](#how-routing-works-step-by-step)
+      - [1. Application Initialization](#1-application-initialization)
+      - [2. Route Registry](#2-route-registry)
+      - [3. User Clicks Navigation Button](#3-user-clicks-navigation-button)
+      - [4. Navigation Happens](#4-navigation-happens)
+      - [5. View Switching (render function)](#5-view-switching-render-function)
+      - [6. Cleanup Pattern](#6-cleanup-pattern)
+      - [7. Browser Back/Forward Buttons](#7-browser-backforward-buttons)
+    - [Data Flow Diagram](#data-flow-diagram)
+    - [Key Concepts](#key-concepts)
   - [Useful commands](#useful-commands)
     - [Docker](#docker)
 
@@ -242,6 +254,194 @@ Browser → http://localhost:8080 (or 8443 for HTTPS)
 - **Only the frontend is exposed**: backend and engine are hidden behind caddy; only caddy is reachable from the host.
 
 ---
+
+## Routing System
+
+### Overview
+The application uses a **client-side router** that enables seamless navigation between views without full page reloads. The router intercepts navigation events, updates the browser's URL and history, and swaps out view components dynamically.
+
+### How Routing Works (Step by Step)
+
+#### 1. Application Initialization
+When application first loads:
+
+```
+User opens http://localhost:8080
+  ↓
+browser/index.html is served by Caddy
+  ↓
+frontend/dist/index.js is loaded as an ES module
+  ↓
+router.ts initializes: render(window.location.pathname)
+  ↓
+Current URL path (e.g., "/") is matched against routes registry
+  ↓
+Corresponding view factory function is called (e.g., MainMenu())
+  ↓
+View component is mounted to DOM at #app element
+```
+
+#### 2. Route Registry
+The [`routes`](frontend/src/router.ts) object maps URL paths to view factory functions:
+
+```typescript
+const routes: { [key: string]: () => View } = {
+  "/": MainMenu,
+  "/local-game": LocalGame,
+  "/tournament": Tournament,
+};
+```
+
+Each key is a URL path, and each value is a **function** (not a component instance). This is important—it defers view creation until navigation occurs, ensuring each view gets a fresh component with clean state.
+
+#### 3. User Clicks Navigation Button
+When a user clicks a button in the UI:
+
+```
+User clicks "Local Game" button
+  ↓
+index.ts event listener catches the click
+  ↓
+e.preventDefault() stops default browser behavior
+  (without this, the button might submit as a form)
+  ↓
+navigateTo("/local-game") is called
+```
+
+The `e.preventDefault()` call is crucial for buttons that might otherwise trigger unwanted default behavior. In your case, it ensures the router handles navigation instead of the browser.
+
+#### 4. Navigation Happens
+The [`navigateTo`](frontend/src/router.ts) function does two things:
+
+```typescript
+export function navigateTo(pathname: string) {
+  window.history.pushState({}, pathname, window.location.origin + pathname);
+  render(pathname);
+}
+```
+
+- **`window.history.pushState()`** updates the browser's URL bar and history stack without reloading the page. This allows back/forward buttons to work correctly and lets users bookmark/share URLs.
+- **`render(pathname)`** handles the actual view switching logic.
+
+#### 5. View Switching (render function)
+The [`render`](frontend/src/router.ts) function orchestrates the view swap:
+
+```
+render("/local-game") is called
+  ↓
+Check if previous view has cleanup function
+  ├─ Yes: call it (removes event listeners, clears timers, etc.)
+  └─ No: do nothing
+  ↓
+Clear DOM: root.innerHTML = ""
+  ↓
+Look up route: routes["/local-game"]() 
+  (calls LocalGame factory function to create new component)
+  ↓
+Append component to DOM: root.appendChild(view.component)
+  ↓
+Store cleanup function: currentCleanup = view.cleanup
+  (for next navigation)
+```
+
+#### 6. Cleanup Pattern
+Each view optionally returns a cleanup function in the [`View`](frontend/src/router.ts) type:
+
+```typescript
+type View = {
+  component: HTMLElement;
+  cleanup?: () => void;
+};
+```
+
+For example, the [`LocalGame`](frontend/src/views/LocalGame.ts) view registers keyboard listeners and a game loop interval:
+
+```typescript
+const cleanup = () => {
+  document.removeEventListener("keydown", onKeyDown);
+  document.removeEventListener("keyup", onKeyUp);
+  clearInterval(intervalId);
+};
+
+return { component: gameContainer, cleanup };
+```
+
+This cleanup runs automatically when navigating away, preventing:
+- Event listeners from firing on detached DOM
+- Game loop intervals from running in the background
+- Memory leaks from accumulated listeners
+
+#### 7. Browser Back/Forward Buttons
+When a user clicks the back or forward button:
+
+```
+User clicks browser back button
+  ↓
+window.onpopstate event fires
+  ↓
+Handler calls: render(window.location.pathname)
+  (render uses the URL that the browser just navigated to)
+  ↓
+Same cleanup and view-switching logic runs
+```
+
+This ensures history navigation works seamlessly without requiring explicit router code.
+
+### Data Flow Diagram
+
+```
+┌────────────────────────────────────────────────────────┐
+│                  User Action                           │
+│            (click button, back, forward, URL change)   │
+└────────────────┬─────────────────────────────────────┘
+                 │
+         ┌───────▼────────┐
+         │  navigateTo()  │  (or onpopstate handler)
+         │   or onpopstate│
+         └───────┬────────┘
+                 │
+      ┌──────────▼─────────┐
+      │  history.pushState │
+      │  (update URL bar)  │
+      └──────────┬─────────┘
+                 │
+      ┌──────────▼──────────────┐
+      │  render(pathname)       │
+      └──────────┬──────────────┘
+                 │
+    ┌────────────┴────────────┐
+    │                         │
+    ▼                         ▼
+┌─────────────┐      ┌─────────────────┐
+│   Cleanup   │      │ View Factory    │
+│  previous   │      │  Call routes[]  │
+│    view     │      │   Get component │
+└─────────────┘      └────────┬────────┘
+    │                         │
+    │      ┌──────────────────┘
+    │      │
+    ▼      ▼
+ ┌────────────────┐
+ │ DOM Update     │
+ │ - Clear old    │
+ │ - Mount new    │
+ │ - Store cleanup│
+ └────────────────┘
+    │
+    ▼
+ ┌────────────────┐
+ │  View visible  │
+ │  to user       │
+ └────────────────┘
+```
+
+### Key Concepts
+
+- **Factory Pattern**: Routes store functions, not instances. Each navigation creates a fresh component with clean state.
+- **Cleanup**: Views can define teardown logic to free resources and prevent memory leaks.
+- **History Integration**: `history.pushState()` keeps the URL in sync without full page reloads.
+- **Event Delegation**: The click listener in [`index.ts`](frontend/src/index.ts) uses event delegation on the `#app` container, catching clicks from any current or future view.
+- **Single-Page Application (SPA)**: No server-side routing needed—all navigation happens in the browser.
 
 ## Useful commands
 

@@ -1,21 +1,21 @@
-# HTTP redirect to HTTPS on port 8443
-localhost:80 {
+# Listen on all interfaces on port 80
+:80 {
+	# Redirect to HTTPS on port 8443, preserving the hostname (IP)
 	redir https://{host}:8443{uri} permanent
 }
 
-# HTTPS server
-localhost:443 {
+localhost, 192.168.1.103 {
 	tls internal
 
 	# Log requests for debugging
 	log
 
-	# Handle API requests first. This block is mutually exclusive.
+	# Handle API requests first
 	handle /api/* {
 		reverse_proxy backend:3000
 	}
 
-	# Handle all other requests by serving the static frontend.
+	# Handle all other requests
 	handle {
 		root * /usr/share/caddy
 		file_server
