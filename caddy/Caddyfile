@@ -1,21 +1,20 @@
-# Listen on all interfaces on port 80
 :80 {
-	# Redirect to HTTPS on port 8443, preserving the hostname (IP)
+	# Redirect to HTTPS on port 8443
 	redir https://{host}:8443{uri} permanent
 }
 
-localhost, 192.168.1.103 {
-	tls internal
+:443 {
+	# "on_demand" tells Caddy to generate certs for ANY IP that connects
+	tls internal {
+		on_demand
+	}
 
-	# Log requests for debugging
 	log
 
-	# Handle API requests first
 	handle /api/* {
 		reverse_proxy backend:3000
 	}
 
-	# Handle all other requests
 	handle {
 		root * /usr/share/caddy
 		file_server
