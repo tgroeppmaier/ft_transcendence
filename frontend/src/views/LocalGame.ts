@@ -31,6 +31,7 @@ export function LocalGame() {
   let leftPaddle = { x: 0, y: canvas.height / 2 - paddleHeight / 2, width: paddleWidth, height: paddleHeight, dy: 0 };
   let rightPaddle = { x: canvas.width - paddleWidth, y: canvas.height / 2 - paddleHeight / 2, width: paddleWidth, height: paddleHeight, dy: 0 };
   let ball = { x: canvas.width / 2, y: canvas.height / 2, radius: 7, dx: 5, dy: 5 };
+	let	game_score = 3;
   let leftScore = 0;
   let rightScore = 0;
   let countdown = 5;
@@ -51,10 +52,11 @@ export function LocalGame() {
   function gameLoop() {
     if (!gameStarted) return;
 
-    if ((leftScore >= 11 || rightScore >= 11) &&
+    if ((leftScore >= game_score || rightScore >= game_score) &&
         (leftScore - rightScore >= 2 || rightScore - leftScore >= 2))
     {
       gameFinished = true;
+			setTimeout( () => {navigateTo("/")}, 3000);
       return;
     }
     // Move paddles
