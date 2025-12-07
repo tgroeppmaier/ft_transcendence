@@ -1,7 +1,8 @@
 import { MainMenu } from "./views/MainMenu.js";
 import { LocalGame } from "./views/LocalGame.js";
 import { Tournament } from "./views/Tournament.js";
-import { LocalGameLobby } from "./views/localPlayLobby.js";
+import { LocalGameLobby } from "./views/LocalPlayLobby.js";
+import { TournamentNet } from "./views/TournamentNet.js";
 
 // Each view now returns a component and a cleanup function.
 type View = {
@@ -14,12 +15,14 @@ const routes: { [key: string]: () => View } = {
   "/local-game-lobby": LocalGameLobby,
   "/local-game": LocalGame,
   "/tournament": Tournament,
+	"/tournamentNet": TournamentNet,
 };
 
 const root = document.getElementById("app");
 let currentCleanup: (() => void) | undefined;
 
-export function navigateTo(pathname: string) {
+export function navigateTo(pathname: string, args?: any) {
+	localStorage.setItem("argOfNavigateTo", args);
   window.history.pushState({}, pathname, window.location.origin + pathname);
   render(pathname);
 }

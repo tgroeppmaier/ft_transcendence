@@ -1,3 +1,5 @@
+import { navigateTo } from "../router.js";
+
 export function Tournament() {
   const tournament = document.createElement("div");
   tournament.classList.add("tournament");
@@ -52,7 +54,9 @@ export function Tournament() {
 				input.disabled = true;
 				playerNames.push(input.value.trim());
 				createInput();
-				proceedButton.style.display = "inline-block";
+				if (playerCount > 3) {
+					proceedButton.style.display = "inline-block";
+				}
 			}
 		});
 
@@ -65,6 +69,7 @@ export function Tournament() {
 	proceedButton.addEventListener("click", () => {
 		console.log("Player names: ", playerNames);
 		alert("Proceeding to the tournament with players: " + playerNames.join(", "));
+		navigateTo("/tournamentNet", playerNames);
 	});
 
   return { component: tournament };
