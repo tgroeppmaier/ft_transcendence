@@ -32,6 +32,18 @@ export function TournamentNet() {
 
 			// Player 2
 			const player2Div = document.createElement("div");
+			player2Div.className = "player";
+			player2Div.textContent = p2;
+			matchDiv.appendChild(player2Div);
+
+			// Draw connector line when both players exist
+			if (p2) {
+				const line = document.createElement("div");
+				line.className = "connector";
+				matchDiv.appendChild(line);
+			}
+
+			bracket.appendChild(matchDiv);
 		}
 	}
 
