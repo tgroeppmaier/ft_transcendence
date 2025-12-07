@@ -1,6 +1,5 @@
 import Fastify from "fastify";
 import websocket from "@fastify/websocket";
-import type * as FastifyWebsocket from "@fastify/websocket";
 import { WebSocket } from "ws";
 
 const backend = Fastify({ logger: true });
@@ -17,96 +16,137 @@ const MAX_BALL_SPEED = 0.025;
 const WIN_SCORE = 5;
 
 // State
-let ball = { x: 0.5, y: 0.5, vx: BALL_SPEED, vy: BALL_SPEED * 0.75 };
-let paddles = [
-  { y: 0.5 - PADDLE_H / 2, dy: 0 },  // left
-  { y: 0.5 - PADDLE_H / 2, dy: 0 }   // right
-];
-let scores = [0, 0];
-let players: WebSocket[] = [];
+let ballX = 0.5;
+let ballY = 0.5;
+let ballVX = BALL_SPEED;
+let ballVY = BALL_SPEED * 0.75;
+let paddle0Y = 0.5 - PADDLE_H / 2;
+let paddle1Y = 0.5 - PADDLE_H / 2;
+let paddle0DY = 0;
+let paddle1DY = 0;
+let score0 = 0;
+let score1 = 0;
+let player0: WebSocket | null = null;
+let player1: WebSocket | null = null;
 let waitingPlayer: WebSocket | null = null;
-let gameInterval: NodeJS.Timeout | null = null;
+let gameInterval: ReturnType<typeof setInterval> | null = null;
 
-function resetBall(dir = Math.random() > 0.5 ? 1 : -1) {
-  ball = { x: 0.5, y: 0.5, vx: BALL_SPEED * dir, vy: (Math.random() - 0.5) * BALL_SPEED };
+function resetBall(dir: number) {
+  ballX = 0.5;
+  ballY = 0.5;
+  ballVX = BALL_SPEED * dir;
+  ballVY = (Math.random() - 0.5) * BALL_SPEED;
 }
 
 function resetGame() {
-  paddles[0].y = paddles[1].y = 0.5 - PADDLE_H / 2;
-  paddles[0].dy = paddles[1].dy = 0;
-  scores = [0, 0];
-  resetBall();
-  if (gameInterval) { clearInterval(gameInterval); gameInterval = null; }
+  paddle0Y = 0.5 - PADDLE_H / 2;
+  paddle1Y = 0.5 - PADDLE_H / 2;
+  paddle0DY = 0;
+  paddle1DY = 0;
+  score0 = 0;
+  score1 = 0;
+  resetBall(Math.random() > 0.5 ? 1 : -1);
+  if (gameInterval) {
+    clearInterval(gameInterval);
+    gameInterval = null;
+  }
 }
 
 function broadcast(msg: object) {
   const data = JSON.stringify(msg);
-  players.forEach(p => p.readyState === WebSocket.OPEN && p.send(data));
+  if (player0 && player0.readyState === WebSocket.OPEN) player0.send(data);
+  if (player1 && player1.readyState === WebSocket.OPEN) player1.send(data);
 }
 
 function bouncePaddle(paddleY: number, goingRight: boolean) {
-  const hitPos = (ball.y - paddleY - PADDLE_H / 2) / (PADDLE_H / 2);
-  const speed = Math.min(Math.hypot(ball.vx, ball.vy) * 1.05, MAX_BALL_SPEED);
+  const hitPos = (ballY - paddleY - PADDLE_H / 2) / (PADDLE_H / 2);
+  const currentSpeed = Math.sqrt(ballVX * ballVX + ballVY * ballVY);
+  const newSpeed = Math.min(currentSpeed * 1.05, MAX_BALL_SPEED);
   const angle = hitPos * Math.PI / 3;
-  ball.vx = Math.cos(angle) * speed * (goingRight ? 1 : -1);
-  ball.vy = Math.sin(angle) * speed;
+  ballVX = Math.cos(angle) * newSpeed * (goingRight ? 1 : -1);
+  ballVY = Math.sin(angle) * newSpeed;
 }
 
 function update() {
   // Move paddles
-  for (const p of paddles) {
-    p.y = Math.max(0, Math.min(1 - PADDLE_H, p.y + p.dy));
-  }
+  paddle0Y = paddle0Y + paddle0DY;
+  paddle1Y = paddle1Y + paddle1DY;
+  if (paddle0Y < 0) paddle0Y = 0;
+  if (paddle0Y > 1 - PADDLE_H) paddle0Y = 1 - PADDLE_H;
+  if (paddle1Y < 0) paddle1Y = 0;
+  if (paddle1Y > 1 - PADDLE_H) paddle1Y = 1 - PADDLE_H;
 
   // Move ball
-  ball.x += ball.vx;
-  ball.y += ball.vy;
+  ballX = ballX + ballVX;
+  ballY = ballY + ballVY;
 
   // Wall bounce
-  if (ball.y < BALL_R) { ball.y = BALL_R; ball.vy = Math.abs(ball.vy); }
-  if (ball.y > 1 - BALL_R) { ball.y = 1 - BALL_R; ball.vy = -Math.abs(ball.vy); }
-
-  // Left paddle
-  if (ball.vx < 0 && ball.x - BALL_R <= PADDLE_W &&
-      ball.y >= paddles[0].y && ball.y <= paddles[0].y + PADDLE_H) {
-    ball.x = PADDLE_W + BALL_R;
-    bouncePaddle(paddles[0].y, true);
+  if (ballY < BALL_R) {
+    ballY = BALL_R;
+    ballVY = Math.abs(ballVY);
+  }
+  if (ballY > 1 - BALL_R) {
+    ballY = 1 - BALL_R;
+    ballVY = -Math.abs(ballVY);
   }
 
-  // Right paddle
-  if (ball.vx > 0 && ball.x + BALL_R >= 1 - PADDLE_W &&
-      ball.y >= paddles[1].y && ball.y <= paddles[1].y + PADDLE_H) {
-    ball.x = 1 - PADDLE_W - BALL_R;
-    bouncePaddle(paddles[1].y, false);
+  // Left paddle collision
+  if (ballVX < 0 && ballX - BALL_R <= PADDLE_W) {
+    if (ballY >= paddle0Y && ballY <= paddle0Y + PADDLE_H) {
+      ballX = PADDLE_W + BALL_R;
+      bouncePaddle(paddle0Y, true);
+    }
+  }
+
+  // Right paddle collision
+  if (ballVX > 0 && ballX + BALL_R >= 1 - PADDLE_W) {
+    if (ballY >= paddle1Y && ballY <= paddle1Y + PADDLE_H) {
+      ballX = 1 - PADDLE_W - BALL_R;
+      bouncePaddle(paddle1Y, false);
+    }
   }
 
   // Scoring
-  let scorer = ball.x < 0 ? 1 : ball.x > 1 ? 0 : -1;
-  if (scorer >= 0) {
-    scores[scorer]++;
-    if (scores[scorer] >= WIN_SCORE) {
-      broadcast({ type: "gameOver", winner: scorer + 1, scores: { left: scores[0], right: scores[1] } });
+  if (ballX < 0) {
+    score1++;
+    if (score1 >= WIN_SCORE) {
+      broadcast({ type: "gameOver", winner: 2, scores: { left: score0, right: score1 } });
       resetGame();
-      players.forEach(p => p.close());
-      players = [];
+      if (player0) player0.close();
+      if (player1) player1.close();
+      player0 = null;
+      player1 = null;
       return;
     }
-    resetBall(scorer === 0 ? -1 : 1);
+    resetBall(1);
+  }
+  if (ballX > 1) {
+    score0++;
+    if (score0 >= WIN_SCORE) {
+      broadcast({ type: "gameOver", winner: 1, scores: { left: score0, right: score1 } });
+      resetGame();
+      if (player0) player0.close();
+      if (player1) player1.close();
+      player0 = null;
+      player1 = null;
+      return;
+    }
+    resetBall(-1);
   }
 
   broadcast({
     type: "gameState",
-    ball,
-    leftPaddle: { y: paddles[0].y },
-    rightPaddle: { y: paddles[1].y },
-    scores: { left: scores[0], right: scores[1] }
+    ball: { x: ballX, y: ballY },
+    leftPaddle: { y: paddle0Y },
+    rightPaddle: { y: paddle1Y },
+    scores: { left: score0, right: score1 }
   });
 }
 
-backend.get("/api/ws", { websocket: true }, (conn: FastifyWebsocket.SocketStream) => {
+backend.get("/api/ws", { websocket: true }, (conn) => {
   const socket = conn.socket;
 
-  if (gameInterval || players.length >= 2) {
+  if (gameInterval || (player0 && player1)) {
     socket.send(JSON.stringify({ type: "error", message: "Game full or in progress" }));
     socket.close();
     return;
@@ -115,44 +155,66 @@ backend.get("/api/ws", { websocket: true }, (conn: FastifyWebsocket.SocketStream
   if (!waitingPlayer) {
     waitingPlayer = socket;
     socket.send(JSON.stringify({ type: "waiting" }));
-    socket.on("close", () => { if (waitingPlayer === socket) waitingPlayer = null; });
+    socket.on("close", function() {
+      if (waitingPlayer === socket) waitingPlayer = null;
+    });
     return;
   }
 
-  // Second player joined - start game
-  players = [waitingPlayer, socket];
+  // Second player joined
+  player0 = waitingPlayer;
+  player1 = socket;
   waitingPlayer = null;
   resetGame();
 
-  players[0].send(JSON.stringify({ type: "countdown", player: 1 }));
-  players[1].send(JSON.stringify({ type: "countdown", player: 2 }));
+  player0.send(JSON.stringify({ type: "countdown", player: 1 }));
+  player1.send(JSON.stringify({ type: "countdown", player: 2 }));
 
-  setTimeout(() => {
-    if (players.length === 2) gameInterval = setInterval(update, TICK_RATE);
+  setTimeout(function() {
+    if (player0 && player1) {
+      gameInterval = setInterval(update, TICK_RATE);
+    }
   }, 5000);
 
-  socket.on("message", (data) => {
+  socket.on("message", function(data) {
     const msg = JSON.parse(data.toString());
-    const idx = players.indexOf(socket);
-    if (idx < 0 || msg.type !== "move") return;
+    if (msg.type !== "move") return;
 
-    paddles[idx].dy = msg.action === "start"
-      ? (msg.direction === "up" ? -PADDLE_SPEED : PADDLE_SPEED)
-      : 0;
+    const isPlayer0 = socket === player0;
+    const isPlayer1 = socket === player1;
+    if (!isPlayer0 && !isPlayer1) return;
+
+    let dy = 0;
+    if (msg.action === "start") {
+      if (msg.direction === "up") dy = -PADDLE_SPEED;
+      if (msg.direction === "down") dy = PADDLE_SPEED;
+    }
+
+    if (isPlayer0) paddle0DY = dy;
+    if (isPlayer1) paddle1DY = dy;
   });
 
-  socket.on("close", () => {
-    const idx = players.indexOf(socket);
-    if (idx < 0) return;
-    
-    players.splice(idx, 1);
-    if (gameInterval) { clearInterval(gameInterval); gameInterval = null; }
-    
-    players.forEach(p => {
-      p.send(JSON.stringify({ type: "opponentDisconnected" }));
-      p.close();
-    });
-    players = [];
+  socket.on("close", function() {
+    const wasPlayer0 = socket === player0;
+    const wasPlayer1 = socket === player1;
+    if (!wasPlayer0 && !wasPlayer1) return;
+
+    if (gameInterval) {
+      clearInterval(gameInterval);
+      gameInterval = null;
+    }
+
+    if (player0 && player0 !== socket) {
+      player0.send(JSON.stringify({ type: "opponentDisconnected" }));
+      player0.close();
+    }
+    if (player1 && player1 !== socket) {
+      player1.send(JSON.stringify({ type: "opponentDisconnected" }));
+      player1.close();
+    }
+
+    player0 = null;
+    player1 = null;
     resetGame();
   });
 });
