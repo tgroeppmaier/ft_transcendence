@@ -32,7 +32,7 @@ export function Remote1v1() {
   let countdownValue = 5;
 
   const paddleWidth = 0.025;  // Normalized (matches backend)
-  const paddleHeight = 0.15;  // Normalized (matches backend)
+  const paddleHeight = 0.2;   // Normalized (matches backend)
   const ballRadius = 0.015;  // Normalized (matches backend)
 
   function draw() {
