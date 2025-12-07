@@ -9,7 +9,7 @@ await backend.register(websocket);
 const TICK_RATE = 1000 / 60;
 const BALL_R = 0.015;
 const PADDLE_W = 0.025;
-const PADDLE_H = 0.2;
+const PADDLE_H = 0.25;
 const PADDLE_SPEED = 0.018;
 const BALL_SPEED = 0.008;
 const MAX_BALL_SPEED = 0.025;
@@ -58,13 +58,19 @@ function broadcast(msg: object) {
   if (player1 && player1.readyState === WebSocket.OPEN) player1.send(data);
 }
 
-function bouncePaddle(paddleY: number, goingRight: boolean) {
-  const hitPos = (ballY - paddleY - PADDLE_H / 2) / (PADDLE_H / 2);
-  const currentSpeed = Math.sqrt(ballVX * ballVX + ballVY * ballVY);
-  const newSpeed = Math.min(currentSpeed * 1.05, MAX_BALL_SPEED);
-  const angle = hitPos * Math.PI / 3;
-  ballVX = Math.cos(angle) * newSpeed * (goingRight ? 1 : -1);
-  ballVY = Math.sin(angle) * newSpeed;
+function bouncePaddle(paddleY: number) {
+  // Reverse X direction and speed up
+  ballVX = -ballVX * 1.05;
+  if (Math.abs(ballVX) > MAX_BALL_SPEED) {
+    ballVX = ballVX > 0 ? MAX_BALL_SPEED : -MAX_BALL_SPEED;
+  }
+  
+  // Deflect if hit top or bottom 25% of paddle
+  if (ballY < paddleY + PADDLE_H * 0.25) {
+    ballVY = -Math.abs(ballVY) - 0.003;
+  } else if (ballY > paddleY + PADDLE_H * 0.75) {
+    ballVY = Math.abs(ballVY) + 0.003;
+  }
 }
 
 function update() {
@@ -94,7 +100,7 @@ function update() {
   if (ballVX < 0 && ballX - BALL_R <= PADDLE_W) {
     if (ballY >= paddle0Y && ballY <= paddle0Y + PADDLE_H) {
       ballX = PADDLE_W + BALL_R;
-      bouncePaddle(paddle0Y, true);
+      bouncePaddle(paddle0Y);
     }
   }
 
@@ -102,7 +108,7 @@ function update() {
   if (ballVX > 0 && ballX + BALL_R >= 1 - PADDLE_W) {
     if (ballY >= paddle1Y && ballY <= paddle1Y + PADDLE_H) {
       ballX = 1 - PADDLE_W - BALL_R;
-      bouncePaddle(paddle1Y, false);
+      bouncePaddle(paddle1Y);
     }
   }
 

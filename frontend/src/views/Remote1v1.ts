@@ -1,17 +1,17 @@
 import { navigateTo } from "../router.js";
 
 export function Remote1v1() {
-  const gameContainer = document.createElement('div');
+  const gameContainer = document.createElement("div");
   gameContainer.innerHTML = `
     <button id="back-to-main">Back to Main Menu</button>
     <canvas id="board" height="600" width="800" style="border: 1px solid #000000; background-color: #000;"></canvas>
   `;
 
-  const backButton = gameContainer.querySelector('#back-to-main');
+  const backButton = gameContainer.querySelector("#back-to-main");
   if (backButton) {
-    backButton.addEventListener('click', (e) => {
+    backButton.addEventListener("click", (e) => {
       e.preventDefault();
-      navigateTo('/');
+      navigateTo("/");
     });
   }
 
@@ -27,12 +27,12 @@ export function Remote1v1() {
   const ctxSafe = ctx as CanvasRenderingContext2D;
 
   let player_id: number;
-  let gameState: any = { type: 'connecting' };
+  let gameState: any = { type: "connecting" };
   let message = "Connecting to server...";
   let countdownValue = 5;
 
   const paddleWidth = 0.025;  // Normalized (matches backend)
-  const paddleHeight = 0.2;   // Normalized (matches backend)
+  const paddleHeight = 0.25;  // Normalized (matches backend)
   const ballRadius = 0.015;  // Normalized (matches backend)
 
   function draw() {
@@ -41,52 +41,63 @@ export function Remote1v1() {
     ctxSafe.font = "30px Arial";
     ctxSafe.textAlign = "center";
 
-    if (gameState.type === 'countdown') {
+    if (gameState.type === "countdown") {
       ctxSafe.fillText(`Game starting in ${countdownValue}`, canvas.width / 2, canvas.height / 2);
       return;
     }
 
-    if (gameState.type === 'gameOver') {
+    if (gameState.type === "gameOver") {
+      const iWon = (player_id === 1 && gameState.winner === 1) || (player_id === 2 && gameState.winner === 2);
       ctxSafe.font = "50px Arial";
-      ctxSafe.fillText(`Player ${gameState.winner} wins!`, canvas.width / 2, canvas.height / 2 - 50);
+      ctxSafe.fillText(iWon ? "You win!" : "You lose!", canvas.width / 2, canvas.height / 2 - 50);
+      const myScore = player_id === 1 ? gameState.scores.left : gameState.scores.right;
+      const opponentScore = player_id === 1 ? gameState.scores.right : gameState.scores.left;
       ctxSafe.font = "30px Arial";
-      ctxSafe.fillText(`${gameState.scores.left} - ${gameState.scores.right}`, canvas.width / 2, canvas.height / 2 + 50);
+      ctxSafe.fillText(`${myScore} - ${opponentScore}`, canvas.width / 2, canvas.height / 2 + 50);
       return;
     }
 
-    if (gameState.type !== 'gameState') {
+    if (gameState.type !== "gameState") {
       ctxSafe.fillText(message, canvas.width / 2, canvas.height / 2);
       return;
     }
 
-    // Draw scores
-    ctxSafe.font = "50px Arial";
-    ctxSafe.fillText(String(gameState.scores.left), canvas.width / 4, 50);
-    ctxSafe.fillText(String(gameState.scores.right), 3 * canvas.width / 4, 50);
+    // Get positions relative to player (player always on left)
+    const myPaddleY = player_id === 1 ? gameState.leftPaddle.y : gameState.rightPaddle.y;
+    const opponentPaddleY = player_id === 1 ? gameState.rightPaddle.y : gameState.leftPaddle.y;
+    const ballX = player_id === 1 ? gameState.ball.x : 1 - gameState.ball.x;
+    const ballY = gameState.ball.y;
+    const myScore = player_id === 1 ? gameState.scores.left : gameState.scores.right;
+    const opponentScore = player_id === 1 ? gameState.scores.right : gameState.scores.left;
 
-    // Draw ball (use smaller dimension for radius to keep it circular)
+    // Draw scores (my score on left, opponent on right)
+    ctxSafe.font = "50px Arial";
+    ctxSafe.fillText(String(myScore), canvas.width / 4, 50);
+    ctxSafe.fillText(String(opponentScore), 3 * canvas.width / 4, 50);
+
+    // Draw ball
     const ballPixelRadius = ballRadius * Math.min(canvas.width, canvas.height);
     ctxSafe.beginPath();
-    ctxSafe.arc(gameState.ball.x * canvas.width, gameState.ball.y * canvas.height, ballPixelRadius, 0, Math.PI * 2);
+    ctxSafe.arc(ballX * canvas.width, ballY * canvas.height, ballPixelRadius, 0, Math.PI * 2);
     ctxSafe.fill();
     ctxSafe.closePath();
 
-    // Draw paddles (using normalized coordinates from backend)
-    ctxSafe.fillRect(0, gameState.leftPaddle.y * canvas.height, paddleWidth * canvas.width, paddleHeight * canvas.height);
-    ctxSafe.fillRect(canvas.width - paddleWidth * canvas.width, gameState.rightPaddle.y * canvas.height, paddleWidth * canvas.width, paddleHeight * canvas.height);
+    // Draw paddles (my paddle on left, opponent on right)
+    ctxSafe.fillRect(0, myPaddleY * canvas.height, paddleWidth * canvas.width, paddleHeight * canvas.height);
+    ctxSafe.fillRect(canvas.width - paddleWidth * canvas.width, opponentPaddleY * canvas.height, paddleWidth * canvas.width, paddleHeight * canvas.height);
   }
 
 
-  const backendSocket = new WebSocket(`${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/api/ws`);
+  const backendSocket = new WebSocket(`${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/api/ws`);
 
   backendSocket.onmessage = (e) => {
     const data = JSON.parse(e.data);
     gameState = data;
     switch (data.type) {
-      case 'waiting':
+      case "waiting":
         message = "Waiting for an opponent...";
         break;
-      case 'countdown':
+      case "countdown":
         player_id = data.player;
         let countdownInterval = setInterval(() => {
           countdownValue--;
@@ -96,17 +107,17 @@ export function Remote1v1() {
           draw();
         }, 1000);
         break;
-      case 'gameStart':
+      case "gameStart":
         message = "Game is starting!";
         break;
-      case 'gameOver':
-        setTimeout(() => navigateTo('/'), 3000);
+      case "gameOver":
+        setTimeout(() => navigateTo("/"), 3000);
         break;
-      case 'opponentDisconnected':
+      case "opponentDisconnected":
         message = "Opponent disconnected.";
-        setTimeout(() => navigateTo('/'), 3000);
+        setTimeout(() => navigateTo("/"), 3000);
         break;
-      case 'error':
+      case "error":
         message = data.message;
         break;
     }
