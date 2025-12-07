@@ -1,6 +1,6 @@
 export class Paddle {
-  readonly w: number = 0.02;
-  readonly h: number = 0.2;
+  readonly w: number = 0.025;
+  readonly h: number = 0.15;
   readonly x: number;
   y: number;
   dy: number = 0;

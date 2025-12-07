@@ -13,16 +13,8 @@ services:
   backend:
     build: ./backend
     container_name: transcendence-backend
-    depends_on:
-      - engine
     networks: [transnet]
 
-  engine:
-    build:
-      context: .
-      dockerfile: ./engine/Dockerfile
-    container_name: transcendence-engine
-    networks: [transnet]
 
 networks:
   transnet:

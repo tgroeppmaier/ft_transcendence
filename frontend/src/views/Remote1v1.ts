@@ -31,7 +31,9 @@ export function Remote1v1() {
   let message = "Connecting to server...";
   let countdownValue = 5;
 
-  const paddleWidth = 10, paddleHeight = 100;
+  const paddleWidth = 0.025;  // Normalized (matches backend)
+  const paddleHeight = 0.15;  // Normalized (matches backend)
+  const ballRadius = 0.015;  // Normalized (matches backend)
 
   function draw() {
     ctxSafe.clearRect(0, 0, canvas.width, canvas.height);
@@ -62,18 +64,16 @@ export function Remote1v1() {
     ctxSafe.fillText(String(gameState.scores.left), canvas.width / 4, 50);
     ctxSafe.fillText(String(gameState.scores.right), 3 * canvas.width / 4, 50);
 
-    // Draw ball
+    // Draw ball (use smaller dimension for radius to keep it circular)
+    const ballPixelRadius = ballRadius * Math.min(canvas.width, canvas.height);
     ctxSafe.beginPath();
-    ctxSafe.arc(gameState.ball.x * canvas.width, gameState.ball.y * canvas.height, 0.02 * canvas.width, 0, Math.PI * 2);
+    ctxSafe.arc(gameState.ball.x * canvas.width, gameState.ball.y * canvas.height, ballPixelRadius, 0, Math.PI * 2);
     ctxSafe.fill();
     ctxSafe.closePath();
 
-    // Draw paddles
-    const leftPaddleY = player_id === 1 ? gameState.leftPaddle.y : gameState.rightPaddle.y;
-    const rightPaddleY = player_id === 1 ? gameState.rightPaddle.y : gameState.leftPaddle.y;
-
-    ctxSafe.fillRect(0, leftPaddleY * canvas.height, paddleWidth, paddleHeight);
-    ctxSafe.fillRect(canvas.width - paddleWidth, rightPaddleY * canvas.height, paddleWidth, paddleHeight);
+    // Draw paddles (using normalized coordinates from backend)
+    ctxSafe.fillRect(0, gameState.leftPaddle.y * canvas.height, paddleWidth * canvas.width, paddleHeight * canvas.height);
+    ctxSafe.fillRect(canvas.width - paddleWidth * canvas.width, gameState.rightPaddle.y * canvas.height, paddleWidth * canvas.width, paddleHeight * canvas.height);
   }
 
 

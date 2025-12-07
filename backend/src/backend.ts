@@ -2,113 +2,200 @@ import Fastify from "fastify";
 import websocket from "@fastify/websocket";
 import type * as FastifyWebsocket from "@fastify/websocket";
 import { WebSocket } from "ws";
+import { Paddle } from "./Paddle.js";
 
 const backend = Fastify({ logger: true });
-
 await backend.register(websocket);
 
-let waitingPlayer: WebSocket | null = null;
+// --- GAME CONFIG ---
+const tickRate = 1000 / 60;
+const ballRadius = 0.015;
+const paddleSpeed = 0.015;
+const winningScore = 5;
+const aspectRatio = 800 / 600; // Canvas aspect ratio
+
+// --- GAME STATE ---
+let ball = { x: 0.5, y: 0.5, vx: 0.008, vy: 0.006 };
+let leftPaddle = new Paddle("left");
+let rightPaddle = new Paddle("right");
+let scores = { left: 0, right: 0 };
 let gameIsRunning = false;
-let players: WebSocket[] = [];
+let gameInterval: NodeJS.Timeout | null = null;
 
-const engineSocket = new WebSocket("ws://engine:4000/ws");
+// --- PLAYER STATE ---
+let waitingPlayer: WebSocket | null = null;
+let players: WebSocket[] = []; // Index 0 = Left, Index 1 = Right
 
-engineSocket.on("open", () => backend.log.info("Connected to engine WS"));
-engineSocket.on("close", () => {
-	backend.log.warn("Engine WS closed");
-	gameIsRunning = false;
-	players.forEach(p => p.close(1013, "Engine connection lost"));
-	players = [];
-	if (waitingPlayer) {
-		waitingPlayer.close(1013, "Engine connection lost");
-		waitingPlayer = null;
-	}
-});
-engineSocket.on("error", (err) => backend.log.error({ err }, "Engine WS error"));
+function resetBall() {
+  ball = { x: 0.5, y: 0.5, vx: Math.random() > 0.5 ? 0.008 : -0.008, vy: (Math.random() - 0.5) * 0.008 };
+}
 
-engineSocket.on("message", (data) => {
-	const message = JSON.parse(Buffer.from(data as any).toString("utf8"));
+function resetGame() {
+  leftPaddle.reset();
+  rightPaddle.reset();
+  resetBall();
+  scores = { left: 0, right: 0 };
+  gameIsRunning = false;
+  if (gameInterval) {
+    clearInterval(gameInterval);
+    gameInterval = null;
+  }
+}
 
-	if (message.type === 'gameOver') {
-		gameIsRunning = false;
-		players.forEach(p => p.send(JSON.stringify({ type: 'gameOver', winner: message.winner, scores: message.scores })));
-		players = [];
-		return;
-	}
+function broadcast(msg: any) {
+  const data = JSON.stringify(msg);
+  players.forEach(p => {
+    if (p.readyState === WebSocket.OPEN) p.send(data);
+  });
+}
 
-	if(gameIsRunning) {
-		players.forEach(p => p.send(JSON.stringify(message)));
-	}
-});
+function startGame() {
+  gameIsRunning = true;
+  if (!gameInterval) {
+    gameInterval = setInterval(updateGame, tickRate);
+  }
+  broadcast({ type: "gameStart" });
+}
+
+function updateGame() {
+  if (!gameIsRunning) return;
+
+  // Move paddles
+  leftPaddle.y += leftPaddle.dy;
+  rightPaddle.y += rightPaddle.dy;
+  leftPaddle.y = Math.max(0, Math.min(1 - leftPaddle.h, leftPaddle.y));
+  rightPaddle.y = Math.max(0, Math.min(1 - rightPaddle.h, rightPaddle.y));
+
+  ball.x += ball.vx;
+  ball.y += ball.vy;
+
+  // Wall collision
+  if (ball.y - ballRadius < 0) {
+    ball.y = ballRadius;
+    ball.vy = Math.abs(ball.vy);
+  } else if (ball.y + ballRadius > 1) {
+    ball.y = 1 - ballRadius;
+    ball.vy = -Math.abs(ball.vy);
+  }
+
+  // Simple AABB paddle collision
+  // Left paddle (x=0, width=0.025)
+  if (ball.vx < 0 && ball.x - ballRadius <= leftPaddle.w) {
+    if (ball.y >= leftPaddle.y && ball.y <= leftPaddle.y + leftPaddle.h) {
+      ball.x = leftPaddle.w + ballRadius;
+      ball.vx = Math.abs(ball.vx);
+    }
+  }
+
+  // Right paddle (x=1-0.025=0.975)
+  if (ball.vx > 0 && ball.x + ballRadius >= rightPaddle.x) {
+    if (ball.y >= rightPaddle.y && ball.y <= rightPaddle.y + rightPaddle.h) {
+      ball.x = rightPaddle.x - ballRadius;
+      ball.vx = -Math.abs(ball.vx);
+    }
+  }
+
+  // Score
+  if (ball.x - ballRadius < 0) {
+    scores.right++;
+    if (scores.right >= winningScore) {
+      broadcast({ type: "gameOver", winner: 2, scores });
+      resetGame();
+      // Disconnect players after game over to reset lobby
+      players.forEach(p => p.close());
+      players = [];
+    } else {
+      resetBall();
+    }
+  } else if (ball.x + ballRadius > 1) {
+    scores.left++;
+    if (scores.left >= winningScore) {
+      broadcast({ type: "gameOver", winner: 1, scores });
+      resetGame();
+      players.forEach(p => p.close());
+      players = [];
+    } else {
+      resetBall();
+    }
+  }
+
+  broadcast({
+    type: "gameState",
+    ball,
+    leftPaddle: { y: leftPaddle.y },
+    rightPaddle: { y: rightPaddle.y },
+    scores
+  });
+}
 
 backend.get("/api/ws", { websocket: true }, (connection: FastifyWebsocket.SocketStream) => {
-	const clientSocket = connection.socket;
-	backend.log.info("New client connection received.");
+  const socket = connection.socket;
+  backend.log.info("Client connected");
 
-	if (gameIsRunning) {
-		backend.log.info("Game in progress, rejecting client.");
-		clientSocket.send(JSON.stringify({ type: "error", message: "Game is already in progress." }));
-		clientSocket.close();
-		return;
-	}
+  if (gameIsRunning || players.length >= 2) {
+    socket.send(JSON.stringify({ type: "error", message: "Game full or in progress" }));
+    socket.close();
+    return;
+  }
 
-	if (!waitingPlayer) {
-		backend.log.info("No waiting player, this client is now waiting.");
-		waitingPlayer = clientSocket;
-		waitingPlayer.send(JSON.stringify({ type: "waiting" }));
+  if (!waitingPlayer) {
+    waitingPlayer = socket;
+    socket.send(JSON.stringify({ type: "waiting" }));
+    
+    socket.on("close", () => {
+      if (waitingPlayer === socket) waitingPlayer = null;
+    });
+  } else {
+    // Start game
+    players = [waitingPlayer, socket];
+    waitingPlayer = null;
+    
+    // Notify players of their side
+    players[0].send(JSON.stringify({ type: "countdown", player: 1 }));
+    players[1].send(JSON.stringify({ type: "countdown", player: 2 }));
 
-		waitingPlayer.on("close", () => {
-			if (waitingPlayer === clientSocket) {
-				backend.log.info("Waiting player disconnected.");
-				waitingPlayer = null;
-			}
-		});
-	} else {
-		backend.log.info("Waiting player found, starting game.");
-		players = [waitingPlayer, clientSocket];
-		waitingPlayer = null;
-		gameIsRunning = true;
+    resetGame();
+    
+    // Start after countdown (approx 5s)
+    setTimeout(() => {
+      if (players.length === 2) startGame();
+    }, 5000);
+  }
 
-		players.forEach((player, index) => {
-			backend.log.info(`Sending countdown to player ${index + 1}`);
-			player.send(JSON.stringify({ type: "countdown", player: index + 1 }));
+  socket.on("message", (data) => {
+    const msg = JSON.parse(data.toString());
+    const playerIdx = players.indexOf(socket);
+    
+    if (playerIdx === -1) return; // Not in game
 
-			player.on("message", (data) => {
-				const message = JSON.parse(data.toString());
-				if (engineSocket.readyState === WebSocket.OPEN) {
-					engineSocket.send(JSON.stringify({ ...message, player: index + 1 }));
-				}
-			});
+    if (msg.type === "move") {
+      const paddle = playerIdx === 0 ? leftPaddle : rightPaddle;
+      if (msg.action === "start") {
+        paddle.dy = msg.direction === "up" ? -paddleSpeed : paddleSpeed;
+      } else if (msg.action === "stop") {
+        paddle.dy = 0;
+      }
+    }
+  });
 
-			player.on("close", () => {
-				if (gameIsRunning) {
-					gameIsRunning = false;
-					const otherPlayer = players.find(p => p !== player);
-					if (otherPlayer) {
-						otherPlayer.send(JSON.stringify({ type: "opponentDisconnected" }));
-						otherPlayer.close();
-					}
-					players = [];
-					if (engineSocket.readyState === WebSocket.OPEN) {
-						engineSocket.send(JSON.stringify({ type: "reset" }));
-					}
-				}
-			});
-		});
-
-		setTimeout(() => {
-			if (!gameIsRunning) return;
-			
-			backend.log.info("Starting game.");
-			players.forEach((player) => {
-				player.send(JSON.stringify({ type: "gameStart" }));
-			});
-
-			if (engineSocket.readyState === WebSocket.OPEN) {
-				engineSocket.send(JSON.stringify({ type: "start" }));
-			}
-		}, 5000);
-	}
+  socket.on("close", () => {
+    const idx = players.indexOf(socket);
+    if (idx !== -1) {
+      // Player disconnected
+      players.splice(idx, 1);
+      gameIsRunning = false;
+      if (gameInterval) clearInterval(gameInterval);
+      gameInterval = null;
+      
+      // Notify remaining player
+      players.forEach(p => {
+        p.send(JSON.stringify({ type: "opponentDisconnected" }));
+        p.close();
+      });
+      players = [];
+      resetGame();
+    }
+  });
 });
 
 await backend.listen({ host: "0.0.0.0", port: 3000 });
