@@ -67,8 +67,9 @@ export function Tournament() {
 	}
 
 	proceedButton.addEventListener("click", () => {
-		console.log("Player names: ", playerNames);
-		alert("Proceeding to the tournament with players: " + playerNames.join(", "));
+		//console.log("Player names: ", playerNames);
+		//alert("Proceeding to the tournament with players: " + playerNames.join(", "));
+		//alert("Proceeding to the tournament with players: " + playerNames);
 		navigateTo("/tournamentNet", playerNames);
 	});
 

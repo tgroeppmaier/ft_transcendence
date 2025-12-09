@@ -1,7 +1,52 @@
+/*type Player = string;
+
+interface Match {
+	id: number;
+	player1?: Player | "Bye";
+	player2?: Player | "Bye";
+}
+
+interface Round {
+	roundNumber: number;
+	matches: Match[];
+}
+
+function generateBracket(players: Player[]): Round[] {
+	const shuffled = [...players];
+	const nextPow2 = 1 << Math.ceil(Math.log2(shiffled.length));
+	while (shuffled.length < nextPow2) shuffled.push("Bye");
+
+	const rounds: Round[] = [];
+	let current = shuffled;
+
+	let roundNumber = 1;
+	while (current.length > 1) {
+		const matches: Match[] = [];
+
+		for (let i = 0; i < current.length; i += 2) {
+			matches.push({
+				id: i / 2 + 1,
+				player1: current[i],
+				player2: current[i + 1],
+			});
+		}
+
+		rounds.push({ roundNumber, matches });
+		current = matches.map(() => "Winner");
+		roundNumber++;
+	}
+
+	return rounds;
+}*/
+
+
+
+////////////////////////////////////////////////
+
 export function TournamentNet() {
 
-	let players = localStorage.getItem("argOfNavigateTo");
-	//console.log(players);
+	let input: string = localStorage.getItem("argOfNavigateTo") ?? "";
+	let players: string[] = input.split(",") ?? ([] as string[]);
 
 	const tournamentNet = document.createElement("div");
 	tournamentNet.classList.add("tournamentNet");
@@ -13,7 +58,22 @@ export function TournamentNet() {
 	title.textContent = "Here is the Tournament Net";
 	tournamentNet.appendChild(title);
 
-	const bracket = document.createElement("div");
+	/*players.forEach((player, index) => {
+		const item = document.createElement("div");
+		item.classList.add("player");
+		item.textContent = player;
+		tournamentNet.appendChild(item);
+
+		const isEndOfPair = index % 2 === 1;
+		if (isEndOfPair) {
+			const connector = document.createElement("div");
+			connector.classList.add("connector");
+			tournamentNet.appendChild(connector);
+		}
+	})*/
+
+
+	/*const bracket = document.createElement("div");
 	//bracket.classList.add("bracket-column"); //adds css class to the element bra
 	
 	function renderBracket(players: string[]) {
@@ -45,11 +105,31 @@ export function TournamentNet() {
 
 			bracket.appendChild(matchDiv);
 		}
+	}*/
+
+	for (let i = 0; i < players.length; i += 2) {
+		const pairWrapper = document.createElement("div");
+		pairWrapper.classList.add("pairWrapper");
+
+		const p1 = document.createElement("div");
+		p1.classList.add("player");
+		p1.textContent = players[i];
+		pairWrapper.appendChild(p1);
+
+		const p2 = document.createElement("div");
+		p2.classList.add("player");
+		p2.textContent = players[i + 1] ?? "";
+		pairWrapper.appendChild(p2);
+
+		const connector = document.createElement("div");
+		connector.classList.add("connector");
+		pairWrapper.appendChild(connector);
+
+		tournamentNet.appendChild(pairWrapper);
+
 	}
 
-
-
-	tournamentNet.appendChild(bracket);
+	//tournamentNet.appendChild(bracket);
 
 	return { component: tournamentNet };
 }

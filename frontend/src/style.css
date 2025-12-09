@@ -39,3 +39,55 @@ body {
 #board {
   background-color: #000;
 }
+
+/*---------------------------------*/
+
+.tournamentNet {
+	display: flex;
+	flex-direction: column;
+	/*align-items: flex-start;*/
+	gap: 30px;
+	/*position: relative;*/
+}
+
+.pairWrapper {
+	display: flex;
+	flex-direction: column;
+	position: relative;
+	gap: 10px;
+}
+
+.player {
+	padding: 6px 10px;
+	border: 1px solid #444;
+	border-radius: 6px;
+	width: 120px;
+	background: #f8f8f8;
+	position: relative;
+}
+
+.connector {
+	position: relative;
+	height: 20px;
+	/*width: 120px;*/
+}
+
+.connector::before {
+	content: "";
+	position: absolute;
+	left: 120px;
+	top: 0;
+	width: 40px;
+	height: 2px;
+	background: black;
+}
+
+.connector::after {
+	content: "";
+	position: absolute;
+	left: 160px; /*calc(100% + 25px); */
+	top: -10px;
+	width: 2px;	
+	height: 40px;
+	background: black;
+}
