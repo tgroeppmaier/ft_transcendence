@@ -51,10 +51,11 @@ body {
 }
 
 .pairWrapper {
+	position: relative;
 	display: flex;
 	flex-direction: column;
-	position: relative;
 	gap: 10px;
+	background: orange;
 }
 
 .player {
@@ -62,8 +63,10 @@ body {
 	border: 1px solid #444;
 	border-radius: 6px;
 	width: 120px;
+	height: 30px;
 	background: #f8f8f8;
 	position: relative;
+	box-sizing: border-box;
 }
 
 .connector {
@@ -90,4 +93,19 @@ body {
 	width: 2px;	
 	height: 40px;
 	background: black;
+}
+
+.horizontal-line {
+	position: absolute;
+	left: 120px;
+	top: 15px;
+	width: 100px;
+	height: 15px;
+	background: yellow;
+}
+
+.vertical-line {
+	width: 30px;
+	height: 100px;
+	background: green;
 }

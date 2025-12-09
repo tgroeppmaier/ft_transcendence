@@ -107,6 +107,32 @@ export function TournamentNet() {
 		}
 	}*/
 
+
+	const pairWrapper = document.createElement("div");
+	pairWrapper.classList.add("pairWrapper");
+
+
+	const player1 = document.createElement("div");
+	player1.classList.add("player");
+	player1.textContent = "Cool Player1";
+
+	const player2 = document.createElement("div");
+	player2.classList.add("player");
+	player2.textContent = "Player 2";
+
+	const vert_line = document.createElement("div");
+	vert_line.classList.add("vertical-line");
+
+	const hor_line = document.createElement("div");
+	hor_line.classList.add("horizontal-line");
+
+	pairWrapper.appendChild(player1);
+	pairWrapper.appendChild(player2);
+	pairWrapper.appendChild(vert_line);
+	pairWrapper.appendChild(hor_line);
+	tournamentNet.appendChild(pairWrapper);
+
+
 	for (let i = 0; i < players.length; i += 2) {
 		const pairWrapper = document.createElement("div");
 		pairWrapper.classList.add("pairWrapper");
