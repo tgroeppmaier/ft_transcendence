@@ -1,5 +1,25 @@
 import { navigateTo } from "../router.js";
 
+type Scores = { left: number; right: number };
+type BallData = { x: number; y: number };
+type PaddleData = { y: number };
+type GameState =
+  | { type: "connecting" }
+  | { type: "waiting" }
+  | { type: "countdown"; player: number }
+  | { type: "gameState"; ball: BallData; leftPaddle: PaddleData; rightPaddle: PaddleData; scores: Scores }
+  | { type: "gameOver"; winner: number; scores: Scores }
+  | { type: "opponentDisconnected" }
+  | { type: "error"; message: string };
+
+type MoveDirection = "up" | "down";
+type MoveAction = "start" | "stop";
+
+const PADDLE_WIDTH = 0.025;
+const PADDLE_HEIGHT = 0.25;
+const BALL_RADIUS = 0.015;
+const COUNTDOWN_START = 5;
+
 export function Remote1v1() {
   const gameContainer = document.createElement("div");
   gameContainer.innerHTML = `
@@ -26,133 +46,180 @@ export function Remote1v1() {
   }
   const ctxSafe = ctx as CanvasRenderingContext2D;
 
-  let player_id: number;
-  let gameState: any = { type: "connecting" };
-  let message = "Connecting to server...";
-  let countdownValue = 5;
+  let playerId: number | null = null;
+  let gameState: GameState = { type: "connecting" };
+  let statusText = "Connecting to server...";
+  let countdownValue = COUNTDOWN_START;
+  let countdownTimer: ReturnType<typeof setInterval> | null = null;
 
-  const paddleWidth = 0.025;  // Normalized (matches backend)
-  const paddleHeight = 0.25;  // Normalized (matches backend)
-  const ballRadius = 0.015;  // Normalized (matches backend)
+  const viewFromPerspective = (state: Extract<GameState, { type: "gameState" }>) => {
+    const myPaddleY = playerId === 1 ? state.leftPaddle.y : state.rightPaddle.y;
+    const opponentPaddleY = playerId === 1 ? state.rightPaddle.y : state.leftPaddle.y;
+    const ballX = playerId === 1 ? state.ball.x : 1 - state.ball.x;
+    const ballY = state.ball.y;
+    const myScore = playerId === 1 ? state.scores.left : state.scores.right;
+    const opponentScore = playerId === 1 ? state.scores.right : state.scores.left;
+    return { myPaddleY, opponentPaddleY, ballX, ballY, myScore, opponentScore };
+  };
+
+  const drawMessage = (text: string) => {
+    ctxSafe.fillStyle = "white";
+    ctxSafe.font = "30px Arial";
+    ctxSafe.textAlign = "center";
+    ctxSafe.fillText(text, canvas.width / 2, canvas.height / 2);
+  };
+
+  const drawCountdown = () => {
+    ctxSafe.clearRect(0, 0, canvas.width, canvas.height);
+    drawMessage(`Game starting in ${countdownValue}`);
+  };
+
+  const drawGameOver = (state: Extract<GameState, { type: "gameOver" }>) => {
+    if (playerId === null) return drawMessage("Game over");
+    const iWon = (playerId === 1 && state.winner === 1) || (playerId === 2 && state.winner === 2);
+    ctxSafe.clearRect(0, 0, canvas.width, canvas.height);
+    ctxSafe.fillStyle = "white";
+    ctxSafe.font = "50px Arial";
+    ctxSafe.textAlign = "center";
+    ctxSafe.fillText(iWon ? "You win!" : "You lose!", canvas.width / 2, canvas.height / 2 - 50);
+    const myScore = playerId === 1 ? state.scores.left : state.scores.right;
+    const opponentScore = playerId === 1 ? state.scores.right : state.scores.left;
+    ctxSafe.font = "30px Arial";
+    ctxSafe.fillText(`${myScore} - ${opponentScore}`, canvas.width / 2, canvas.height / 2 + 50);
+  };
+
+  const drawScores = (myScore: number, opponentScore: number) => {
+    ctxSafe.font = "50px Arial";
+    ctxSafe.textAlign = "center";
+    ctxSafe.fillText(String(myScore), canvas.width / 4, 50);
+    ctxSafe.fillText(String(opponentScore), (3 * canvas.width) / 4, 50);
+  };
+
+  const drawBall = (x: number, y: number) => {
+    const radius = BALL_RADIUS * Math.min(canvas.width, canvas.height);
+    ctxSafe.beginPath();
+    ctxSafe.arc(x * canvas.width, y * canvas.height, radius, 0, Math.PI * 2);
+    ctxSafe.fill();
+    ctxSafe.closePath();
+  };
+
+  const drawPaddles = (myPaddleY: number, opponentPaddleY: number) => {
+    ctxSafe.fillRect(0, myPaddleY * canvas.height, PADDLE_WIDTH * canvas.width, PADDLE_HEIGHT * canvas.height);
+    ctxSafe.fillRect(canvas.width - PADDLE_WIDTH * canvas.width, opponentPaddleY * canvas.height, PADDLE_WIDTH * canvas.width, PADDLE_HEIGHT * canvas.height);
+  };
 
   function draw() {
     ctxSafe.clearRect(0, 0, canvas.width, canvas.height);
     ctxSafe.fillStyle = "white";
-    ctxSafe.font = "30px Arial";
-    ctxSafe.textAlign = "center";
 
     if (gameState.type === "countdown") {
-      ctxSafe.fillText(`Game starting in ${countdownValue}`, canvas.width / 2, canvas.height / 2);
+      drawCountdown();
       return;
     }
 
     if (gameState.type === "gameOver") {
-      const iWon = (player_id === 1 && gameState.winner === 1) || (player_id === 2 && gameState.winner === 2);
-      ctxSafe.font = "50px Arial";
-      ctxSafe.fillText(iWon ? "You win!" : "You lose!", canvas.width / 2, canvas.height / 2 - 50);
-      const myScore = player_id === 1 ? gameState.scores.left : gameState.scores.right;
-      const opponentScore = player_id === 1 ? gameState.scores.right : gameState.scores.left;
-      ctxSafe.font = "30px Arial";
-      ctxSafe.fillText(`${myScore} - ${opponentScore}`, canvas.width / 2, canvas.height / 2 + 50);
+      drawGameOver(gameState);
       return;
     }
 
-    if (gameState.type !== "gameState") {
-      ctxSafe.fillText(message, canvas.width / 2, canvas.height / 2);
+    if (gameState.type !== "gameState" || playerId === null) {
+      drawMessage(statusText);
       return;
     }
 
-    // Get positions relative to player (player always on left)
-    const myPaddleY = player_id === 1 ? gameState.leftPaddle.y : gameState.rightPaddle.y;
-    const opponentPaddleY = player_id === 1 ? gameState.rightPaddle.y : gameState.leftPaddle.y;
-    const ballX = player_id === 1 ? gameState.ball.x : 1 - gameState.ball.x;
-    const ballY = gameState.ball.y;
-    const myScore = player_id === 1 ? gameState.scores.left : gameState.scores.right;
-    const opponentScore = player_id === 1 ? gameState.scores.right : gameState.scores.left;
-
-    // Draw scores (my score on left, opponent on right)
-    ctxSafe.font = "50px Arial";
-    ctxSafe.fillText(String(myScore), canvas.width / 4, 50);
-    ctxSafe.fillText(String(opponentScore), 3 * canvas.width / 4, 50);
-
-    // Draw ball
-    const ballPixelRadius = ballRadius * Math.min(canvas.width, canvas.height);
-    ctxSafe.beginPath();
-    ctxSafe.arc(ballX * canvas.width, ballY * canvas.height, ballPixelRadius, 0, Math.PI * 2);
-    ctxSafe.fill();
-    ctxSafe.closePath();
-
-    // Draw paddles (my paddle on left, opponent on right)
-    ctxSafe.fillRect(0, myPaddleY * canvas.height, paddleWidth * canvas.width, paddleHeight * canvas.height);
-    ctxSafe.fillRect(canvas.width - paddleWidth * canvas.width, opponentPaddleY * canvas.height, paddleWidth * canvas.width, paddleHeight * canvas.height);
+    const view = viewFromPerspective(gameState);
+    drawScores(view.myScore, view.opponentScore);
+    drawBall(view.ballX, view.ballY);
+    drawPaddles(view.myPaddleY, view.opponentPaddleY);
   }
 
 
-  const backendSocket = new WebSocket(`${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/api/ws`);
+  const ws = new WebSocket(`${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/api/ws`);
 
-  backendSocket.onmessage = (e) => {
-    const data = JSON.parse(e.data);
+  const sendMove = (direction: MoveDirection, action: MoveAction) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "move", direction, action }));
+    }
+  };
+
+  const handleWaiting = () => {
+    statusText = "Waiting for an opponent...";
+  };
+
+  const handleCountdown = (player: number) => {
+    playerId = player;
+    countdownValue = COUNTDOWN_START;
+    if (countdownTimer) clearInterval(countdownTimer);
+    countdownTimer = setInterval(() => {
+      countdownValue--;
+      if (countdownValue <= 0 && countdownTimer) {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+      }
+      draw();
+    }, 1000);
+  };
+
+  const handleGameOver = () => {
+    setTimeout(() => navigateTo("/"), 3000);
+  };
+
+  const handleOpponentDisconnected = () => {
+    statusText = "Opponent disconnected.";
+    setTimeout(() => navigateTo("/"), 3000);
+  };
+
+  ws.onmessage = (e) => {
+    const data: GameState = JSON.parse(e.data);
     gameState = data;
     switch (data.type) {
       case "waiting":
-        message = "Waiting for an opponent...";
+        handleWaiting();
         break;
       case "countdown":
-        player_id = data.player;
-        let countdownInterval = setInterval(() => {
-          countdownValue--;
-          if (countdownValue <= 0) {
-            clearInterval(countdownInterval);
-          }
-          draw();
-        }, 1000);
-        break;
-      case "gameStart":
-        message = "Game is starting!";
+        handleCountdown(data.player);
         break;
       case "gameOver":
-        setTimeout(() => navigateTo("/"), 3000);
+        handleGameOver();
         break;
       case "opponentDisconnected":
-        message = "Opponent disconnected.";
-        setTimeout(() => navigateTo("/"), 3000);
+        handleOpponentDisconnected();
         break;
       case "error":
-        message = data.message;
+        statusText = data.message;
+        break;
+      default:
         break;
     }
     draw();
   };
 
-  backendSocket.onopen = () => {
-    console.log("WS open");
-    message = "Connected. Waiting for game to start...";
+  ws.onopen = () => {
+    statusText = "Connected. Waiting for game to start...";
     draw();
   };
-  backendSocket.onclose = () => {
-    console.log("WS closed");
-    message = "Connection lost.";
+  ws.onclose = () => {
+    statusText = "Connection lost.";
     draw();
   };
-  backendSocket.onerror = (err) => {
-    console.error("WS error", err);
-    message = "Connection error.";
+  ws.onerror = () => {
+    statusText = "Connection error.";
     draw();
   };
 
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.key === "w" || e.key === "ArrowUp") {
-      backendSocket.send(JSON.stringify({ type: "move", direction: "up", action: "start" }));
+      sendMove("up", "start");
     } else if (e.key === "s" || e.key === "ArrowDown") {
-      backendSocket.send(JSON.stringify({ type: "move", direction: "down", action: "start" }));
+      sendMove("down", "start");
     }
   };
 
   const onKeyUp = (e: KeyboardEvent) => {
     if (e.key === "w" || e.key === "ArrowUp") {
-      backendSocket.send(JSON.stringify({ type: "move", direction: "up", action: "stop" }));
+      sendMove("up", "stop");
     } else if (e.key === "s" || e.key === "ArrowDown") {
-      backendSocket.send(JSON.stringify({ type: "move", direction: "down", action: "stop" }));
+      sendMove("down", "stop");
     }
   };
 
@@ -160,11 +227,14 @@ export function Remote1v1() {
   document.addEventListener("keyup", onKeyUp);
 
   const cleanup = () => {
-    console.log("Cleaning up game view");
     document.removeEventListener("keydown", onKeyDown);
     document.removeEventListener("keyup", onKeyUp);
-    if (backendSocket.readyState === WebSocket.OPEN) {
-      backendSocket.close();
+    if (countdownTimer) {
+      clearInterval(countdownTimer);
+      countdownTimer = null;
+    }
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.close();
     }
   };
 

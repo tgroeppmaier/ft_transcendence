@@ -34,9 +34,15 @@ function render(pathname: string) {
     return;
   }
   root.innerHTML = "";
-  const view = routes[pathname] ? routes[pathname]() : routes["/"]();
-  root.appendChild(view.component);
-  currentCleanup = view.cleanup;
+  
+  try {
+    const view = routes[pathname] ? routes[pathname]() : routes["/"]();
+    root.appendChild(view.component);
+    currentCleanup = view.cleanup;
+  } catch (error) {
+    console.error("Failed to render view:", error);
+    root.innerHTML = "<p>Error loading page. <a href=\"/\">Return to home</a></p>";
+  }
 }
 
 window.onpopstate = () => {
