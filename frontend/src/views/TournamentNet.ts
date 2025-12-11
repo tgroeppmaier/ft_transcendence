@@ -151,7 +151,7 @@ export function TournamentNet() {
 			pairWrapper.appendChild(p2);
 		}
 
-		if (2 === i && "" !== p2.textContent) {
+		if (0 === i && "" !== p2.textContent) {
 			setTimeout(() => {
 				p1.classList.add("toPlay");
 				p2.classList.add("toPlay");
