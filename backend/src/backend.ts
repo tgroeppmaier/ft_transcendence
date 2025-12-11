@@ -176,18 +176,13 @@ backend.get("/api/ws", { websocket: true }, (conn) => {
   player0.send(JSON.stringify({ type: "countdown", player: 1 }));
   player1.send(JSON.stringify({ type: "countdown", player: 2 }));
 
-  setTimeout(function() {
-    if (player0 && player1) {
-      gameInterval = setInterval(update, TICK_RATE);
-    }
-  }, 5000);
-
-  socket.on("message", function(data) {
-    const msg = JSON.parse(data.toString());
+  // Helper to handle move messages
+  function handleMove(playerSocket: WebSocket, data: unknown) {
+    const msg = JSON.parse(String(data));
     if (msg.type !== "move") return;
 
-    const isPlayer0 = socket === player0;
-    const isPlayer1 = socket === player1;
+    const isPlayer0 = playerSocket === player0;
+    const isPlayer1 = playerSocket === player1;
     if (!isPlayer0 && !isPlayer1) return;
 
     let dy = 0;
@@ -198,11 +193,12 @@ backend.get("/api/ws", { websocket: true }, (conn) => {
 
     if (isPlayer0) paddle0DY = dy;
     if (isPlayer1) paddle1DY = dy;
-  });
+  }
 
-  socket.on("close", function() {
-    const wasPlayer0 = socket === player0;
-    const wasPlayer1 = socket === player1;
+  // Helper to handle disconnect
+  function handleClose(playerSocket: WebSocket) {
+    const wasPlayer0 = playerSocket === player0;
+    const wasPlayer1 = playerSocket === player1;
     if (!wasPlayer0 && !wasPlayer1) return;
 
     if (gameInterval) {
@@ -210,11 +206,11 @@ backend.get("/api/ws", { websocket: true }, (conn) => {
       gameInterval = null;
     }
 
-    if (player0 && player0 !== socket) {
+    if (player0 && player0 !== playerSocket) {
       player0.send(JSON.stringify({ type: "opponentDisconnected" }));
       player0.close();
     }
-    if (player1 && player1 !== socket) {
+    if (player1 && player1 !== playerSocket) {
       player1.send(JSON.stringify({ type: "opponentDisconnected" }));
       player1.close();
     }
@@ -222,7 +218,20 @@ backend.get("/api/ws", { websocket: true }, (conn) => {
     player0 = null;
     player1 = null;
     resetGame();
-  });
+  }
+
+  // Set up handlers for BOTH players
+  player0.on("message", (data: unknown) => handleMove(player0!, data));
+  player0.on("close", () => handleClose(player0!));
+  
+  player1.on("message", (data: unknown) => handleMove(player1!, data));
+  player1.on("close", () => handleClose(player1!));
+
+  setTimeout(function() {
+    if (player0 && player1) {
+      gameInterval = setInterval(update, TICK_RATE);
+    }
+  }, 5000);
 });
 
 await backend.listen({ host: "0.0.0.0", port: 3000 });
