@@ -46,7 +46,7 @@ body {
 	display: flex;
 	flex-direction: column;
 	/*align-items: flex-start;*/
-	gap: 30px;
+	gap: 20px; /*#30px;*/
 	/*position: relative;*/
 }
 
@@ -69,8 +69,24 @@ body {
 	box-sizing: border-box;
 }
 
+.player.toPlay {
+	color: green;
+	/*transition: color 1s ease;*/
+	animation: pulse 1.5s ease-in-out 100;
+}
+
+@keyframes pulse {
+	10%, 100% {
+		opacity: 100;
+	}
+	50% {
+		opacity: 0;
+	}
+}
+
 .connector {
 	position: relative;
+	top: 0px;
 	height: 20px;
 	/*width: 120px;*/
 }
@@ -85,15 +101,15 @@ body {
 	background: black;
 }
 
-.connector::after {
+/*.connector::after {
 	content: "";
 	position: absolute;
-	left: 160px; /*calc(100% + 25px); */
+	left: 160px; /*calc(100% + 25px); 
 	top: -10px;
 	width: 2px;	
 	height: 40px;
 	background: black;
-}
+}*/
 
 .horizontal-line {
 	position: absolute;

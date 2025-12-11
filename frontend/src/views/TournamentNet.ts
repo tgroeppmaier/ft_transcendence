@@ -1,3 +1,5 @@
+import { navigateTo } from "../router.js";
+
 /*type Player = string;
 
 interface Match {
@@ -108,7 +110,7 @@ export function TournamentNet() {
 	}*/
 
 
-	const pairWrapper = document.createElement("div");
+	/*const pairWrapper = document.createElement("div");
 	pairWrapper.classList.add("pairWrapper");
 
 
@@ -131,7 +133,7 @@ export function TournamentNet() {
 	pairWrapper.appendChild(vert_line);
 	pairWrapper.appendChild(hor_line);
 	tournamentNet.appendChild(pairWrapper);
-
+	*/
 
 	for (let i = 0; i < players.length; i += 2) {
 		const pairWrapper = document.createElement("div");
@@ -145,11 +147,22 @@ export function TournamentNet() {
 		const p2 = document.createElement("div");
 		p2.classList.add("player");
 		p2.textContent = players[i + 1] ?? "";
-		pairWrapper.appendChild(p2);
+		if ("" !== p2.textContent) {
+			pairWrapper.appendChild(p2);
+		}
 
-		const connector = document.createElement("div");
-		connector.classList.add("connector");
-		pairWrapper.appendChild(connector);
+		if (2 === i && "" !== p2.textContent) {
+			setTimeout(() => {
+				p1.classList.add("toPlay");
+				p2.classList.add("toPlay");
+				}, 2000);
+
+			setTimeout(() => { navigateTo("/local-game") }, 5000);
+		}
+
+		//const connector = document.createElement("div");
+		//connector.classList.add("connector");
+		//pairWrapper.appendChild(connector);
 
 		tournamentNet.appendChild(pairWrapper);
 
