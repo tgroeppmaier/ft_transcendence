@@ -1,5 +1,20 @@
 import { navigateTo } from "../router.js";
 
+function isInputValid(input: string, 
+											error: { errorMessage: string }): boolean {
+	input = input.trim();
+	if ("" === input.trim()) {
+		error.errorMessage = "input is empty";
+		return false;
+	}
+	if (input.includes(',')) {
+		error.errorMessage = "input contains ,";
+		return false;
+	}	
+	return true;
+}
+
+
 export function Tournament() {
   const tournament = document.createElement("div");
   tournament.classList.add("tournament");
@@ -49,13 +64,19 @@ export function Tournament() {
 		input.placeholder = "Enter the name of a player and press Enter";
 
 		input.addEventListener("keydown", (e) => {
-			if (e.key === "Enter")
-			{
-				input.disabled = true;
-				playerNames.push(input.value.trim());
-				createInput();
-				if (playerCount > 3) {
-					proceedButton.style.display = "inline-block";
+			let error: { errorMessage: string } = { errorMessage: "" };
+			if (e.key === "Enter") {
+				if (!isInputValid(input.value, error)) {
+					alert("Invalid input: " + error.errorMessage);
+				}
+				else
+				{
+					input.disabled = true;
+					playerNames.push(input.value.trim());
+					createInput();
+					if (playerCount > 3) {
+						proceedButton.style.display = "inline-block";
+					}
 				}
 			}
 		});
@@ -67,9 +88,9 @@ export function Tournament() {
 	}
 
 	proceedButton.addEventListener("click", () => {
-		//console.log("Player names: ", playerNames);
-		//alert("Proceeding to the tournament with players: " + playerNames.join(", "));
-		//alert("Proceeding to the tournament with players: " + playerNames);
+		console.log("Player names: ", playerNames);
+		alert("Proceeding to the tournament with players: " + playerNames.join(", "));
+		alert("Proceeding to the tournament with players: " + playerNames);
 		navigateTo("/tournamentNet", playerNames);
 	});
 
