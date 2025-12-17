@@ -34,7 +34,7 @@ export function localGame() {
   const leftPaddle: Paddle = {x: 0, y: canvas.height / 2 - paddleH / 2, w: paddleW, h: paddleH};
   const rightPaddle: Paddle = {x: canvas.width - paddleW, y: canvas.height / 2 - paddleH / 2, w: paddleW, h: paddleH};
   const score = { left: 0, right: 0};
-  const keyMap = { isWPressed: false, isSPressed: false, isUpPressed: false, isDownPressed: false };
+  const keyMap: Record<string, boolean> = { "w": false, "s": false, "ArrowUp": false, "ArrowDown": false };
   let gameOver = false;
 
   const resetBall = () => {
@@ -94,7 +94,7 @@ export function localGame() {
   // get timestamp
   let last = performance.now();
 
-  const handlePaddleColission = () => {
+  const handlePaddleCollision = () => {
     //checks if ball is within y axis range of the given paddle
     const checkYaxis = (paddle: Paddle) => {
       return(ball.y + ball.radius >= paddle.y && ball.y - ball.radius <= paddle.y + paddle.h) 
@@ -113,10 +113,10 @@ export function localGame() {
   function tick(now: number) {
     const dt = (now - last) / 1000; 
     last = now;
-    if (keyMap.isWPressed) leftPaddle.y -= paddleSpeed * dt;
-    if (keyMap.isSPressed) leftPaddle.y += paddleSpeed * dt;
-    if (keyMap.isUpPressed) rightPaddle.y -= paddleSpeed * dt;
-    if (keyMap.isDownPressed) rightPaddle.y += paddleSpeed * dt
+    if (keyMap["w"]) leftPaddle.y -= paddleSpeed * dt;
+    if (keyMap["s"]) leftPaddle.y += paddleSpeed * dt;
+    if (keyMap["ArrowUp"]) rightPaddle.y -= paddleSpeed * dt;
+    if (keyMap["ArrowDown"]) rightPaddle.y += paddleSpeed * dt
     
     // clamp to top and bottom. paddle y should be min 0 and max canvas.height - paddleH
     leftPaddle.y = Math.max(0, Math.min(canvas.height - paddleH, leftPaddle.y));
@@ -125,7 +125,7 @@ export function localGame() {
     ball.x += ball.vx * dt;
     ball.y += ball.vy * dt;
 
-    handlePaddleColission();
+    handlePaddleCollision();
     if (ball.x < 0) { 
       resetBall();
       score.right += 1;
@@ -138,7 +138,7 @@ export function localGame() {
     if (ball.y + ball.radius > canvas.height) { ball.y = canvas.height - ball.radius; ball.vy *= -1; }
     if (ball.y - ball.radius < 0) { ball.y = ball.radius; ball.vy *= -1; }
     
-    if (score.left > POINTS_TO_WIN || score.right > POINTS_TO_WIN) {
+    if (score.left >= POINTS_TO_WIN || score.right >= POINTS_TO_WIN) {
       gameOver = true;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       drawScores();
@@ -152,7 +152,6 @@ export function localGame() {
 
     render();
     rafID = requestAnimationFrame(tick);
-    
   }
 
   // event listener callback functions
@@ -162,17 +161,11 @@ export function localGame() {
   }
   
   const onKeyDown = (e: KeyboardEvent) => {
-    if (e.key === "w") keyMap.isWPressed = true;
-    if (e.key === "s") keyMap.isSPressed = true;
-    if (e.key === "ArrowUp") keyMap.isUpPressed = true;
-    if (e.key === "ArrowDown") keyMap.isDownPressed = true;
+    if (e.key in keyMap) keyMap[e.key] = true;
   }
   
   const onKeyUp = (e: KeyboardEvent) => {
-    if (e.key === "w") keyMap.isWPressed = false;
-    if (e.key === "s") keyMap.isSPressed = false;
-    if (e.key === "ArrowUp") keyMap.isUpPressed = false;
-    if (e.key === "ArrowDown") keyMap.isDownPressed = false; 
+    if (e.key in keyMap) keyMap[e.key] = false;
   }
   
   // adding event Listeners
