@@ -1,0 +1,13 @@
+{
+  "name": "test2",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch --preserveWatchOutput"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
+
