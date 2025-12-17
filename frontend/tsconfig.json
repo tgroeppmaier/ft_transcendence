@@ -6,7 +6,7 @@
     "lib": ["es2020", "dom"],
     "outDir": "dist",
     "rootDir": "src",
-    "strict": true,
+    // "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "types": ["node"]

@@ -1,26 +1,24 @@
 import { navigateTo } from "../router.js";
 
-// ---- Types & constants ------------------------------------------------------
-type Paddle = { x: number; y: number; width: number; height: number };
-type Ball = { x: number; y: number; radius: number; dx: number; dy: number };
+// scaling Factor 1 = 100%
+const PADDLE_WIDTH = 0.02;
+const PADDLE_HEIGHT = 0.2; 
+const PADDLE_SPEED = 0.6;
+const BALL_X_SPEED = 0.6
+const BALL_Y_SPEED = 0.4
+const BALL_RADIUS = 0.02
 
-const PADDLE_WIDTH = 10;
-const PADDLE_HEIGHT = 100;
-const BALL_RADIUS = 7;
-const BALL_SPEED_X = 5;
-const BALL_SPEED_Y = 5;
-const PADDLE_SPEED = 8;
-const FPS = 60;
-const COUNTDOWN_START = 5;
+const POINTS_TO_WIN = 3;
 
-// ---- View -------------------------------------------------------------------
 export function LocalGame() {
+  type Paddle = {x: number, y: number, w: number, h: number};
+  
   const gameContainer = document.createElement("div");
   gameContainer.innerHTML = `
-    <button id="back-to-main">Back to Main Menu</button>
-    <canvas id="board" height="600" width="800" style="border: 1px solid #000000; background-color: #000;"></canvas>
+  <button id="back-to-main">Back to Main Menu</button>
+  <canvas id="board" width="800" height="600" style="background-color: #000;"></canvas>
   `;
-
+  
   const backButton = gameContainer.querySelector("#back-to-main");
   if (backButton) {
     backButton.addEventListener("click", (e) => {
@@ -28,177 +26,172 @@ export function LocalGame() {
       navigateTo("/");
     });
   }
+  
+  const canvas = gameContainer.querySelector<HTMLCanvasElement>("#board");
+  if (!(canvas instanceof HTMLCanvasElement))
+    throw new Error("Canvas not found");
+  
+  const ctx = canvas.getContext("2d");  
+  if (!ctx)
+    throw new Error("Context not found");
 
-  const canvasElement = gameContainer.querySelector("#board");
-  if (!(canvasElement instanceof HTMLCanvasElement)) {
-    throw new Error("Canvas #board not found");
-  }
-  const canvas = canvasElement;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("2D context not available");
-  const ctxSafe = ctx as CanvasRenderingContext2D;
+  // actual pixel values
+  const paddleW = PADDLE_WIDTH * canvas.width;
+  const paddleH = PADDLE_HEIGHT * canvas.height;
+  const paddleSpeed = PADDLE_SPEED * canvas.height;
 
-  // ---- State ----------------------------------------------------------------
-  let leftPaddle: Paddle = {
-    x: 0,
-    y: canvas.height / 2 - PADDLE_HEIGHT / 2,
-    width: PADDLE_WIDTH,
-    height: PADDLE_HEIGHT,
-  };
-  let rightPaddle: Paddle = {
-    x: canvas.width - PADDLE_WIDTH,
-    y: canvas.height / 2 - PADDLE_HEIGHT / 2,
-    width: PADDLE_WIDTH,
-    height: PADDLE_HEIGHT,
-  };
-  let ball: Ball = {
-    x: canvas.width / 2,
-    y: canvas.height / 2,
-    radius: BALL_RADIUS,
-    dx: BALL_SPEED_X,
-    dy: BALL_SPEED_Y,
-  };
-  let leftScore = 0;
-  let rightScore = 0;
-  let countdown = COUNTDOWN_START;
-  let gameStarted = false;
-  let intervalId: ReturnType<typeof setInterval> | undefined;
+  // Game state
+  const ball = {x: canvas.width / 2, y: canvas.height / 2, vx: BALL_X_SPEED * canvas.width, vy: BALL_Y_SPEED * canvas.height, radius: BALL_RADIUS * canvas.width};
+  const leftPaddle: Paddle = {x: 0, y: canvas.height / 2 - paddleH / 2, w: paddleW, h: paddleH};
+  const rightPaddle: Paddle = {x: canvas.width - paddleW, y: canvas.height / 2 - paddleH / 2, w: paddleW, h: paddleH};
+  const score = { left: 0, right: 0};
+  const keyMap: Record<string, boolean> = { "w": false, "s": false, "ArrowUp": false, "ArrowDown": false };
+  let gameOver = false;
 
-  const keys: Record<string, boolean> = {
-    w: false,
-    s: false,
-    ArrowUp: false,
-    ArrowDown: false,
-  };
-
-  // ---- Helpers --------------------------------------------------------------
   const resetBall = () => {
-    ball = { ...ball, x: canvas.width / 2, y: canvas.height / 2, dx: -ball.dx, dy: BALL_SPEED_Y };
+    ball.x = canvas.width / 2; 
+    ball.y = canvas.height / 2; 
+    ball.vx *= -1; ball.vy *= -1
+  }
+
+  const resetPaddles = () => {
+    leftPaddle.y = canvas.height / 2 - paddleH / 2;
+    rightPaddle.y = canvas.height / 2 - paddleH / 2;
+  }
+  
+  const resetGame = () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    score.left = 0;
+    score.right = 0;
+    resetPaddles();
+    resetBall();
+    cancelAnimationFrame(rafID);
+    gameOver = false;
+    last = performance.now();
+    render()
+    rafID = requestAnimationFrame(tick);
+  }
+
+  const drawBall = () => {
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.closePath();
+  }
+
+  const drawScores = () => {
+    ctx.font = "50px Arial";
+    ctx.fillStyle = "white";
+    ctx.textAlign = "center";
+    ctx.fillText(String(score.left), canvas.width / 4, 50);
+    ctx.fillText(String(score.right), (3 * canvas.width) / 4, 50);
   };
 
   const drawPaddles = () => {
-    ctxSafe.fillStyle = "white";
-    ctxSafe.fillRect(leftPaddle.x, leftPaddle.y, leftPaddle.width, leftPaddle.height);
-    ctxSafe.fillRect(rightPaddle.x, rightPaddle.y, rightPaddle.width, rightPaddle.height);
-  };
+    ctx.fillStyle = "white";
+    ctx.fillRect(leftPaddle.x, leftPaddle.y, leftPaddle.w, leftPaddle.h);
+    ctx.fillRect(rightPaddle.x, rightPaddle.y, paddleW, paddleH);
+  }
 
-  const drawBall = () => {
-    ctxSafe.beginPath();
-    ctxSafe.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-    ctxSafe.fillStyle = "white";
-    ctxSafe.fill();
-    ctxSafe.closePath();
-  };
-
-  const drawScores = () => {
-    ctxSafe.font = "50px Arial";
-    ctxSafe.fillStyle = "white";
-    ctxSafe.textAlign = "center";
-    ctxSafe.fillText(String(leftScore), canvas.width / 4, 50);
-    ctxSafe.fillText(String(rightScore), (3 * canvas.width) / 4, 50);
-  };
-
-  const drawCountdown = () => {
-    ctxSafe.fillStyle = "white";
-    ctxSafe.font = "30px Arial";
-    ctxSafe.textAlign = "center";
-    ctxSafe.fillText(`Game starting in ${countdown}`, canvas.width / 2, canvas.height / 2 - 100);
-    ctxSafe.font = "20px Arial";
-    ctxSafe.fillText("Left Player: W/S", canvas.width / 2, canvas.height / 2);
-    ctxSafe.fillText("Right Player: ArrowUp/ArrowDown", canvas.width / 2, canvas.height / 2 + 50);
-  };
-
-  // ---- Render ---------------------------------------------------------------
   function render() {
-    ctxSafe.clearRect(0, 0, canvas.width, canvas.height);
-    if (!gameStarted) {
-      drawCountdown();
-      return;
-    }
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawPaddles();
     drawBall();
     drawScores();
   }
+  
+  // stores identifier of requestAnimationFrame
+  let rafID = 0;
+  // get timestamp
+  let last = performance.now();
 
-  // ---- Game loop ------------------------------------------------------------
-  function gameLoop() {
-    if (!gameStarted) return;
+  const handlePaddleCollision = () => {
+    //checks if ball is within y axis range of the given paddle
+    const checkYaxis = (paddle: Paddle) => {
+      return(ball.y + ball.radius >= paddle.y && ball.y - ball.radius <= paddle.y + paddle.h) 
+    }
+    
+    if (ball.vx < 0 && checkYaxis(leftPaddle) && ball.x - ball.radius < paddleW) {
+      ball.x = paddleW + ball.radius;
+      ball.vx *= -1;
+    }
+    else if (ball.vx > 0 && checkYaxis(rightPaddle) && ball.x + ball.radius > rightPaddle.x) {
+      ball.x = rightPaddle.x - ball.radius;
+      ball.vx *= -1;
+    }
+  }
 
-    // Move paddles
-    if (keys.w && leftPaddle.y > 0) leftPaddle.y -= PADDLE_SPEED;
-    if (keys.s && leftPaddle.y < canvas.height - leftPaddle.height) leftPaddle.y += PADDLE_SPEED;
-    if (keys.ArrowUp && rightPaddle.y > 0) rightPaddle.y -= PADDLE_SPEED;
-    if (keys.ArrowDown && rightPaddle.y < canvas.height - rightPaddle.height) rightPaddle.y += PADDLE_SPEED;
+  function tick(now: number) {
+    const dt = (now - last) / 1000; 
+    last = now;
+    if (keyMap["w"]) leftPaddle.y -= paddleSpeed * dt;
+    if (keyMap["s"]) leftPaddle.y += paddleSpeed * dt;
+    if (keyMap["ArrowUp"]) rightPaddle.y -= paddleSpeed * dt;
+    if (keyMap["ArrowDown"]) rightPaddle.y += paddleSpeed * dt
+    
+    // clamp to top and bottom. paddle y should be min 0 and max canvas.height - paddleH
+    leftPaddle.y = Math.max(0, Math.min(canvas.height - paddleH, leftPaddle.y));
+    rightPaddle.y = Math.max(0, Math.min(canvas.height - paddleH, rightPaddle.y));
+    
+    ball.x += ball.vx * dt;
+    ball.y += ball.vy * dt;
 
-    // Move ball
-    ball.x += ball.dx;
-    ball.y += ball.dy;
-
-    // Wall collision
-    if (ball.y + ball.radius > canvas.height || ball.y - ball.radius < 0) ball.dy *= -1;
-
-    // Paddle collision
-    const hitLeft =
-      ball.dx < 0 &&
-      ball.x - ball.radius < leftPaddle.x + leftPaddle.width &&
-      ball.y > leftPaddle.y &&
-      ball.y < leftPaddle.y + leftPaddle.height;
-
-    const hitRight =
-      ball.dx > 0 &&
-      ball.x + ball.radius > rightPaddle.x &&
-      ball.y > rightPaddle.y &&
-      ball.y < rightPaddle.y + rightPaddle.height;
-
-    if (hitLeft || hitRight) ball.dx *= -1;
-
-    // Scoring
-    if (ball.x - ball.radius < 0) {
-      rightScore++;
+    handlePaddleCollision();
+    if (ball.x < 0) { 
       resetBall();
-    } else if (ball.x + ball.radius > canvas.width) {
-      leftScore++;
+      score.right += 1;
+    } else if (ball.x > canvas.width) { 
       resetBall();
+      score.left += 1; 
+    }
+    
+    // top can bottom Wall colission
+    if (ball.y + ball.radius > canvas.height) { ball.y = canvas.height - ball.radius; ball.vy *= -1; }
+    if (ball.y - ball.radius < 0) { ball.y = ball.radius; ball.vy *= -1; }
+    
+    if (score.left >= POINTS_TO_WIN || score.right >= POINTS_TO_WIN) {
+      gameOver = true;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawScores();
+      ctx.font = "50px Arial";
+      ctx.fillStyle = "white";
+      ctx.textAlign = "center";
+      ctx.fillText(score.left > score.right ? "Player 1 wins" : "Player 2 wins", canvas.width / 2, canvas.height / 2);
+      ctx.fillText("click to play again", canvas.width / 2, (canvas.height / 3) * 2, canvas.width);
+      return;
     }
 
     render();
+    rafID = requestAnimationFrame(tick);
   }
 
-  // ---- Countdown & start ----------------------------------------------------
-  function startCountdown() {
-    render();
-    const countdownInterval = setInterval(() => {
-      countdown--;
-      render();
-      if (countdown === 0) {
-        clearInterval(countdownInterval);
-        gameStarted = true;
-        intervalId = setInterval(gameLoop, 1000 / FPS);
-      }
-    }, 1000);
+  // event listener callback functions
+  const onCanvasClick = () => {
+    if(gameOver) 
+      resetGame();
   }
-
-  // ---- Input ----------------------------------------------------------------
+  
   const onKeyDown = (e: KeyboardEvent) => {
-    if (e.key in keys) keys[e.key] = true;
-  };
-
+    if (e.key in keyMap) keyMap[e.key] = true;
+  }
+  
   const onKeyUp = (e: KeyboardEvent) => {
-    if (e.key in keys) keys[e.key] = false;
-  };
-
+    if (e.key in keyMap) keyMap[e.key] = false;
+  }
+  
+  // adding event Listeners
   document.addEventListener("keydown", onKeyDown);
   document.addEventListener("keyup", onKeyUp);
-
-  // ---- Init -----------------------------------------------------------------
-  startCountdown();
-
-  // ---- Cleanup --------------------------------------------------------------
+  canvas.addEventListener("click", onCanvasClick);
+  
+  // // // calls callback function tick and passes in timestamp
+  rafID = requestAnimationFrame(tick);
+  
   const cleanup = () => {
+    cancelAnimationFrame(rafID);
     document.removeEventListener("keydown", onKeyDown);
     document.removeEventListener("keyup", onKeyUp);
-    if (intervalId) clearInterval(intervalId);
-  };
-
+    canvas.removeEventListener("click", onCanvasClick);
+  }
   return { component: gameContainer, cleanup };
 }
