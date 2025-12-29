@@ -4,6 +4,7 @@ export function MainMenu() {
   mainMenu.innerHTML = `
     <h1>Welcome to Pong!</h1>
     <div id="game-mode-selector">
+      <button id="game-lobby">Game Lobby</button>
       <button id="local-game">Local Game</button>
       <button id="tournament">Tournament</button>
       <button id="remote-game">Remote Game</button>

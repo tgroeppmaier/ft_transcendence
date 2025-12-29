@@ -14,7 +14,11 @@ if (app) {
     } else if (target.id === "remote-game") {
       e.preventDefault();
       navigateTo("/remote-game");
-    }
+      
+    } else if (target.id === "game-lobby") {
+          e.preventDefault();
+          navigateTo("/game-lobby");
+        }
   });
 }
 

@@ -13,6 +13,7 @@ const POINTS_TO_WIN = 3;
 export function LocalGame() {
   type Paddle = {x: number, y: number, w: number, h: number};
   
+  
   const gameContainer = document.createElement("div");
   gameContainer.innerHTML = `
   <button id="back-to-main">Back to Main Menu</button>
@@ -121,6 +122,17 @@ export function LocalGame() {
     }
   }
 
+  const handleScore = () => {
+    if (ball.x < 0) { 
+      resetBall();
+      score.right += 1;
+    } else if (ball.x > canvas.width) { 
+      resetBall();
+      score.left += 1; 
+    }
+    
+  }
+
   function tick(now: number) {
     const dt = (now - last) / 1000; 
     last = now;
@@ -137,13 +149,7 @@ export function LocalGame() {
     ball.y += ball.vy * dt;
 
     handlePaddleCollision();
-    if (ball.x < 0) { 
-      resetBall();
-      score.right += 1;
-    } else if (ball.x > canvas.width) { 
-      resetBall();
-      score.left += 1; 
-    }
+    handleScore();
     
     // top can bottom Wall colission
     if (ball.y + ball.radius > canvas.height) { ball.y = canvas.height - ball.radius; ball.vy *= -1; }
