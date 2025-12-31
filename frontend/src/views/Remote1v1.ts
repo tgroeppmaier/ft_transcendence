@@ -1,13 +1,19 @@
 import { navigateTo } from "../router.js";
+import {
+  Ball,
+  Paddle,
+  Score,
+  drawBall,
+  drawPaddles,
+  drawScores,
+  drawMessage,
+} from "../utils/gameRenderer.js";
 
 // const cleanupFunction = (ws: WebSocket) => {
 //   ws.close();
 // }
 
-type Ball = { x: number; y: number; radius: number };
-type Paddle = { x: number; y: number; w: number; h: number };
 type State = "connecting" | "waiting" | "gameRunning" | "gameOver" | "gameFull";
-type Score = { left: number; right: number };
 type GameMessage = {
   ball: Ball;
   leftPaddle: Paddle;
@@ -17,11 +23,7 @@ type GameMessage = {
 };
 type ErrorMessage = { error: string };
 
-
-type MoveDirection = "up" | "down";
-type MoveAction = "start" | "stop";
-
-type Action = { move: MoveAction; direction: MoveDirection };
+type Action = { move: "start" | "stop"; direction: "up" | "down" };
 
 export async function remoteGame(existingGameId?: string) {
   let gameId = existingGameId;
@@ -32,7 +34,7 @@ export async function remoteGame(existingGameId?: string) {
     gameId = params.get("gameId") || undefined;
   }
 
-  // If no ID is provided, create a new game (Lobby "Create" behavior)
+  // If no ID is provided, create a new game 
   if (!gameId) {
     const response = await fetch("/api/games", { method: "POST"});
     const data = await response.json();
@@ -62,55 +64,9 @@ export async function remoteGame(existingGameId?: string) {
   if (!ctx) throw new Error("2D context not found");
 
   let ball: Ball = { x: 0, y: 0, radius: 0 };
-  let leftPaddle = { x: 0, y: 0, w: 0, h: 0 };
-  let rightPaddle = { x: 0, y: 0, w: 0, h: 0 };
+  let leftPaddle: Paddle = { x: 0, y: 0, w: 0, h: 0 };
+  let rightPaddle: Paddle = { x: 0, y: 0, w: 0, h: 0 };
   let score: Score = { left: 0, right: 0 };
-
-  const drawBall = () => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.beginPath();
-    ctx.arc(
-      ball.x * canvas.width,
-      ball.y * canvas.height,
-      ball.radius * canvas.width,
-      0,
-      Math.PI * 2,
-    );
-    ctx.fillStyle = "white";
-    ctx.fill();
-    ctx.closePath();
-  };
-
-  const drawPaddles = () => {
-    ctx.fillStyle = "white";
-    ctx.fillRect(
-      leftPaddle.x * canvas.width,
-      leftPaddle.y * canvas.height,
-      leftPaddle.w * canvas.width,
-      leftPaddle.h * canvas.height,
-    );
-    ctx.fillRect(
-      rightPaddle.x * canvas.width,
-      rightPaddle.y * canvas.height,
-      rightPaddle.w * canvas.width,
-      rightPaddle.h * canvas.height,
-    );
-  };
-
-  const drawScores = () => {
-    ctx.font = "50px Arial";
-    ctx.fillStyle = "white";
-    ctx.textAlign = "center";
-    ctx.fillText(String(score.left), canvas.width / 4, 50);
-    ctx.fillText(String(score.right), (3 * canvas.width) / 4, 50);
-  };
-
-  const drawMessage = (text: string) => {
-    ctx.fillStyle = "white";
-    ctx.font = "30px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText(text, canvas.width / 2, canvas.height / 2);
-  };
 
 
 
@@ -118,12 +74,16 @@ export async function remoteGame(existingGameId?: string) {
     const msg = JSON.parse(event.data) as GameMessage | ErrorMessage;
     
     if ("error" in msg) {
-      drawMessage(`Error: ${msg.error}`);
+      drawMessage(ctx, canvas, `Error: ${msg.error}`);
       return;
     }
     
     if (msg.state == "waiting") {
-      drawMessage("Waiting for other Player");
+      drawMessage(ctx, canvas, "Waiting for other Player");
+      return;
+    }
+    if (msg.state == "gameOver") {
+      drawMessage(ctx, canvas, "You won!");
       return;
     }
     ball = msg.ball;
@@ -131,9 +91,9 @@ export async function remoteGame(existingGameId?: string) {
     rightPaddle = msg.rightPaddle;
     score = msg.score;
 
-    drawBall();
-    drawPaddles();
-    drawScores();
+    drawBall(ctx, canvas, ball);
+    drawPaddles(ctx, canvas, leftPaddle, rightPaddle);
+    drawScores(ctx, canvas, score);
 
     // console.log("Ball position:", msg);
   };
