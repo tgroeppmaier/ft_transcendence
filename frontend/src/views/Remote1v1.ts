@@ -82,18 +82,18 @@ export async function remoteGame(existingGameId?: string) {
       drawMessage(ctx, canvas, "Waiting for other Player");
       return;
     }
-    if (msg.state == "gameOver") {
-      drawMessage(ctx, canvas, "You won!");
-      return;
-    }
     ball = msg.ball;
     leftPaddle = msg.leftPaddle;
     rightPaddle = msg.rightPaddle;
     score = msg.score;
 
+    drawScores(ctx, canvas, score);
+    if (msg.state == "gameOver") {
+      drawMessage(ctx, canvas, "You won!");
+      return;
+    }
     drawBall(ctx, canvas, ball);
     drawPaddles(ctx, canvas, leftPaddle, rightPaddle);
-    drawScores(ctx, canvas, score);
 
     // console.log("Ball position:", msg);
   };

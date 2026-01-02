@@ -34,6 +34,7 @@ const BALL_RADIUS = 0.02;
 
 const POINTS_TO_WIN = 3;
 const FPS = 1000 / 60;
+const MAX_BALL_SPEED = 1.5;
 
 class Player {
   public socket: WebSocket;
@@ -166,7 +167,7 @@ class Game {
   private resetBall() {
     this.ball.x = this.canvas.width / 2;
     this.ball.y = this.canvas.height / 2;
-    this.ball.vx *= -1;
+    this.ball.vx = this.ball.vx > 0 ? -BALL_X_SPEED : BALL_X_SPEED;
     this.ball.vy = (Math.random() - 0.5) * BALL_Y_SPEED * 2;
   }
 
@@ -182,31 +183,31 @@ class Game {
     this.resetPaddles();
   }
 
+  private bouncePaddle(paddleY: number) {
+    this.ball.vx = -this.ball.vx * 1.05;
+    if (Math.abs(this.ball.vx) > MAX_BALL_SPEED) {
+      this.ball.vx = this.ball.vx > 0 ? MAX_BALL_SPEED : -MAX_BALL_SPEED;
+    }
+    if (this.ball.y < paddleY + PADDLE_HEIGHT * 0.25) {
+      this.ball.vy = -Math.abs(this.ball.vy) - 0.01;
+    } else if (this.ball.y > paddleY + PADDLE_HEIGHT * 0.75) {
+      this.ball.vy = Math.abs(this.ball.vy) + 0.01;
+    }
+  }
+
   private handlePaddleCollision() {
     const checkYaxis = (paddle: Paddle) => {
-      return (
-        this.ball.y + this.ball.radius >= paddle.y &&
-        this.ball.y - this.ball.radius <= paddle.y + paddle.h
-      );
+      return ( this.ball.y + this.ball.radius >= paddle.y && this.ball.y - this.ball.radius <= paddle.y + paddle.h );
     };
 
-    if (
-      this.player1 &&
-      this.ball.vx < 0 &&
-      checkYaxis(this.player1?.paddle) &&
-      this.ball.x - this.ball.radius < this.player1?.paddle.w
-    ) {
-      this.ball.x = this.player1?.paddle.w + this.ball.radius;
-      this.ball.vx *= -1;
-    } else if (
-      this.player2 &&
-      this.ball.vx > 0 &&
-      checkYaxis(this.player2?.paddle) &&
-      this.ball.x + this.ball.radius > this.player2?.paddle.x
-    ) {
-      this.ball.x = this.player2?.paddle.x - this.ball.radius;
-      this.ball.vx *= -1;
-    }
+    if ( this.player1 && this.ball.vx < 0 && checkYaxis(this.player1?.paddle) &&
+      this.ball.x - this.ball.radius < this.player1.paddle.w ) { 
+        this.ball.x = this.player1.paddle.w + this.ball.radius;
+        this.bouncePaddle(this.player1.paddle.y) }
+    else if ( this.player2 && this.ball.vx > 0 && checkYaxis(this.player2.paddle) &&
+      this.ball.x + this.ball.radius > this.player2.paddle.x ) {
+        this.ball.x = this.player2.paddle.x - this.ball.radius; 
+        this.bouncePaddle(this.player2.paddle.y) }
   }
 
   private handlePaddleMovement(dt: number) {
@@ -214,9 +215,22 @@ class Game {
     this.player2?.paddleMove(dt);
   }
 
+  private createGameState() {
+    // Create a deep copy of the current game state
+    if (!this.player1 || !this.player2) return null;
+
+    const snapshot: GameMessage = {
+      ball: { ...this.ball },
+      leftPaddle: { ...this.player1.paddle },
+      rightPaddle: { ...this.player2.paddle },
+      state: this.state,
+      score: { ...this.score },
+    };
+    return snapshot;
+  }
+
+
   private handleScore() {
-    if (this.ball.x < 0) { this.resetBall(); this.score.right += 1; }
-    else if (this.ball.x > this.canvas.width) { this.resetBall(); this.score.left += 1; }
   }
 
   private handleWallCollision() {
@@ -251,22 +265,16 @@ class Game {
 
     this.handlePaddleMovement(dt);
     this.handlePaddleCollision();
-    this.handleScore();
+    if (this.ball.x < 0) { this.resetBall(); this.score.right += 1; }
+    else if (this.ball.x > this.canvas.width) { this.resetBall(); this.score.left += 1; }
 
-    // if (this.score.left >= POINTS_TO_WIN || this.score.right >= POINTS_TO_WIN) {
-    //   this.state = "gameOver";
-    //   this.gameState = {
-    //     ball: this.ball,
-    //     leftPaddle: this.player1.paddle,
-    //     rightPaddle: this.player2.paddle,
-    //     state: this.state,
-    //     score: this.score,
-    //   };
-    //   this.broadcast(this.gameState);
-    //   this.stop(false);
-    //   return;
-    // }
-
+    if (this.score.left >= POINTS_TO_WIN || this.score.right >= POINTS_TO_WIN) {
+      this.state = "gameOver";
+      const snap = this.createGameState();
+      if (snap) this.broadcast(snap);
+      this.stop(false);
+      return;
+    }
     this.handleWallCollision();
 
     this.gameState = {
