@@ -1,7 +1,7 @@
 import Fastify from "fastify";
 import websocket from "@fastify/websocket";
 import type { WebSocket } from "@fastify/websocket";
-import { randomUUID, UUID } from "crypto";
+import { randomUUID } from "crypto";
 import { validate as uuidValidate } from "uuid";
 import {
   CANVAS_WIDTH,
@@ -19,9 +19,11 @@ import {
 import {
   Ball,
   Paddle,
-  State,
+  GameStatus,
   Score,
-  GameMessage,
+  InitMessage,
+  StateSnapshot,
+  GameStateSnapshot,
   ErrorMessage,
   Action,
 } from "../../shared/types.js";
@@ -42,8 +44,8 @@ class Player {
   }
 
   public resetPaddle() {
-    this.paddle = this.side === "left" ? { x: 0, y: CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2, w: PADDLE_WIDTH, h: PADDLE_HEIGHT, }
-     : { x: CANVAS_WIDTH - PADDLE_WIDTH, y: CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2, w: PADDLE_WIDTH, h: PADDLE_HEIGHT, };
+    this.paddle = this.side === "left" ? { x: 0, y: CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2 }
+     : { x: CANVAS_WIDTH - PADDLE_WIDTH, y: CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2 };
   }
 
   public sendToSocket(msg: object) {
@@ -66,18 +68,17 @@ class Game {
   private ball: Ball;
   private canvas: { width: number; height: number };
   private score: Score;
-  private state: State;
+  private state: GameStatus;
   private lastUpdate: number;
   private player1: Player | null = null;
   private player2: Player | null = null;
   private gameInterval: ReturnType<typeof setInterval> | null;
-  private gameState: GameMessage | null = null;
   private onEmpty: () => void;
 
   constructor(id: string, onEmpty: () => void) {
     this.gameId = id;
     this.onEmpty = onEmpty;
-    this.ball = { x: 0.5, y: 0.5, vx: BALL_X_SPEED, vy: BALL_Y_SPEED, radius: BALL_RADIUS, };
+    this.ball = { x: 0.5, y: 0.5, vx: BALL_X_SPEED, vy: BALL_Y_SPEED };
     this.canvas = { width: 1, height: 1 };
     this.score = { left: 0, right: 0 };
     this.state = "waiting";
@@ -88,6 +89,15 @@ class Game {
   private broadcast(msg: object) {
     this.player1?.sendToSocket(msg);
     this.player2?.sendToSocket(msg);
+  }
+
+  private broadcastState() {
+    const msg: StateSnapshot = {
+      type: "state",
+      status: this.state,
+      score: [this.score.left, this.score.right],
+    };
+    this.broadcast(msg);
   }
 
   public getState() {
@@ -102,14 +112,19 @@ class Game {
       this.player2 = new Player(socket, "right");
       this.setupPlayer(this.player2);
     }
+    
+    // Broadcast state update when player joins
+    this.broadcastState();
+
     if (this.player1 && this.player2 && !this.gameInterval) {
       this.state = "gameRunning";
+      this.broadcastState();
       this.start();
     }
   }
 
   private setupPlayer(player: Player) {
-    player.sendToSocket({ type: "init", side: player.side });
+    player.sendToSocket({ type: "init", side: player.side } as InitMessage);
 
     player.socket.on("message", (data) => {
       try {
@@ -132,6 +147,7 @@ class Game {
         this.player2 = null;
       }
       this.state = "gameOver";
+      this.broadcastState();
       this.stop();
       this.onEmpty();
       backend.log.info(
@@ -191,16 +207,16 @@ class Game {
 
   private handlePaddleCollision() {
     const checkYaxis = (paddle: Paddle) => {
-      return ( this.ball.y + this.ball.radius >= paddle.y && this.ball.y - this.ball.radius <= paddle.y + paddle.h );
+      return ( this.ball.y + BALL_RADIUS >= paddle.y && this.ball.y - BALL_RADIUS <= paddle.y + PADDLE_HEIGHT );
     };
 
     if ( this.player1 && this.ball.vx < 0 && checkYaxis(this.player1?.paddle) &&
-      this.ball.x - this.ball.radius < this.player1.paddle.w ) { 
-        this.ball.x = this.player1.paddle.w + this.ball.radius;
+      this.ball.x - BALL_RADIUS < this.player1.paddle.x + PADDLE_WIDTH ) { 
+        this.ball.x = this.player1.paddle.x + PADDLE_WIDTH + BALL_RADIUS;
         this.bouncePaddle(this.player1.paddle.y) }
     else if ( this.player2 && this.ball.vx > 0 && checkYaxis(this.player2.paddle) &&
-      this.ball.x + this.ball.radius > this.player2.paddle.x ) {
-        this.ball.x = this.player2.paddle.x - this.ball.radius; 
+      this.ball.x + BALL_RADIUS > this.player2.paddle.x ) {
+        this.ball.x = this.player2.paddle.x - BALL_RADIUS; 
         this.bouncePaddle(this.player2.paddle.y) }
   }
 
@@ -209,31 +225,23 @@ class Game {
     this.player2?.paddleMove(dt);
   }
 
-  private createGameState() {
-    // Create a deep copy of the current game state
+  private createGameState(): GameStateSnapshot | null {
     if (!this.player1 || !this.player2) return null;
 
-    const snapshot: GameMessage = {
-      ball: { ...this.ball },
-      leftPaddle: { ...this.player1.paddle },
-      rightPaddle: { ...this.player2.paddle },
-      state: this.state,
-      score: { ...this.score },
+    return {
+      t: Date.now(),
+      b: [this.ball.x, this.ball.y],
+      p: [this.player1.paddle.y, this.player2.paddle.y],
     };
-    return snapshot;
-  }
-
-
-  private handleScore() {
   }
 
   private handleWallCollision() {
-    if (this.ball.y + this.ball.radius > this.canvas.height) {
-      this.ball.y = this.canvas.height - this.ball.radius;
+    if (this.ball.y + BALL_RADIUS > this.canvas.height) {
+      this.ball.y = this.canvas.height - BALL_RADIUS;
       this.ball.vy *= -1;
     }
-    if (this.ball.y - this.ball.radius < 0) {
-      this.ball.y = this.ball.radius;
+    if (this.ball.y - BALL_RADIUS < 0) {
+      this.ball.y = BALL_RADIUS;
       this.ball.vy *= -1;
     }
   }
@@ -244,13 +252,7 @@ class Game {
     this.lastUpdate = now;
 
     if (!this.player1 || !this.player2) {
-      this.broadcast({
-        ball: this.ball,
-        leftPaddle: this.player1?.paddle,
-        rightPaddle: this.player2?.paddle,
-        state: "gameOver",
-        score: this.score,
-      });
+      this.stop(); // Stop game if player missing
       return;
     }
 
@@ -259,26 +261,35 @@ class Game {
 
     this.handlePaddleMovement(dt);
     this.handlePaddleCollision();
-    if (this.ball.x < 0) { this.resetBall(); this.score.right += 1; }
-    else if (this.ball.x > this.canvas.width) { this.resetBall(); this.score.left += 1; }
+    
+    let scoreChanged = false;
+    if (this.ball.x < 0) { 
+      this.resetBall(); 
+      this.score.right += 1; 
+      scoreChanged = true;
+    }
+    else if (this.ball.x > this.canvas.width) { 
+      this.resetBall(); 
+      this.score.left += 1; 
+      scoreChanged = true;
+    }
+
+    if (scoreChanged) {
+        this.broadcastState();
+    }
 
     if (this.score.left >= POINTS_TO_WIN || this.score.right >= POINTS_TO_WIN) {
       this.state = "gameOver";
-      const snap = this.createGameState();
-      if (snap) this.broadcast(snap);
+      this.broadcastState();
       this.stop(false);
       return;
     }
     this.handleWallCollision();
 
-    this.gameState = {
-      ball: this.ball,
-      leftPaddle: this.player1.paddle,
-      rightPaddle: this.player2.paddle,
-      state: this.state,
-      score: this.score,
-    };
-    this.broadcast(this.gameState);
+    const snapshot = this.createGameState();
+    if (snapshot) {
+      this.broadcast(snapshot);
+    }
   }
 }
 
@@ -312,7 +323,7 @@ backend.get("/api/ws/:id", { websocket: true }, (socket, req) => {
   if (!uuidValidate(gameId)) {
     backend.log.warn({ gameId }, "Invalid game ID attempted");
     socket.send(
-      JSON.stringify({ error: "Invalid game ID format" } as ErrorMessage),
+      JSON.stringify({ type: "error", message: "Invalid game ID format" } as ErrorMessage),
     );
     socket.close();
     return;
@@ -322,7 +333,7 @@ backend.get("/api/ws/:id", { websocket: true }, (socket, req) => {
 
   if (!game) {
     backend.log.warn({ gameId }, "Game not found");
-    socket.send(JSON.stringify({ error: "Game not found" } as ErrorMessage));
+    socket.send(JSON.stringify({ type: "error", message: "Game not found" } as ErrorMessage));
     socket.close();
     return;
   }
@@ -333,7 +344,8 @@ backend.get("/api/ws/:id", { websocket: true }, (socket, req) => {
     );
     socket.send(
       JSON.stringify({
-        error: "Game is not accepting players",
+        type: "error",
+        message: "Game is not accepting players",
       } as ErrorMessage),
     );
     socket.close();

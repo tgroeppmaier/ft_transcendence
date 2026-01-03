@@ -1,6 +1,11 @@
 // src/utils/gameRenderer.ts
 
 import { Ball, Paddle, Score } from "../../../shared/types.js";
+import {
+  BALL_RADIUS,
+  PADDLE_WIDTH,
+  PADDLE_HEIGHT,
+} from "../../../shared/constants.js";
 
 export function drawBall(
   ctx: CanvasRenderingContext2D,
@@ -11,7 +16,7 @@ export function drawBall(
   ctx.arc(
     ball.x * canvas.width,
     ball.y * canvas.height,
-    ball.radius * canvas.width,
+    BALL_RADIUS * canvas.width,
     0,
     Math.PI * 2,
   );
@@ -30,14 +35,14 @@ export function drawPaddles(
   ctx.fillRect(
     leftPaddle.x * canvas.width,
     leftPaddle.y * canvas.height,
-    leftPaddle.w * canvas.width,
-    leftPaddle.h * canvas.height,
+    PADDLE_WIDTH * canvas.width,
+    PADDLE_HEIGHT * canvas.height,
   );
   ctx.fillRect(
     rightPaddle.x * canvas.width,
     rightPaddle.y * canvas.height,
-    rightPaddle.w * canvas.width,
-    rightPaddle.h * canvas.height,
+    PADDLE_WIDTH * canvas.width,
+    PADDLE_HEIGHT * canvas.height,
   );
 }
 

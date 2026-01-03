@@ -1,7 +1,8 @@
+export type GameStatus = "connecting" | "waiting" | "gameRunning" | "gameOver" | "gameFull";
+
 export interface Ball {
   x: number;
   y: number;
-  radius: number;
   vx: number;
   vy: number;
 }
@@ -9,8 +10,6 @@ export interface Ball {
 export interface Paddle {
   x: number;
   y: number;
-  w: number;
-  h: number;
 }
 
 export interface Score {
@@ -18,24 +17,31 @@ export interface Score {
   right: number;
 }
 
-export type State = "connecting" | "waiting" | "gameRunning" | "gameOver" | "gameFull";
-
 export interface InitMessage {
   type: "init";
   side: "left" | "right";
 }
 
-export type GameMessage = {
-  ball: Ball;
-  leftPaddle: Paddle;
-  rightPaddle: Paddle;
-  state: State;
-  score: Score;
-} | InitMessage;
-
 export interface ErrorMessage {
-  error: string;
+  type: "error";
+  message: string;
 }
+
+// High frequency update (Ball and Paddles)
+export interface GameStateSnapshot {
+  t: number;             // timestamp
+  b: [number, number];   // ball [x, y]
+  p: [number, number];   // paddles [leftY, rightY]
+}
+
+// Low frequency update (Score and Game Status)
+export interface StateSnapshot {
+  type: "state";
+  status: GameStatus;
+  score: [number, number]; // [left, right]
+}
+
+export type ServerMessage = InitMessage | GameStateSnapshot | StateSnapshot | ErrorMessage;
 
 export interface Action {
   move: "start" | "stop";
