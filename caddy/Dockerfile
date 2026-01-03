@@ -1,14 +1,19 @@
 # Stage 1: build frontend (TypeScript -> dist)
 FROM node:alpine AS builder
-WORKDIR /app/frontend
+WORKDIR /app
 
 # Install deps
-COPY ./frontend/package*.json ./
+COPY ./frontend/package*.json ./frontend/
+WORKDIR /app/frontend
 RUN npm ci || npm install
 
+# Copy source
+WORKDIR /app
+COPY shared ./shared
+COPY frontend ./frontend
+
 # Compile TS
-COPY ./frontend/tsconfig.json ./
-COPY ./frontend/src ./src
+WORKDIR /app/frontend
 RUN npm run build
 
 # Stage 2: serve with Caddy

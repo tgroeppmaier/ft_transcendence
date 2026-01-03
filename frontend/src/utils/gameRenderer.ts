@@ -1,29 +1,12 @@
 // src/utils/gameRenderer.ts
 
-export interface Ball {
-  x: number;
-  y: number;
-  radius: number;
-}
-
-export interface Paddle {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
-
-export interface Score {
-  left: number;
-  right: number;
-}
+import { Ball, Paddle, Score } from "../../../shared/types.js";
 
 export function drawBall(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
   ball: Ball
 ) {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.beginPath();
   ctx.arc(
     ball.x * canvas.width,

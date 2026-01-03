@@ -11,7 +11,9 @@ services:
     networks: [transnet]
 
   backend:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
     container_name: transcendence-backend
     networks: [transnet]
 

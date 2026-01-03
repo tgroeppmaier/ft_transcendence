@@ -3,38 +3,30 @@ import websocket from "@fastify/websocket";
 import type { WebSocket } from "@fastify/websocket";
 import { randomUUID, UUID } from "crypto";
 import { validate as uuidValidate } from "uuid";
-
-type Ball = { x: number; y: number; radius: number; vx: number; vy: number };
-type Paddle = { x: number; y: number; w: number; h: number };
-type State = "connecting" | "waiting" | "gameRunning" | "gameOver" | "gameFull";
-type Score = { left: number; right: number };
-type GameMessage = {
-  ball: Ball;
-  leftPaddle: Paddle;
-  rightPaddle: Paddle;
-  state: State;
-  score: Score;
-};
-type ErrorMessage = { error: string };
-type Action = {
-  move: "start" | "stop";
-  direction: "up" | "down";
-};
+import {
+  CANVAS_WIDTH,
+  CANVAS_HEIGHT,
+  PADDLE_WIDTH,
+  PADDLE_HEIGHT,
+  PADDLE_SPEED,
+  BALL_X_SPEED,
+  BALL_Y_SPEED,
+  BALL_RADIUS,
+  POINTS_TO_WIN,
+  FPS,
+  MAX_BALL_SPEED,
+} from "../../shared/constants.js";
+import {
+  Ball,
+  Paddle,
+  State,
+  Score,
+  GameMessage,
+  ErrorMessage,
+  Action,
+} from "../../shared/types.js";
 
 type Side = "left" | "right";
-// scaling Factor 1 = 100%
-const CANVAS_WIDTH = 1;
-const CANVAS_HEIGHT = 1;
-const PADDLE_WIDTH = 0.02;
-const PADDLE_HEIGHT = 0.2;
-const PADDLE_SPEED = 0.6;
-const BALL_X_SPEED = 0.6;
-const BALL_Y_SPEED = 0.4;
-const BALL_RADIUS = 0.02;
-
-const POINTS_TO_WIN = 3;
-const FPS = 1000 / 60;
-const MAX_BALL_SPEED = 1.5;
 
 class Player {
   public socket: WebSocket;
@@ -117,6 +109,8 @@ class Game {
   }
 
   private setupPlayer(player: Player) {
+    player.sendToSocket({ type: "init", side: player.side });
+
     player.socket.on("message", (data) => {
       try {
         const msg = JSON.parse(data.toString()) as Partial<Action>;
@@ -168,7 +162,7 @@ class Game {
     this.ball.x = this.canvas.width / 2;
     this.ball.y = this.canvas.height / 2;
     this.ball.vx = this.ball.vx > 0 ? -BALL_X_SPEED : BALL_X_SPEED;
-    this.ball.vy = (Math.random() - 0.5) * BALL_Y_SPEED * 2;
+    this.ball.vy = (Math.random() - 0.5) * BALL_Y_SPEED * 3;
   }
 
   private resetPaddles() {
