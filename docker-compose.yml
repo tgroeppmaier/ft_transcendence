@@ -7,7 +7,7 @@ services:
     ports:
       - "8080:80"
       - "8443:443"
-    depends_on: [backend]
+    depends_on: [backend, database]
     networks: [transnet]
 
   backend:
@@ -15,6 +15,20 @@ services:
       context: .
       dockerfile: ./backend/Dockerfile
     container_name: transcendence-backend
+    environment:
+      - JWT_SECRET=supersecret
+    networks: [transnet]
+
+  database:
+    build: ./database
+    container_name: transcendence-db
+    environment:
+      - JWT_SECRET=supersecret
+      - FRONTEND_URL=https://localhost:8443
+      - GOOGLE_REDIRECT_URI=https://localhost:8443/api/auth/google/callback
+      - DB_PATH=/app/data/users.db
+    volumes:
+      - ./database/data:/app/data
     networks: [transnet]
 
 

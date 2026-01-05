@@ -3,3 +3,5 @@
 .git
 .gitignore
 .env
+data/*.db
+uploads/*

@@ -65,8 +65,8 @@ export async function remoteGame(existingGameId?: string) {
   if (!ctx) throw new Error("2D context not found");
 
   let ball: Ball = { x: 0.5, y: 0.5, vx: 0, vy: 0 };
-  let leftPaddle: Paddle = { x: 0, y: 0.4 };
-  let rightPaddle: Paddle = { x: 1 - PADDLE_WIDTH, y: 0.4 };
+  let leftPaddle: Paddle = { x: 0, y: (CANVAS_HEIGHT - PADDLE_HEIGHT) / 2 };
+  let rightPaddle: Paddle = { x: CANVAS_WIDTH - PADDLE_WIDTH, y: (CANVAS_HEIGHT - PADDLE_HEIGHT) / 2 };
   let score: Score = { left: 0, right: 0 };
   let gameStatus: GameStatus = "waiting";
   let mySide: "left" | "right" | null = null;

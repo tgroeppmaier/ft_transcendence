@@ -352,7 +352,116 @@ backend.get("/api/ws/:id", { websocket: true }, (socket, req) => {
     return;
   }
 
-  game.addPlayer(socket);
-});
+    game.addPlayer(socket);
 
-await backend.listen({ host: "0.0.0.0", port: 3000 });
+  });
+
+  
+
+  // 3. REST API for Server-Side Pong Module (CLI Interop)
+
+  
+
+  // Get Game State (Polling)
+
+  backend.get("/api/games/:id/state", async (request, reply) => {
+
+    const { id } = request.params as { id: string };
+
+    const game = games.get(id);
+
+  
+
+    if (!game) {
+
+      return reply.status(404).send({ type: "error", message: "Game not found" });
+
+    }
+
+  
+
+    // Return the latest snapshot (or create one if null)
+
+    // Accessing private method via bracket notation for JS interop simulation
+
+    const snapshot = game["createGameState"](); 
+
+    return snapshot || { type: "error", message: "Game not initialized" };
+
+  });
+
+  
+
+  // Send Action (Control Paddle)
+
+  backend.post("/api/games/:id/action", async (request, reply) => {
+
+    const { id } = request.params as { id: string };
+
+    const body = request.body as {
+
+      side: "left" | "right";
+
+      move: "start" | "stop";
+
+      direction: "up" | "down";
+
+    };
+
+    
+
+    const game = games.get(id);
+
+  
+
+    if (!game) {
+
+      return reply.status(404).send({ type: "error", message: "Game not found" });
+
+    }
+
+  
+
+    // Access private players
+
+    const p1 = game["player1"];
+
+    const p2 = game["player2"];
+
+  
+
+    let targetPlayer: Player | null = null;
+
+    
+
+    if (body.side === "left") targetPlayer = p1;
+
+    else if (body.side === "right") targetPlayer = p2;
+
+  
+
+    if (targetPlayer) {
+
+      targetPlayer.keyMap[body.direction] = body.move === "start";
+
+      return { success: true, side: body.side, action: body.move, direction: body.direction };
+
+    } else {
+
+      // If player doesn't exist (e.g. headless slot), we can't control it with current architecture
+
+      // unless we modify Game to allow headless players. 
+
+      // For this demo, we assume player exists or we fail.
+
+      return reply.status(400).send({ type: "error", message: "Player not connected on that side" });
+
+    }
+
+  });
+
+  
+
+  await backend.listen({ host: "0.0.0.0", port: 3000 });
+
+  

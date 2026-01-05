@@ -3,7 +3,7 @@
     "target": "es2020",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "lib": ["es2020", "dom"],
+    "lib": ["es2020", "dom", "dom.iterable"],
     "outDir": "dist",
     // "strict": true,
     "esModuleInterop": true,

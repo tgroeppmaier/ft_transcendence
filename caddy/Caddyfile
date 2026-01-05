@@ -1,23 +1,42 @@
-:80 {
-	# Redirect to HTTPS on port 8443
-	redir https://{host}:8443{uri} permanent
+{
+	local_certs
 }
 
-:443 {
-	# "on_demand" tells Caddy to generate certs for ANY IP that connects
-	tls internal {
-		on_demand
-	}
+localhost {
+    # 1. WebSocket
+    @ws {
+        path /api/ws
+        path /api/ws/*
+    }
+    handle @ws {
+        reverse_proxy backend:3000
+    }
 
-	log
+    # 2. Game API
+    @games {
+        path /api/games
+        path /api/games/*
+    }
+    handle @games {
+        reverse_proxy backend:3000
+    }
 
-	handle /api/* {
-		reverse_proxy backend:3000
-	}
+    # 3. Database API
+    @api path /api/*
+    handle @api {
+        uri strip_prefix /api
+        reverse_proxy database:3000
+    }
 
-	handle {
-		root * /usr/share/caddy
-		file_server
-		try_files {path} {path}/ /index.html
-	}
+    # 4. Frontend
+    handle {
+        root * /usr/share/caddy
+        file_server
+        try_files {path} /index.html
+    }
+}
+
+# Redirect HTTP
+http://localhost:80 {
+    redir https://localhost:8443{uri}
 }
