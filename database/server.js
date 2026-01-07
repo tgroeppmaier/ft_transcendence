@@ -516,22 +516,17 @@ fastify.get('/friend-requests', { preHandler: [fastify.authenticate] }, async (r
 	}
 })
 
-fastify.post('/avatar', async (request, reply) => {
+fastify.post('/avatar', { preHandler: [fastify.authenticate] }, async (request, reply) => {
 	let db
 	try {
-		const token = request.cookies?.token
-		if (!token) {
-			return reply.code(401).send({ message: 'Not authenticated' })
-		}
-		const decoded = fastify.jwt.verify(token)
-		request.user = decoded
+		// Auth handled by preHandler
+		const { id } = request.user
 	}
 	catch (err) {
 		request.log.error(err)
 		return reply.code(401).send({ message: 'Authentication error' })
 	}
 	await ensureUploadsDir()
-	const { id } = request.user
 	const data = await request.file()
 	if (!data) {
 		return reply.code(400).send({ message: 'No file uploaded' })

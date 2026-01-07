@@ -1,5 +1,7 @@
 import Fastify from "fastify";
 import websocket from "@fastify/websocket";
+import cookie from "@fastify/cookie";
+import jwt from "@fastify/jwt";
 import type { WebSocket } from "@fastify/websocket";
 import { randomUUID } from "crypto";
 import { validate as uuidValidate } from "uuid";
@@ -296,10 +298,25 @@ class Game {
 const backend = Fastify({ logger: true });
 await backend.register(websocket);
 
+const JWT_SECRET = process.env.JWT_SECRET || 'change_this_to_a_strong_secret';
+await backend.register(cookie, { secret: JWT_SECRET });
+await backend.register(jwt, { secret: JWT_SECRET });
+
+backend.decorate("authenticate", async (request: any, reply: any) => {
+  try {
+    const token = request.cookies?.token;
+    if (!token) return reply.code(401).send({ message: 'Not authenticated' });
+    const decoded = backend.jwt.verify(token);
+    request.user = decoded;
+  } catch (err) {
+    return reply.code(401).send({ message: 'Authentication error' });
+  }
+});
+
 const games = new Map<string, Game>();
 
 // 1. API Endpoint for Game Creation
-backend.post("/api/games", async (request, reply) => {
+backend.post("/api/games", { preHandler: [(backend as any).authenticate] }, async (request, reply) => {
   const gameId = randomUUID();
   const newGame = new Game(gameId, () => {
     games.delete(gameId);
@@ -311,13 +328,25 @@ backend.post("/api/games", async (request, reply) => {
   return { gameId };
 });
 
-backend.get("/api/games", async (request, reply) => {
+backend.get("/api/games", { preHandler: [(backend as any).authenticate] }, async (request, reply) => {
   const gameIds = Array.from(games.keys());
   return { games: gameIds };
 });
 
 // 2. WebSocket Endpoint for Gameplay
 backend.get("/api/ws/:id", { websocket: true }, (socket, req) => {
+  const token = req.cookies?.token;
+  if (!token) {
+    socket.close();
+    return;
+  }
+  try {
+    backend.jwt.verify(token);
+  } catch {
+    socket.close();
+    return;
+  }
+
   const params = req.params as { id: string };
   const gameId = params.id;
   if (!uuidValidate(gameId)) {
@@ -364,7 +393,7 @@ backend.get("/api/ws/:id", { websocket: true }, (socket, req) => {
 
   // Get Game State (Polling)
 
-  backend.get("/api/games/:id/state", async (request, reply) => {
+  backend.get("/api/games/:id/state", { preHandler: [(backend as any).authenticate] }, async (request, reply) => {
 
     const { id } = request.params as { id: string };
 
@@ -394,7 +423,7 @@ backend.get("/api/ws/:id", { websocket: true }, (socket, req) => {
 
   // Send Action (Control Paddle)
 
-  backend.post("/api/games/:id/action", async (request, reply) => {
+  backend.post("/api/games/:id/action", { preHandler: [(backend as any).authenticate] }, async (request, reply) => {
 
     const { id } = request.params as { id: string };
 
