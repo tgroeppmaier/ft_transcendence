@@ -19,10 +19,15 @@ interface Paddle {
 
 export function LocalGameView() {
   const gameContainer = document.createElement("div");
+  gameContainer.className = "flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4";
   gameContainer.id = "local-game";
   gameContainer.innerHTML = `
-    <button id="back-to-main">Back to Main Menu</button>
-    <canvas id="board" width="800" height="600" style="background-color: #000;"></canvas>
+    <div class="mb-4">
+      <button id="back-to-main" class="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition shadow-sm">
+        ← Back to Home
+      </button>
+    </div>
+    <canvas id="board" width="800" height="600" class="rounded-xl shadow-2xl border-4 border-gray-800" style="background-color: #000;"></canvas>
   `;
   
   const backButton = gameContainer.querySelector("#back-to-main");

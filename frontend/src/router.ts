@@ -54,7 +54,7 @@ async function render(fullPath: string) {
     return;
 
   const pathname = fullPath.split('?')[0];
-  const publicRoutes = ["/", "/login", "/register"];
+  const publicRoutes = ["/", "/login", "/register", "/local-game"];
 
   if (!publicRoutes.includes(pathname)) {
     const isAuth = await checkAuth();
