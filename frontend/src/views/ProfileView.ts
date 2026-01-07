@@ -97,6 +97,42 @@ export function ProfileView() {
 
     loadProfile();
 
+    async function handlePlayGame() {
+        try {
+            const pendingResponse = await fetch('/api/game-pending', {
+                credentials: 'include'
+            });
+
+            if (pendingResponse.ok) {
+                const pendingGame: any = await pendingResponse.json();
+
+                const accept = confirm(`${pendingGame.player1_login} invited you. Do you want to accept?`);
+
+                if (accept) {
+                    const acceptResponse = await fetch(`/api/game/${pendingGame.id}/accept`, {
+                        method: 'POST',
+                        credentials: 'include'
+                    });
+
+                    if (acceptResponse.ok) {
+                        navigateTo(`/remote-game?gameId=${pendingGame.game_code}`);
+                        return;
+                    } else {
+                        const error = await acceptResponse.json();
+                        alert(`Error: ${error.message || 'Failed to accept game'}`);
+                    }
+                }
+                return;
+            }
+            // If no pending game, go to lobby
+            navigateTo('/game-lobby');
+
+        } catch (err) {
+            console.log('Error in handlePlayGame:', err);
+            navigateTo('/game-lobby');
+        }
+    }
+
     async function loadProfile() {
         try {
             const res = await fetch('/api/profile', { credentials: 'include' });
@@ -122,10 +158,32 @@ export function ProfileView() {
             if (loginInput) loginInput.value = data.login;
             if (emailInput) emailInput.value = data.email;
             updateGameStats(data);
+            
+            await checkGameInvitations();
         }
         catch (err) {
             console.error('Error loading profile:', err);
             navigateTo('/login');
+        }
+    }
+
+    async function checkGameInvitations() {
+        try {
+            const res = await fetch('/api/game-pending', { credentials: 'include' });
+            if (res.ok) {
+                const game = await res.json();
+                
+                // Show notification
+                const notificationEl = document.createElement('div');
+                notificationEl.className = 'fixed top-20 right-4 bg-green-600 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-4 z-40 animate-pulse cursor-pointer border-2 border-white';
+                notificationEl.innerHTML = `
+                    <span class="text-lg font-bold">🏓 1v1 Invite from ${game.player1_login}!</span>
+                `;
+                notificationEl.onclick = handlePlayGame;
+                document.body.appendChild(notificationEl);
+            }
+        } catch (e) {
+            console.error(e);
         }
     }
 

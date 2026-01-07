@@ -713,6 +713,49 @@ fastify.get('/auth/google/callback', async (req, reply) => {
 
 //GAME SESSION
 
+fastify.post('/game/invite', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+	let db
+	try {
+		const { friend_id, game_uuid } = request.body
+		const player1_id = request.user.id
+
+		if (!friend_id || !game_uuid) {
+			return reply.code(400).send({ message: "Friend ID and Game UUID are required" })
+		}
+
+		db = await openDB()
+
+		// Check friendship
+		const friendship = await db.get(
+			`SELECT id FROM friends WHERE 
+			 ((requester_id = ? AND addressee_id = ?) OR 
+			  (requester_id = ? AND addressee_id = ?))
+			 AND status = 'accepted'`,
+			[player1_id, friend_id, friend_id, player1_id]
+		)
+
+		if (!friendship) {
+			await db.close()
+			return reply.code(403).send({ message: "You can only invite friends" })
+		}
+
+		// Insert game record
+		await db.run(
+			`INSERT INTO games (player1_id, player2_id, status, game_code, created_at)
+			 VALUES (?, ?, 'waiting', ?, datetime('now'))`,
+			[player1_id, friend_id, game_uuid]
+		)
+
+		await db.close()
+		return reply.code(200).send({ message: "Invitation sent" })
+	}
+	catch (err) {
+		if (db) await db.close()
+		request.log.error(err)
+		return reply.code(500).send({ message: "Error sending invitation" })
+	}
+})
+
 fastify.post('/game/create', { preHandler: [fastify.authenticate] }, async (request, reply) => {
 	let db
 	try {
