@@ -26,7 +26,7 @@ import {
 //   ws.close();
 // }
 
-export async function remoteGame(existingGameId?: string) {
+export async function RemoteGameView(existingGameId?: string) {
   let gameId = existingGameId;
 
   // Check URL params if not provided

@@ -9,6 +9,7 @@ export function SearchView() {
              <button id="nav-menu" class="text-blue-800 font-semibold hover:opacity-60 transition">Back to Menu</button>
              <button id="nav-friends" class="text-blue-800 font-semibold hover:opacity-60 transition">Friends</button>
              <button id="nav-requests" class="text-blue-800 font-semibold hover:opacity-60 transition">Requests</button>
+             <button id="nav-profile" class="text-blue-800 font-semibold hover:opacity-60 transition">Profile</button>
         </div>
 
         <div class="mb-6 flex gap-2">
@@ -37,6 +38,7 @@ export function SearchView() {
     container.querySelector("#nav-menu")?.addEventListener("click", () => navigateTo("/menu"));
     container.querySelector("#nav-friends")?.addEventListener("click", () => navigateTo("/friends"));
     container.querySelector("#nav-requests")?.addEventListener("click", () => navigateTo("/requests"));
+    container.querySelector("#nav-profile")?.addEventListener("click", () => navigateTo("/profile"));
 
     btn.addEventListener("click", async () => {
         const query = input.value.trim();

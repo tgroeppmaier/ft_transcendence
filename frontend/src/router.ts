@@ -1,14 +1,15 @@
-import { MainMenu } from "./views/MainMenu.js";
-import { LocalGame } from "./views/LocalGame.js";
-import { Tournament } from "./views/Tournament.js";
-import { remoteGame } from "./views/Remote1v1.js";
-import { gameLobby } from "./views/lobby.js";
-import { LoginLanding } from "./views/LoginLanding.js";
+import { MainMenuView } from "./views/MainMenuView.js";
+import { LocalGameView } from "./views/LocalGameView.js";
+import { TournamentView } from "./views/TournamentView.js";
+import { RemoteGameView } from "./views/RemoteGameView.js";
+import { gameLobby } from "./views/LobbyView.js";
+import { LandingView } from "./views/LandingView.js";
 import { LoginView } from "./views/LoginView.js";
 import { RegisterView } from "./views/RegisterView.js";
 import { FriendsView } from "./views/FriendsView.js";
 import { RequestsView } from "./views/RequestsView.js";
 import { SearchView } from "./views/SearchView.js";
+import { ProfileView } from "./views/ProfileView.js";
 
 type View = {
   component: HTMLElement;
@@ -16,17 +17,18 @@ type View = {
 }
 
 const routes: Record<string, (existingGameId?: string) => View | Promise<View>> = {
-  "/": LoginLanding,
+  "/": LandingView,
   "/login": LoginView,
   "/register": RegisterView,
-  "/menu": MainMenu,
-  "/local-game": LocalGame,
-  "/remote-game": remoteGame,
+  "/menu": MainMenuView,
+  "/local-game": LocalGameView,
+  "/remote-game": RemoteGameView,
   "/game-lobby": gameLobby,
-  "/tournament": Tournament,
+  "/tournament": TournamentView,
   "/friends": FriendsView,
   "/requests": RequestsView,
-  "/search": SearchView
+  "/search": SearchView,
+  "/profile": ProfileView
 }
 
 const root = document.getElementById("app");

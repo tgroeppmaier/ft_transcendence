@@ -9,6 +9,7 @@ export function RequestsView() {
              <button id="nav-menu" class="text-blue-800 font-semibold hover:opacity-60 transition">Back to Menu</button>
              <button id="nav-friends" class="text-blue-800 font-semibold hover:opacity-60 transition">Friends</button>
              <button id="nav-search" class="text-blue-800 font-semibold hover:opacity-60 transition">Search Users</button>
+             <button id="nav-profile" class="text-blue-800 font-semibold hover:opacity-60 transition">Profile</button>
         </div>
         <div id="requestsContainer" class="flex flex-col gap-4"></div>
         <p id="emptyMessage" class="text-center text-gray-500 mt-4"></p>
@@ -21,6 +22,7 @@ export function RequestsView() {
     container.querySelector("#nav-menu")?.addEventListener("click", () => navigateTo("/menu"));
     container.querySelector("#nav-friends")?.addEventListener("click", () => navigateTo("/friends"));
     container.querySelector("#nav-search")?.addEventListener("click", () => navigateTo("/search"));
+    container.querySelector("#nav-profile")?.addEventListener("click", () => navigateTo("/profile"));
 
     loadRequests();
 

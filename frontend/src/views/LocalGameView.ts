@@ -10,14 +10,19 @@ const BALL_RADIUS = 0.02
 
 const POINTS_TO_WIN = 3;
 
-export function LocalGame() {
-  type Paddle = {x: number, y: number, w: number, h: number};
-  
-  
+interface Paddle {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export function LocalGameView() {
   const gameContainer = document.createElement("div");
+  gameContainer.id = "local-game";
   gameContainer.innerHTML = `
-  <button id="back-to-main">Back to Main Menu</button>
-  <canvas id="board" width="800" height="600" style="background-color: #000;"></canvas>
+    <button id="back-to-main">Back to Main Menu</button>
+    <canvas id="board" width="800" height="600" style="background-color: #000;"></canvas>
   `;
   
   const backButton = gameContainer.querySelector("#back-to-main");

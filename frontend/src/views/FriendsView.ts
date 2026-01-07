@@ -9,6 +9,7 @@ export function FriendsView() {
              <button id="nav-menu" class="text-blue-800 font-semibold hover:opacity-60 transition">Back to Menu</button>
              <button id="nav-search" class="text-blue-800 font-semibold hover:opacity-60 transition">Search Users</button>
              <button id="nav-requests" class="text-blue-800 font-semibold hover:opacity-60 transition">Requests</button>
+             <button id="nav-profile" class="text-blue-800 font-semibold hover:opacity-60 transition">Profile</button>
         </div>
         <div id="friendsMessage" class="text-gray-600 mb-4"></div>
         <div id="friendsList"></div>
@@ -21,6 +22,7 @@ export function FriendsView() {
     container.querySelector("#nav-menu")?.addEventListener("click", () => navigateTo("/menu"));
     container.querySelector("#nav-search")?.addEventListener("click", () => navigateTo("/search"));
     container.querySelector("#nav-requests")?.addEventListener("click", () => navigateTo("/requests"));
+    container.querySelector("#nav-profile")?.addEventListener("click", () => navigateTo("/profile"));
 
     loadFriends();
 
