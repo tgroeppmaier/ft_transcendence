@@ -38,12 +38,31 @@ export function navigateTo(pathname: string) {
   render(pathname);
 }
 
+async function checkAuth(): Promise<boolean> {
+  try {
+    const res = await fetch("/api/profile", { credentials: "include" });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 async function render(fullPath: string) {
   if (!root) 
     return;
 
-  // Extract pure path for route matching
   const pathname = fullPath.split('?')[0];
+  const publicRoutes = ["/", "/login", "/register"];
+
+  if (!publicRoutes.includes(pathname)) {
+    const isAuth = await checkAuth();
+    if (!isAuth) {
+      if (pathname !== "/login") {
+         navigateTo("/login");
+      }
+      return;
+    }
+  }
 
   if (currentCleanup) {
     currentCleanup();
