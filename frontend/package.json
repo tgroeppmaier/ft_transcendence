@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "mkdir -p dist && npm run build:css && tsc",
+    "build:css": "tailwindcss -i ./src/input.css -o ./dist/style.css",
     "start": "node dist/index.js"
   },
   "dependencies": {
@@ -12,6 +13,7 @@
     "ws": "^8.18.3"
   },
   "devDependencies": {
+    "tailwindcss": "^3.4.1",
     "typescript": "^5.6.0",
     "@types/node": "^20.11.30",
     "@types/ws": "^8.18.1"

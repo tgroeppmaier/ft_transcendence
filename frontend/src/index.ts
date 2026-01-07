@@ -18,7 +18,16 @@ if (app) {
     } else if (target.id === "game-lobby") {
           e.preventDefault();
           navigateTo("/game-lobby");
-        }
+        } else if (target.id === "friends-menu") {
+      e.preventDefault();
+      navigateTo("/friends");
+    } else if (target.id === "requests-menu") {
+      e.preventDefault();
+      navigateTo("/requests");
+    } else if (target.id === "search-menu") {
+      e.preventDefault();
+      navigateTo("/search");
+    }
   });
 }
 

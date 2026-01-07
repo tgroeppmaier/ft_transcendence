@@ -6,6 +6,9 @@ import { gameLobby } from "./views/lobby.js";
 import { LoginLanding } from "./views/LoginLanding.js";
 import { LoginView } from "./views/LoginView.js";
 import { RegisterView } from "./views/RegisterView.js";
+import { FriendsView } from "./views/FriendsView.js";
+import { RequestsView } from "./views/RequestsView.js";
+import { SearchView } from "./views/SearchView.js";
 
 type View = {
   component: HTMLElement;
@@ -20,7 +23,10 @@ const routes: Record<string, (existingGameId?: string) => View | Promise<View>> 
   "/local-game": LocalGame,
   "/remote-game": remoteGame,
   "/game-lobby": gameLobby,
-  "/tournament": Tournament
+  "/tournament": Tournament,
+  "/friends": FriendsView,
+  "/requests": RequestsView,
+  "/search": SearchView
 }
 
 const root = document.getElementById("app");

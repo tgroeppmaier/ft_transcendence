@@ -295,11 +295,15 @@ fastify.post('/friend-request', { preHandler: [fastify.authenticate] }, async (r
 		const { addressee_id } = request.body
 		const requester_id = request.user.id
 
+		request.log.info(`[Friend Request] Requester: ${requester_id}, Addressee: ${addressee_id}`)
+
 		if (!addressee_id) {
+			request.log.warn('[Friend Request] Missing addressee_id')
 			return reply.code(400).send({ message: "Addressee ID is required" })
 		}
 
 		if (requester_id === addressee_id) {
+			request.log.warn('[Friend Request] User tried to add themselves')
 			return reply.code(400).send({ message: "You cannot add yourself" })
 		}
 
@@ -320,6 +324,7 @@ fastify.post('/friend-request', { preHandler: [fastify.authenticate] }, async (r
 
 		if (existingRequest) {
 			await db.close()
+			request.log.warn(`[Friend Request] Existing request found: ${JSON.stringify(existingRequest)}`)
 			if (existingRequest.status === 'pending') {
 				return reply.code(400).send({ message: "Friend request already sent" })
 			} else if (existingRequest.status === 'accepted') {

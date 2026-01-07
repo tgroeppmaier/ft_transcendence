@@ -8,6 +8,10 @@ export function MainMenu() {
       <button id="local-game">Local Game</button>
       <button id="tournament">Tournament</button>
       <button id="remote-game">Remote Game</button>
+      <div class="separator" style="margin: 10px 0; border-top: 1px solid #ccc;"></div>
+      <button id="friends-menu">Friends</button>
+      <button id="requests-menu">Friend Requests</button>
+      <button id="search-menu">Search Users</button>
     </div>
   `;
   return { component: mainMenu };
