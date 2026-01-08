@@ -25,10 +25,15 @@ export function FriendsView() {
     container.querySelector("#nav-profile")?.addEventListener("click", () => navigateTo("/profile"));
 
     loadFriends();
+    const intervalId = setInterval(loadFriends, 5000);
 
     async function loadFriends() {
         try {
-            message.textContent = "Loading...";
+            // Only show "Loading..." on first load if list is empty, otherwise silent update
+            if (friendsList.children.length === 0 && message.textContent !== "") {
+                 message.textContent = "Loading...";
+            }
+            
             const res = await fetch("/api/friends", {
                 credentials: "include"
             });
@@ -43,6 +48,8 @@ export function FriendsView() {
                 return;
             }
             message.textContent = "";
+            
+            // Re-render list (simple approach, could be diffed for optimization but this is fine)
             friendsList.innerHTML = "";
             data.friends.forEach((friend: any) => {
                 const card = document.createElement("div");
@@ -81,7 +88,7 @@ export function FriendsView() {
         }
         catch (err) {
             console.error("Load friends error:", err);
-            message.textContent = "Error loading friends.";
+            // Don't overwrite message on poll fail
         }
     }
 
@@ -102,6 +109,7 @@ export function FriendsView() {
             }
             cardElement.remove();
             alert("Friend removed");
+            loadFriends(); // Refresh list immediately
         }
         catch (err) {
             console.error("Remove friend error:", err);
@@ -109,5 +117,5 @@ export function FriendsView() {
         }
     }
 
-    return { component: container };
+    return { component: container, cleanup: () => clearInterval(intervalId) };
 }

@@ -908,7 +908,7 @@ fastify.get('/game-pending', { preHandler: [fastify.authenticate] }, async (requ
 		await db.close()
 
 		if (!game) {
-			return reply.code(404).send({ message: "No pending games" })
+			return reply.send(null)
 		}
 
 		return reply.send(game)

@@ -40,6 +40,92 @@ export function SearchView() {
     container.querySelector("#nav-requests")?.addEventListener("click", () => navigateTo("/requests"));
     container.querySelector("#nav-profile")?.addEventListener("click", () => navigateTo("/profile"));
 
+    let currentQuery = "";
+    
+    // Polling function
+    const performSearch = async (silent = false) => {
+        if (!currentQuery) return;
+        
+        try {
+            const res = await fetch(`/api/search?query=${encodeURIComponent(currentQuery)}`, {
+                credentials: "include"
+            });
+
+            const data = await res.json();
+            
+            // If fetching silently (polling), we don't want to clear the list if fetching fails temporarily
+            // But if we get a result, we update.
+            if (!res.ok) {
+                if (!silent) {
+                    message.textContent = data.message || "Search error";
+                    resultsSection.classList.add("hidden");
+                }
+                return;
+            }
+
+            if (data.users.length === 0) {
+                if (!silent) message.textContent = "No users found.";
+                resultsSection.classList.add("hidden");
+                resultsList.innerHTML = "";
+                return;
+            }
+
+            if (!silent) {
+                resultsSection.classList.remove("hidden");
+                message.textContent = "";
+            }
+            
+            // Only update DOM if we have results (to prevent flashing empty if poller fails)
+            if (data.users.length > 0) {
+                resultsSection.classList.remove("hidden");
+                resultsList.innerHTML = "";
+                data.users.forEach((u: any) => {
+                    const card = document.createElement("div");
+                    card.className = "flex items-center justify-between p-3 bg-gray-100 rounded-xl";
+                    
+                    const isOnline = u.onlineStatus === "online";
+                    const statusColor = isOnline ? "bg-green-500" : "bg-gray-400";
+                    const statusText = isOnline ? "Online" : "Offline";
+
+                    card.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="relative">
+                            <img src="/uploads/${u.avatar ? u.avatar : 'default.png'}"
+                            class="w-12 h-12 rounded-full object-cover">
+                            <div class="${statusColor} w-3 h-3 rounded-full absolute bottom-0 right-0 border-2 border-white" title="${statusText}"></div>
+                        </div>
+                        <div>
+                            <p class="font-semibold">${u.login}</p>
+                            <p class="text-gray-500 text-sm">${u.email}</p>
+                            <p class="text-xs ${isOnline ? 'text-green-600' : 'text-gray-500'} font-medium">${statusText}</p>
+                        </div>
+                    </div>
+                    <button class="add-friend-btn bg-blue-600 text-white px-3 py-1 rounded-lg hover:opacity-60 transition" data-user-id="${u.id}">
+                        Add
+                    </button>
+                    `;
+
+                    resultsList.appendChild(card);
+                    const addBtn = card.querySelector('.add-friend-btn') as HTMLButtonElement;
+
+                    if (addBtn) {
+                        addBtn.addEventListener("click", async () => {
+                            console.log("Clicked Add for user:", u.id);
+                            await sendFriendRequest(u.id, addBtn);
+                        });
+                    }
+                });
+            }
+
+        }
+        catch (err) {
+            console.error("Search error:", err);
+            if (!silent) message.textContent = "Error performing search.";
+        }
+    };
+
+    const intervalId = setInterval(() => performSearch(true), 5000);
+
     btn.addEventListener("click", async () => {
         const query = input.value.trim();
         message.textContent = "";
@@ -47,64 +133,12 @@ export function SearchView() {
         if (!query) {
             message.textContent = "Enter a username to search.";
             resultsSection.classList.add("hidden");
+            currentQuery = "";
             return;
         }
-
-        try {
-            const res = await fetch(`/api/search?query=${encodeURIComponent(query)}`, {
-                credentials: "include"
-            });
-
-            const data = await res.json();
-            resultsList.innerHTML = "";
-
-            if (!res.ok) {
-                message.textContent = data.message || "Search error";
-                resultsSection.classList.add("hidden");
-                return;
-            }
-
-            if (data.users.length === 0) {
-                message.textContent = "No users found.";
-                resultsSection.classList.add("hidden");
-                return;
-            }
-
-            resultsSection.classList.remove("hidden");
-
-            data.users.forEach((u: any) => {
-                const card = document.createElement("div");
-                card.className = "flex items-center justify-between p-3 bg-gray-100 rounded-xl";
-                card.innerHTML = `
-                <div class="flex items-center gap-3">
-                    <img src="/uploads/${u.avatar ? u.avatar : 'default.png'}"
-                    class="w-12 h-12 rounded-full object-cover">
-                    <div>
-                        <p class="font-semibold">${u.login}</p>
-                        <p class="text-gray-500 text-sm">${u.email}</p>
-                    </div>
-                </div>
-                <button class="add-friend-btn bg-blue-600 text-white px-3 py-1 rounded-lg hover:opacity-60 transition" data-user-id="${u.id}">
-                    Add
-                </button>
-                `;
-
-                resultsList.appendChild(card);
-                const addBtn = card.querySelector('.add-friend-btn') as HTMLButtonElement;
-
-                if (addBtn) {
-                    addBtn.addEventListener("click", async () => {
-                        console.log("Clicked Add for user:", u.id);
-                        await sendFriendRequest(u.id, addBtn);
-                    });
-                }
-            });
-
-        }
-        catch (err) {
-            console.error("Search error:", err);
-            message.textContent = "Error performing search.";
-        }
+        
+        currentQuery = query;
+        await performSearch(false);
     });
 
     async function sendFriendRequest(addresseeId: number, btn: HTMLButtonElement) {
@@ -144,5 +178,5 @@ export function SearchView() {
         }
     }
 
-    return { component: container };
+    return { component: container, cleanup: () => clearInterval(intervalId) };
 }
