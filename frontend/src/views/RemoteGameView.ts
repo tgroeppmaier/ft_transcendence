@@ -172,68 +172,55 @@ export async function RemoteGameView(existingGameId?: string) {
       score.left = msg.score[0];
       score.right = msg.score[1];
       
-      // Force redraw of score/status
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawScores(ctx, canvas, score);
-      drawBall(ctx, canvas, ball);
-      drawPaddles(ctx, canvas, leftPaddle, rightPaddle);
-      
       if (gameStatus === "waiting") {
-        drawMessage(ctx, canvas, "Waiting for other Player");
-        // Show invite button if I am player 1 (left)
         if (mySide === "left") {
             inviteOverlay.classList.remove("hidden");
         }
       } else {
         inviteOverlay.classList.add("hidden");
-        inviteModal.classList.add("hidden"); // Auto close modal if game starts
-      }
-      
-      if (gameStatus === "gameOver") {
-        if (mySide === "left") {
-          drawMessage(ctx, canvas, score.left > score.right ? "You won!" : "You lost!");
-        } else if (mySide === "right") {
-          drawMessage(ctx, canvas, score.right > score.left ? "You won!" : "You lost!");
-        } else {
-          drawMessage(ctx, canvas, "Game Over");
-        }
+        inviteModal.classList.add("hidden"); 
       }
       return;
     }
     
     // 4. Game Tick (Ball/Paddles)
     if ("t" in msg) {
-      // Update local state from snapshot
       ball.x = msg.b[0];
       ball.y = msg.b[1];
       leftPaddle.y = msg.p[0];
       rightPaddle.y = msg.p[1];
+    }
+  };
 
-      // Render Loop
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+  let rafID = 0;
 
-      drawScores(ctx, canvas, score);
-      
-      if (gameStatus === "gameOver") {
-         if (mySide === "left") {
-          drawMessage(ctx, canvas, score.left > score.right ? "You won!" : "You lost!");
-        } else if (mySide === "right") {
-          drawMessage(ctx, canvas, score.right > score.left ? "You won!" : "You lost!");
-        } else {
-          drawMessage(ctx, canvas, "Game Over");
-        }
-        return;
+  function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    drawScores(ctx, canvas, score);
+    
+    if (gameStatus === "waiting") {
+      drawMessage(ctx, canvas, "Waiting for other Player");
+    } 
+    else if (gameStatus === "gameOver") {
+       if (mySide === "left") {
+        drawMessage(ctx, canvas, score.left > score.right ? "You won!" : "You lost!");
+      } else if (mySide === "right") {
+        drawMessage(ctx, canvas, score.right > score.left ? "You won!" : "You lost!");
+      } else {
+        drawMessage(ctx, canvas, "Game Over");
       }
-      
-      if (gameStatus === "waiting") {
-        drawMessage(ctx, canvas, "Waiting for other Player");
-        return;
-      }
-
+    } else {
+      // Game Running
       drawBall(ctx, canvas, ball);
       drawPaddles(ctx, canvas, leftPaddle, rightPaddle);
     }
-  };
+
+    rafID = requestAnimationFrame(render);
+  }
+
+  // Start render loop
+  rafID = requestAnimationFrame(render);
 
   const keyMap: Record<string, boolean> = { up: false, down: false };
 
@@ -270,6 +257,7 @@ export async function RemoteGameView(existingGameId?: string) {
   return {
     component: gameContainer,
     cleanup: () => {
+      cancelAnimationFrame(rafID);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
       ws.close();
