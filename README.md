@@ -1,465 +1,137 @@
-# Transcendence
+# ft_transcendence
 
-A microservices-based web application simulating a bouncing ball game, built with TypeScript, Node.js, Fastify, and Docker. It features real-time WebSocket communication between frontend, backend, and engine services, orchestrated via Caddy as a reverse proxy.
+A robust, microservices-based implementation of the classic Pong game, featuring real-time multiplayer, social features, and a scalable architecture.
 
-## Table of Contents
-- [Transcendence](#transcendence)
-  - [Table of Contents](#table-of-contents)
-  - [Overview](#overview)
-    - [Frontend](#frontend)
-    - [Backend](#backend)
-    - [Engine](#engine)
-  - [Setup](#setup)
-    - [Frontend: TypeScript Dev Setup](#frontend-typescript-dev-setup)
-    - [Local Dev Server (Serve over HTTP)](#local-dev-server-serve-over-http)
-    - [Docker + Caddy (Production-like Serve)](#docker--caddy-production-like-serve)
-  - [Architecture and Dataflow](#architecture-and-dataflow)
-    - [Services](#services)
-    - [Data Flow (Detailed)](#data-flow-detailed)
-      - [1. User Opens Website](#1-user-opens-website)
-      - [2. Caddy Receives Request](#2-caddy-receives-request)
-      - [3. Frontend Loads in Browser](#3-frontend-loads-in-browser)
-      - [4. Caddy Routes WebSocket Connection](#4-caddy-routes-websocket-connection)
-      - [5. Backend Receives WebSocket Connection](#5-backend-receives-websocket-connection)
-      - [6. Engine Broadcasts Ball State](#6-engine-broadcasts-ball-state)
-      - [7. Backend Forwards Ball State](#7-backend-forwards-ball-state)
-      - [8. Frontend Displays Data](#8-frontend-displays-data)
-    - [Container Communication Diagram](#container-communication-diagram)
-    - [Key Points](#key-points)
-  - [Routing System](#routing-system)
-    - [Overview](#overview-1)
-    - [How Routing Works (Step by Step)](#how-routing-works-step-by-step)
-      - [1. Application Initialization](#1-application-initialization)
-      - [2. Route Registry](#2-route-registry)
-      - [3. User Clicks Navigation Button](#3-user-clicks-navigation-button)
-      - [4. Navigation Happens](#4-navigation-happens)
-      - [5. View Switching (render function)](#5-view-switching-render-function)
-      - [6. Cleanup Pattern](#6-cleanup-pattern)
-      - [7. Browser Back/Forward Buttons](#7-browser-backforward-buttons)
-    - [Data Flow Diagram](#data-flow-diagram)
-    - [Key Concepts](#key-concepts)
-  - [Useful commands](#useful-commands)
-    - [Docker](#docker)
+## 🏗 Architecture
 
----
+The application is composed of **5 distinct services**, orchestrated via Docker Compose.
 
-## Overview
+### 1. **Caddy (Reverse Proxy)**
+- **Role**: The single entry point for all client requests.
+- **Functions**:
+  - Handles HTTPS/TLS termination.
+  - Serves the **Frontend** static files.
+  - Routes API requests to the appropriate internal services based on URL paths.
 
-This project demonstrates a full-stack application with separated concerns: a user interface, API bridge, and game logic engine, all communicating via WebSockets for real-time updates.
+### 2. **Frontend (UI)**
+- **Tech**: TypeScript, Tailwind CSS.
+- **Role**: Single Page Application (SPA).
+- **Function**: Renders the interface, manages game rendering via Canvas API, and handles user interactions.
 
-### Frontend
-A single-page application (SPA) built with TypeScript, auto-compiled from `src/` to `dist/` as ES modules. It renders the UI and establishes WebSocket connections to the backend for real-time ball state updates.
+### 3. **Database Service (Business Logic & Persistence)**
+- **Tech**: Node.js (Fastify), SQLite.
+- **Role**: The "Brain" of the platform.
+- **Functions**:
+  - **Auth**: User registration, Login (JWT), Google OAuth.
+  - **Persistence**: Stores Users, Friends, Match History, and Tournament configurations.
+  - **API**: Handles all REST endpoints (except active game sessions).
 
-### Backend
-A Node.js application using Fastify, acting as a WebSocket proxy between the frontend and engine. It exposes `/api/ws` and forwards engine messages to connected clients.
+**Endpoints:**
+- **Authentication**
+  - `POST /registration`: Register a new user.
+  - `POST /login`: Authenticate with credentials.
+  - `POST /logout`: Invalidate session.
+  - `GET /auth/google`: Initiate Google OAuth flow.
+- **Profile**
+  - `GET /profile`: Fetch current user data.
+  - `PUT /profile`: Update user details.
+  - `DELETE /profile`: Delete user account.
+  - `POST /avatar`: Upload profile image.
+  - `GET /search`: Search users by login.
+- **Social**
+  - `GET /friends`: List accepted friends.
+  - `POST /friend-request`: Send a friend request.
+  - `POST /friend-accept`: Accept a friend request.
+  - `DELETE /friend-remove`: Remove a friend.
+  - `GET /match-history`: Retrieve past match results.
+- **Game & Tournament**
+  - `POST /game/create`: Initialize a new game record.
+  - `POST /game/invite`: Invite a friend to a game.
+  - `GET /game/:id`: Get game metadata.
+  - `POST /tournament/create`: Create a new tournament.
+  - `POST /tournament/:id/start`: Begin a tournament.
+- **Internal**
+  - `POST /internal/match-result`: Save final game scores (called by Backend).
 
-### Engine
-A Node.js application using Fastify for game simulation. It maintains ball state (position and velocity) in a [-1, 1] coordinate system, updating every 100ms and broadcasting via WebSocket at `/ws`.
+### 4. **Backend Service (Game Gateway)**
+- **Tech**: Node.js (Fastify + WebSockets).
+- **Role**: The "Nervous System" of the game.
+- **Functions**:
+  - Manages active game sessions in memory.
+  - Handles WebSocket connections (`/api/ws`).
+  - Acts as a bridge, relaying inputs from Frontend to Engine, and state from Engine to Frontend.
+  - **Post-Game**: Sends final scores to the Database Service for persistence.
 
----
+**Endpoints:**
+- **Real-Time**
+  - `GET /api/ws/:id`: **WebSocket** endpoint for game state streaming and input.
+- **CLI / Interop**
+  - `POST /api/games`: Create an in-memory game instance.
+  - `GET /api/games/:id/state`: Get snapshot of current game state (Polling).
+  - `POST /api/games/:id/action`: Send paddle commands via HTTP.
 
-## Setup
-
-### Frontend: TypeScript Dev Setup
-Auto-compile TypeScript from `frontend/src/` to `frontend/dist/` and load it in the browser as ES modules.
-
-1. Install Node.js (includes npm)
-   - macOS: `brew install node`
-
-2. Init and install TypeScript (inside `frontend/`)
-   ```
-   cd frontend
-   npm init -y
-   npm i -D typescript
-   ```
-
-3. Add npm scripts to package.json
-   ```
-   {
-     "scripts": {
-       "build": "tsc",
-       "dev": "tsc --watch --preserveWatchOutput"
-     }
-   }
-   ```
-
-4. Create tsconfig.json (src → dist)
-   ```
-   {
-     "compilerOptions": {
-       "target": "ES2020",
-       "module": "ES2020",
-       "strict": true,
-       "sourceMap": true,
-       "rootDir": "src",
-       "outDir": "dist"
-     },
-     "include": ["src/**/*.ts"]
-   }
-   ```
-
-5. Reference the built file from HTML
-   - In `frontend/index.html`:
-   ```
-   <script type="module" src="dist/script.js"></script>
-   ```
-
-6. Start auto compilation (in `frontend/`)
-   ```
-   npm run dev
-   ```
-
-### Local Dev Server (Serve over HTTP)
-Use any static server while `npm run dev` is watching:
-- VS Code Live Server (recommended), or
-- From `frontend/`: `python3 -m http.server 8000` → open http://localhost:8000
-
-Notes:
-- ES modules in the browser require `type="module"` on the script tag.
-- Keep sources in `frontend/src/` and compiled output in `frontend/dist/`.
-- Add `frontend/dist/` and `node_modules/` to `.gitignore`.
-- Do not ignore `package.json` or `package-lock.json`.
-
-### Docker + Caddy (Production-like Serve)
-- Build and run (via Compose at repo root):
-  ```
-  docker compose up --build -d
-  docker compose ps
-  ```
-- Open the published ports shown by `docker compose ps`.
-  - Caddy listens on container ports 80 (HTTP → redirects to HTTPS) and 443 (HTTPS).
-  - Example: if mapped to host `8080:80` and `8443:443`, open:
-    - HTTP (redirects): http://localhost:8080
-    - HTTPS (self-signed): https://localhost:8443
-
-Quick checks:
-```
-curl -I http://localhost:<host_http_port>
-curl -kI https://localhost:<host_https_port>
-```
+### 5. **Engine Service (Physics)**
+- **Tech**: Node.js.
+- **Role**: The "Heart" of the simulation.
+- **Functions**:
+  - Pure physics simulation (Collision detection, velocity vectors).
+  - Runs a high-frequency game loop (60 ticks/sec).
+  - Broadcasts raw game state to the Backend.
 
 ---
 
-## Architecture and Dataflow
+## 🔄 Program Flow
 
-This project is a microservices-based application composed of four main services orchestrated by Docker Compose: `caddy`, `frontend`, `backend`, and `engine`.
+### 1. Authentication & Browsing
+*Flow: Frontend ↔ Caddy ↔ Database Service*
+1.  User performs an action (e.g., Login, View Profile).
+2.  **Caddy** receives the request at `/api/*` (e.g., `/api/login`).
+3.  It forwards the request to the **Database Service**.
+4.  The service queries the local SQLite file (`users.db`) and returns the JSON response.
 
-### Services
+### 2. Matchmaking (Starting a Game)
+*Flow: Frontend ↔ Caddy ↔ Database Service*
+1.  User clicks "Play" or invites a friend.
+2.  A request is sent to the **Database Service** (`/api/game/create`).
+3.  The service creates a permanent record of the match (ID: `123`, Status: `waiting`) and returns the Game ID.
 
-*   **`caddy`**: Acts as the entry point for the application. It's a reverse proxy that serves the frontend application and forwards API requests to the backend.
-    *   Listens on port 80 (and 443 for HTTPS).
-    *   Serves the static files (HTML, CSS, JS) of the frontend application.
-    *   Routes all requests starting with `/api/` to the `backend` service.
+### 3. Game Connection
+*Flow: Frontend ↔ Caddy ↔ Backend Service*
+1.  Frontend initiates a WebSocket connection to `wss://localhost:8443/api/ws/123`.
+2.  **Caddy** recognizes the `/api/ws` prefix and routes it to the **Backend Service**.
+3.  **Backend** validates the Game ID and Token.
+4.  **Backend** connects to the **Engine Service** via an internal WebSocket.
 
-*   **`frontend`**: A single-page application (SPA) built with TypeScript.
-    *   The user interface of the application.
-    *   It communicates with the `backend` service through a WebSocket connection.
+### 4. Gameplay Loop
+*Flow: Frontend ↔ Caddy ↔ Backend ↔ Engine*
+1.  **Engine**: Simulates one frame of physics. Sends state (Ball X/Y) to Backend.
+2.  **Backend**: Relays state to both connected clients (Frontend).
+3.  **Frontend**: Draws the frame.
+4.  **User**: Presses a key (Move Up).
+5.  **Frontend**: Sends input to Backend -> Engine.
+6.  **Engine**: Updates paddle position for the next frame.
 
-*   **`backend`**: A Node.js application built with Fastify.
-    *   Acts as a bridge between the `frontend` and the `engine`.
-    *   Exposes a WebSocket endpoint at `/api/ws`.
-    *   Forwards messages from the `engine` to all connected `frontend` clients.
-
-*   **`engine`**: A Node.js application built with Fastify.
-    *   Manages the game logic and state.
-    *   Simulates a bouncing ball within a [-1, 1] coordinate system and updates its position every 100ms.
-    *   Exposes a WebSocket endpoint at `/ws` that broadcasts the ball's current position (x, y) and velocity (vx, vy) to all connected clients.
-
-### Data Flow (Detailed)
-
-#### 1. User Opens Website
-```
-Browser → http://localhost:8080 (or 8443 for HTTPS)
-```
-
-#### 2. Caddy Receives Request
-- **caddy** container (port 8080/8443) receives the request
-- Checks the path: `/` is not `/api/`, so it serves static files
-- Returns `frontend/index.html` + assets (style.css, dist/main.js)
-
-#### 3. Frontend Loads in Browser
-- Browser parses HTML and loads `frontend/index.html`
-- The frontend JavaScript establishes a WebSocket connection to `wss://localhost:8443/api/ws`.
-
-#### 4. Caddy Routes WebSocket Connection
-- **caddy** sees the `/api/ws` path and upgrades the connection to a WebSocket connection.
-- Forwards the WebSocket connection to `backend:3000/api/ws`.
-- Uses the internal Docker network `transnet` to reach the **backend** container.
-
-#### 5. Backend Receives WebSocket Connection
-- The **backend** service accepts the WebSocket connection.
-- The backend has already established a WebSocket connection to the **engine** service at `ws://engine:4000/ws`.
-
-#### 6. Engine Broadcasts Ball State
-- The **engine** service simulates the ball's movement.
-- Every 100ms, it sends the current ball state as a JSON payload to all its connected clients (in this case, the **backend** service).
-
-#### 7. Backend Forwards Ball State
-- The **backend** service receives the ball state from the **engine**.
-- It then forwards this state to all of its connected clients (the **frontend** applications).
-
-#### 8. Frontend Displays Data
-- The **frontend** receives the ball state through its WebSocket connection.
-- It then updates the UI to display the new position of the ball.
-
-### Container Communication Diagram
-
-```
-┌─────────────────────────────────────────────────────┐
-│                    Host Machine                      │
-│   Port 8080 (HTTP) / 8443 (HTTPS)                  │
-└─────────────────┬───────────────────────────────────┘
-                  │
-        ┌─────────▼─────────┐
-        │     caddy:80      │
-        │   (reverse proxy)  │
-        └────────┬──────────┘
-                 │
-      ┌──────────┼──────────┐
-      │          │          │
-      │    /  (static)  /api/ws (WebSocket)
-      │     [index.html]    │
-      │     [style.css]     │
-      │     [main.js]       │
-      │                     │
-      │          ┌──────────▼────────┐
-      │          │   backend:3000    │
-      │          │ (WebSocket proxy) │
-      │          └────────┬──────────┘
-      │                   │
-      │                   │ WebSocket to engine:4000/ws
-      │                   │
-      │          ┌────────▼──────────┐
-      │          │   engine:4000     │
-      │          │ (game simulation)  │
-      │          │  ball state loop   │
-      │          └───────────────────┘
-      │
-      └──────────────────────────────┐
-                                     │
-                          ┌──────────▼────────┐
-                          │ Frontend (Browser) │
-                          │  [index.html]      │
-                          │  WebSocket conn.   │
-                          └────────────────────┘
-```
-
-### Key Points
-
-- **All 3 backend services** communicate via the `transnet` bridge network (internal Docker DNS).
-- **Frontend only talks to caddy** (not directly to backend or engine).
-- **Engine continuously simulates** the ball bouncing every 100ms and broadcasts the state via WebSockets.
-- **Backend acts as a WebSocket proxy**, forwarding the engine's state to the frontend.
-- **Caddy handles HTTPS and WebSocket connections**, providing a secure and real-time communication channel.
-- **Only the frontend is exposed**: backend and engine are hidden behind caddy; only caddy is reachable from the host.
+### 5. Game Over
+*Flow: Engine → Backend → Database Service*
+1.  **Engine** detects a win condition (Score reached).
+2.  It notifies the **Backend**.
+3.  **Backend** sends an internal HTTP POST to the **Database Service** (`http://database:3000/internal/match-result`) with the final score.
+4.  **Database Service** saves the result to `users.db` and updates user statistics (Wins/Losses).
 
 ---
 
-## Routing System
+## 🚀 Quick Start
 
-### Overview
-The application uses a **client-side router** that enables seamless navigation between views without full page reloads. The router intercepts navigation events, updates the browser's URL and history, and swaps out view components dynamically.
+1. **Build and Run**
+   ```bash
+   docker compose up --build
+   ```
 
-### How Routing Works (Step by Step)
+2. **Access the App**
+   Open [https://localhost:8443](https://localhost:8443) in your browser.
+   *(Accept the self-signed certificate warning)*
 
-#### 1. Application Initialization
-When application first loads:
-
-```
-User opens http://localhost:8080
-  ↓
-browser/index.html is served by Caddy
-  ↓
-frontend/dist/index.js is loaded as an ES module
-  ↓
-router.ts initializes: render(window.location.pathname)
-  ↓
-Current URL path (e.g., "/") is matched against routes registry
-  ↓
-Corresponding view factory function is called (e.g., MainMenu())
-  ↓
-View component is mounted to DOM at #app element
-```
-
-#### 2. Route Registry
-The [`routes`](frontend/src/router.ts) object maps URL paths to view factory functions:
-
-```typescript
-const routes: { [key: string]: () => View } = {
-  "/": MainMenu,
-  "/local-game": LocalGame,
-  "/tournament": Tournament,
-};
-```
-
-Each key is a URL path, and each value is a **function** (not a component instance). This is important—it defers view creation until navigation occurs, ensuring each view gets a fresh component with clean state.
-
-#### 3. User Clicks Navigation Button
-When a user clicks a button in the UI:
-
-```
-User clicks "Local Game" button
-  ↓
-index.ts event listener catches the click
-  ↓
-e.preventDefault() stops default browser behavior
-  (without this, the button might submit as a form)
-  ↓
-navigateTo("/local-game") is called
-```
-
-The `e.preventDefault()` call is crucial for buttons that might otherwise trigger unwanted default behavior. In your case, it ensures the router handles navigation instead of the browser.
-
-#### 4. Navigation Happens
-The [`navigateTo`](frontend/src/router.ts) function does two things:
-
-```typescript
-export function navigateTo(pathname: string) {
-  window.history.pushState({}, pathname, window.location.origin + pathname);
-  render(pathname);
-}
-```
-
-- **`window.history.pushState()`** updates the browser's URL bar and history stack without reloading the page. This allows back/forward buttons to work correctly and lets users bookmark/share URLs.
-- **`render(pathname)`** handles the actual view switching logic.
-
-#### 5. View Switching (render function)
-The [`render`](frontend/src/router.ts) function orchestrates the view swap:
-
-```
-render("/local-game") is called
-  ↓
-Check if previous view has cleanup function
-  ├─ Yes: call it (removes event listeners, clears timers, etc.)
-  └─ No: do nothing
-  ↓
-Clear DOM: root.innerHTML = ""
-  ↓
-Look up route: routes["/local-game"]() 
-  (calls LocalGame factory function to create new component)
-  ↓
-Append component to DOM: root.appendChild(view.component)
-  ↓
-Store cleanup function: currentCleanup = view.cleanup
-  (for next navigation)
-```
-
-#### 6. Cleanup Pattern
-Each view optionally returns a cleanup function in the [`View`](frontend/src/router.ts) type:
-
-```typescript
-type View = {
-  component: HTMLElement;
-  cleanup?: () => void;
-};
-```
-
-For example, the [`LocalGame`](frontend/src/views/LocalGame.ts) view registers keyboard listeners and a game loop interval:
-
-```typescript
-const cleanup = () => {
-  document.removeEventListener("keydown", onKeyDown);
-  document.removeEventListener("keyup", onKeyUp);
-  clearInterval(intervalId);
-};
-
-return { component: gameContainer, cleanup };
-```
-
-This cleanup runs automatically when navigating away, preventing:
-- Event listeners from firing on detached DOM
-- Game loop intervals from running in the background
-- Memory leaks from accumulated listeners
-
-#### 7. Browser Back/Forward Buttons
-When a user clicks the back or forward button:
-
-```
-User clicks browser back button
-  ↓
-window.onpopstate event fires
-  ↓
-Handler calls: render(window.location.pathname)
-  (render uses the URL that the browser just navigated to)
-  ↓
-Same cleanup and view-switching logic runs
-```
-
-This ensures history navigation works seamlessly without requiring explicit router code.
-
-### Data Flow Diagram
-
-```
-┌────────────────────────────────────────────────────────┐
-│                  User Action                           │
-│            (click button, back, forward, URL change)   │
-└────────────────┬─────────────────────────────────────┘
-                 │
-         ┌───────▼────────┐
-         │  navigateTo()  │  (or onpopstate handler)
-         │   or onpopstate│
-         └───────┬────────┘
-                 │
-      ┌──────────▼─────────┐
-      │  history.pushState │
-      │  (update URL bar)  │
-      └──────────┬─────────┘
-                 │
-      ┌──────────▼──────────────┐
-      │  render(pathname)       │
-      └──────────┬──────────────┘
-                 │
-    ┌────────────┴────────────┐
-    │                         │
-    ▼                         ▼
-┌─────────────┐      ┌─────────────────┐
-│   Cleanup   │      │ View Factory    │
-│  previous   │      │  Call routes[]  │
-│    view     │      │   Get component │
-└─────────────┘      └────────┬────────┘
-    │                         │
-    │      ┌──────────────────┘
-    │      │
-    ▼      ▼
- ┌────────────────┐
- │ DOM Update     │
- │ - Clear old    │
- │ - Mount new    │
- │ - Store cleanup│
- └────────────────┘
-    │
-    ▼
- ┌────────────────┐
- │  View visible  │
- │  to user       │
- └────────────────┘
-```
-
-### Key Concepts
-
-- **Factory Pattern**: Routes store functions, not instances. Each navigation creates a fresh component with clean state.
-- **Cleanup**: Views can define teardown logic to free resources and prevent memory leaks.
-- **History Integration**: `history.pushState()` keeps the URL in sync without full page reloads.
-- **Event Delegation**: The click listener in [`index.ts`](frontend/src/index.ts) uses event delegation on the `#app` container, catching clicks from any current or future view.
-- **Single-Page Application (SPA)**: No server-side routing needed—all navigation happens in the browser.
-
-## Useful commands
-
-### Docker
-
-- Build and run (via Compose at repo root):
-  ```
-  docker compose up --build -d
-  docker compose ps
-  ```
-- Open the published ports shown by `docker compose ps`.
-  - Caddy listens on container ports 80 (HTTP → redirects to HTTPS) and 443 (HTTPS).
-  - Example: if mapped to host `8080:80` and `8443:443`, open:
-    - HTTP (redirects): http://localhost:8080
-    - HTTPS (self-signed): https://localhost:8443
-
-Quick checks:
-```
-curl -I http://localhost:<host_http_port>
-curl -kI https://localhost:<host_https_port>
-```
+3. **Stop**
+   ```bash
+   docker compose down
+   ```
