@@ -1,8 +1,12 @@
 import { navigateTo } from "../router.js";
+import { checkAndShowInvites } from "../utils/inviteHandler.js";
 
 export function MainMenuView() {
   const mainMenu = document.createElement("div");
   mainMenu.className = "flex flex-col items-center justify-center min-h-screen bg-gray-100 p-8";
+  
+  // Check for invites when menu loads
+  checkAndShowInvites();
   
   mainMenu.innerHTML = `
     <h1 class="text-5xl font-extrabold text-blue-900 mb-12 drop-shadow-sm">Welcome to Pong</h1>

@@ -1,4 +1,5 @@
 import { navigateTo } from "../router.js";
+import { checkAndShowInvites } from "../utils/inviteHandler.js";
 
 export function ProfileView() {
     const container = document.createElement("div");
@@ -88,6 +89,71 @@ export function ProfileView() {
             </form>
             <p id="avatarMessage" class="mt-3 text-red-600"></p>
         </section>
+        <section class="bg-white rounded-2xl p-5 mb-8 shadow">
+            <h2 class="text-2xl font-semibold mb-4">Game Statistics</h2>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div class="bg-green-50 p-4 rounded-lg text-center">
+                    <p class="text-gray-600 text-sm">Wins</p>
+                    <p id="winsCount" class="text-2xl font-bold text-green-600">0</p>
+                </div>
+                <div class="bg-red-50 p-4 rounded-lg text-center">
+                    <p class="text-gray-600 text-sm">Losses</p>
+                    <p id="lossesCount" class="text-2xl font-bold text-red-600">0</p>
+                </div>
+                <div class="bg-blue-50 p-4 rounded-lg text-center">
+                    <p class="text-gray-600 text-sm">Draws</p>
+                    <p id="drawsCount" class="text-2xl font-bold text-blue-600">0</p>
+                </div>
+                <div class="bg-purple-50 p-4 rounded-lg text-center">
+                    <p class="text-gray-600 text-sm">Total Games</p>
+                    <p id="totalGamesCount" class="text-2xl font-bold text-purple-600">0</p>
+                </div>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg text-center">
+                <p class="text-gray-600 text-sm">Win Rate</p>
+                <p id="winRate" class="text-xl font-bold text-gray-800">0%</p>
+            </div>
+        </section>
+
+        <!-- Change personal data -->
+        <section class="bg-white rounded-2xl p-5 mb-8 shadow">
+            <h2 class="text-2xl font-semibold mb-4">Change personal data</h2>
+            <form id="editForm" class="flex flex-col gap-3">
+                <label class="flex flex-col text-left">
+                    <span class="mb-1">Login:</span>
+                    <input id="loginInput" name="login" type="text" required pattern="[a-zA-Z0-9_]+"
+                                                 title="Only letters, numbers and underscore"
+                                                 class="p-2 rounded-lg border border-gray-400 w-full outline-none" />
+                </label>
+
+                <label class="flex flex-col text-left">
+                    <span class="mb-1">Email:</span>
+                    <input id="emailInput" name="email" type="text" required
+                                        class="p-2 rounded-lg border border-gray-400 w-full outline-none" />
+                </label>
+
+                <label class="flex flex-col text-left">
+                    <span class="mb-1">New password:</span>
+                    <input id="passwordInput" name="password" type="password" minlength="6" placeholder="Leave empty to keep current"
+                                                        class="p-2 rounded-lg border border-gray-400 w-full outline-none" />
+                </label>
+
+                <button type="submit" class="bg-blue-800 text-white py-2 rounded-lg w-full hover:opacity-50 transition">Save</button>
+                <button id="deleteProfileBtn" type="button" class="bg-red-600 text-white py-2 rounded-lg w-full hover:opacity-50 transition">Delete profile</button>
+            </form>
+            <p id="editMessage" class="mt-3 text-red-600"></p>
+        </section>
+
+        <!-- Avatar settings -->
+        <section class="bg-white rounded-2xl p-5 mb-8 shadow">
+            <h2 class="text-2xl font-semibold mb-4">Avatar settings</h2>
+            <form id="avatarForm" enctype="multipart/form-data" class="flex flex-col gap-3">
+                <input type="file" name="avatar" accept="image/*" class="border border-gray-400 rounded-lg p-2" required>
+                <button type="submit" class="bg-blue-800 text-white py-2 rounded-lg w-full hover:opacity-50 transition">Upload avatar</button>
+                <button id="deleteAvatarBtn" type="button" class="bg-red-600 text-white py-2 rounded-lg w-full hover:opacity-50 transition">Delete avatar</button>
+            </form>
+            <p id="avatarMessage" class="mt-3 text-red-600"></p>
+        </section>
     `;
 
     const backBtn = container.querySelector("#back-to-menu") as HTMLButtonElement;
@@ -96,42 +162,6 @@ export function ProfileView() {
     let isSubmitting = false;
 
     loadProfile();
-
-    async function handlePlayGame() {
-        try {
-            const pendingResponse = await fetch('/api/game-pending', {
-                credentials: 'include'
-            });
-
-            if (pendingResponse.ok) {
-                const pendingGame: any = await pendingResponse.json();
-
-                const accept = confirm(`${pendingGame.player1_login} invited you. Do you want to accept?`);
-
-                if (accept) {
-                    const acceptResponse = await fetch(`/api/game/${pendingGame.id}/accept`, {
-                        method: 'POST',
-                        credentials: 'include'
-                    });
-
-                    if (acceptResponse.ok) {
-                        navigateTo(`/remote-game?gameId=${pendingGame.game_code}`);
-                        return;
-                    } else {
-                        const error = await acceptResponse.json();
-                        alert(`Error: ${error.message || 'Failed to accept game'}`);
-                    }
-                }
-                return;
-            }
-            // If no pending game, go to lobby
-            navigateTo('/game-lobby');
-
-        } catch (err) {
-            console.log('Error in handlePlayGame:', err);
-            navigateTo('/game-lobby');
-        }
-    }
 
     async function loadProfile() {
         try {
@@ -159,31 +189,11 @@ export function ProfileView() {
             if (emailInput) emailInput.value = data.email;
             updateGameStats(data);
             
-            await checkGameInvitations();
+            await checkAndShowInvites();
         }
         catch (err) {
             console.error('Error loading profile:', err);
             navigateTo('/login');
-        }
-    }
-
-    async function checkGameInvitations() {
-        try {
-            const res = await fetch('/api/game-pending', { credentials: 'include' });
-            if (res.ok) {
-                const game = await res.json();
-                
-                // Show notification
-                const notificationEl = document.createElement('div');
-                notificationEl.className = 'fixed top-20 right-4 bg-green-600 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-4 z-40 animate-pulse cursor-pointer border-2 border-white';
-                notificationEl.innerHTML = `
-                    <span class="text-lg font-bold">🏓 1v1 Invite from ${game.player1_login}!</span>
-                `;
-                notificationEl.onclick = handlePlayGame;
-                document.body.appendChild(notificationEl);
-            }
-        } catch (e) {
-            console.error(e);
         }
     }
 

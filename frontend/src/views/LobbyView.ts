@@ -1,7 +1,11 @@
 import { navigateTo } from "../router.js";
+import { checkAndShowInvites } from "../utils/inviteHandler.js";
 
 export async function gameLobby() {
   const container = document.createElement("div");
+  
+  checkAndShowInvites();
+
   container.className = "min-h-screen bg-gray-100 p-8 flex flex-col items-center";
   container.innerHTML = `
     <div class="w-full max-w-4xl">

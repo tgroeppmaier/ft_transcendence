@@ -7,6 +7,6 @@ export const BALL_X_SPEED = 0.6;
 export const BALL_Y_SPEED = 0.4;
 export const BALL_RADIUS = 0.02;
 
-export const POINTS_TO_WIN = 20;
+export const POINTS_TO_WIN = 7;
 export const FPS = 1000 / 60;
 export const MAX_BALL_SPEED = 1.5;
