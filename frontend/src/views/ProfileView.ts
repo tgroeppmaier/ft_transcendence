@@ -50,6 +50,14 @@ export function ProfileView() {
             </div>
         </section>
 
+        <!-- Match History -->
+        <section class="bg-white rounded-2xl p-5 mb-8 shadow">
+            <h2 class="text-2xl font-semibold mb-4">Match History</h2>
+            <div id="matchHistoryList" class="flex flex-col gap-3">
+                <p class="text-gray-500 text-center">Loading history...</p>
+            </div>
+        </section>
+
         <!-- Change personal data -->
         <section class="bg-white rounded-2xl p-5 mb-8 shadow">
             <h2 class="text-2xl font-semibold mb-4">Change personal data</h2>
@@ -125,10 +133,55 @@ export function ProfileView() {
             updateGameStats(data);
             
             await checkAndShowInvites();
+            await loadMatchHistory(data);
         }
         catch (err) {
             console.error('Error loading profile:', err);
             navigateTo('/login');
+        }
+    }
+
+    async function loadMatchHistory(currentUser: any) {
+        try {
+            const res = await fetch('/api/match-history', { credentials: 'include' });
+            const data = await res.json();
+            const listEl = container.querySelector('#matchHistoryList') as HTMLElement;
+            
+            if (data.history && data.history.length > 0) {
+                listEl.innerHTML = data.history.map((m: any) => {
+                    const date = new Date(m.played_at).toLocaleDateString();
+                    
+                    let resultClass = 'bg-gray-50';
+                    let resultText = '';
+                    
+                    if (m.winner_id) {
+                        if (m.winner_id === currentUser.id) {
+                            resultClass = 'bg-green-50 border border-green-200';
+                            resultText = '<span class="text-green-600 font-bold text-xs uppercase ml-2">Win</span>';
+                        } else {
+                            resultClass = 'bg-red-50 border border-red-200';
+                            resultText = '<span class="text-red-600 font-bold text-xs uppercase ml-2">Loss</span>';
+                        }
+                    } else if (m.score_player1 === m.score_player2) {
+                             resultClass = 'bg-blue-50 border border-blue-200';
+                             resultText = '<span class="text-blue-600 font-bold text-xs uppercase ml-2">Draw</span>';
+                    }
+
+                    return `
+                    <div class="flex justify-between items-center p-3 rounded-lg ${resultClass}">
+                        <div class="text-sm text-gray-500">${date}</div>
+                        <div class="font-semibold flex items-center">
+                            ${m.p1_login} <span class="text-blue-600 mx-1">${m.score_player1}</span> - <span class="text-blue-600 mx-1">${m.score_player2}</span> ${m.p2_login}
+                            ${resultText}
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+            } else {
+                listEl.innerHTML = '<p class="text-gray-500 text-center">No matches played yet.</p>';
+            }
+        } catch (e) {
+            console.error("History load error", e);
         }
     }
 

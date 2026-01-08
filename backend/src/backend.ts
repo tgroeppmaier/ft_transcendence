@@ -296,6 +296,25 @@ class Game {
     if (this.score.left >= POINTS_TO_WIN || this.score.right >= POINTS_TO_WIN) {
       this.state = "gameOver";
       this.broadcastState();
+      
+      // Save Match Result to Database
+      if (this.player1 && this.player2) {
+          const winnerId = this.score.left > this.score.right ? this.player1.userId : (this.score.right > this.score.left ? this.player2.userId : null);
+          
+          // Use the docker service name "database" to reach the container
+          fetch("http://database:3000/internal/match-result", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                  player1_id: this.player1.userId,
+                  player2_id: this.player2.userId,
+                  score1: this.score.left,
+                  score2: this.score.right,
+                  winner_id: winnerId
+              })
+          }).catch(err => console.error("Failed to save match result:", err));
+      }
+
       this.stop(false);
       return;
     }

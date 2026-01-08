@@ -86,6 +86,51 @@ async function ensureUploadsDir() {
 	}
 }
 
+// Internal endpoint for game service to report results
+fastify.post('/internal/match-result', async (request, reply) => {
+	let db
+	try {
+		// In a real scenario, check for an internal API key header
+		// const apiKey = request.headers['x-internal-secret']
+		// if (apiKey !== process.env.INTERNAL_API_KEY) return reply.code(403).send()
+
+		const { player1_id, player2_id, score1, score2, winner_id } = request.body
+
+		db = await openDB()
+
+		// 1. Insert into match_history
+		await db.run(
+			`INSERT INTO match_history (player1_id, player2_id, winner_id, score_player1, score_player2, played_at)
+			 VALUES (?, ?, ?, ?, ?, datetime('now'))`,
+			[player1_id, player2_id, winner_id, score1, score2]
+		)
+
+		// 2. Update User Stats (Player 1)
+		let p1Update = 'UPDATE users SET total_games = total_games + 1'
+		if (player1_id === winner_id) p1Update += ', wins = wins + 1'
+		else if (score1 === score2) p1Update += ', draws = draws + 1'
+		else p1Update += ', losses = losses + 1'
+		p1Update += ' WHERE id = ?'
+		await db.run(p1Update, [player1_id])
+
+		// 3. Update User Stats (Player 2)
+		let p2Update = 'UPDATE users SET total_games = total_games + 1'
+		if (player2_id === winner_id) p2Update += ', wins = wins + 1'
+		else if (score1 === score2) p2Update += ', draws = draws + 1'
+		else p2Update += ', losses = losses + 1'
+		p2Update += ' WHERE id = ?'
+		await db.run(p2Update, [player2_id])
+
+		await db.close()
+		return reply.code(200).send({ message: "Match recorded" })
+	}
+	catch (err) {
+		if (db) await db.close()
+		request.log.error(err)
+		return reply.code(500).send({ message: "Error recording match" })
+	}
+})
+
 fastify.post('/registration', async (request, reply) => {
 	let db
 	try {
@@ -513,6 +558,39 @@ fastify.get('/friend-requests', { preHandler: [fastify.authenticate] }, async (r
 		if (db) await db.close()
 		request.log.error(err)
 		return reply.code(500).send({ message: "Error fetching friend requests" })
+	}
+})
+
+fastify.get('/match-history', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+	let db
+	try {
+		const userId = request.user.id
+		db = await openDB()
+
+		const history = await db.all(
+			`SELECT 
+				mh.played_at,
+				mh.score_player1,
+				mh.score_player2,
+				mh.winner_id,
+				u1.login as p1_login,
+				u2.login as p2_login
+			 FROM match_history mh
+			 JOIN users u1 ON mh.player1_id = u1.id
+			 JOIN users u2 ON mh.player2_id = u2.id
+			 WHERE mh.player1_id = ? OR mh.player2_id = ?
+			 ORDER BY mh.played_at DESC
+			 LIMIT 20`,
+			[userId, userId]
+		)
+
+		await db.close()
+		return reply.send({ history: history || [] })
+	}
+	catch (err) {
+		if (db) await db.close()
+		request.log.error(err)
+		return reply.code(500).send({ message: "Error fetching history" })
 	}
 })
 
