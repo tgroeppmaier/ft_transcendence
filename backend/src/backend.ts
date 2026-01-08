@@ -144,15 +144,47 @@ class Game {
     });
 
     player.socket.on("close", () => {
-      if (this.player1?.socket === player.socket) {
-        // game over, save result in DB
-        this.player1 = null;
-      } else if (this.player2?.socket === player.socket) {
-        this.player2 = null;
+      if (this.state === "gameOver") return;
+
+      const isPlayer1 = this.player1?.socket === player.socket;
+      const isPlayer2 = this.player2?.socket === player.socket;
+
+      if (!isPlayer1 && !isPlayer2) return;
+
+      // Only record stats if game was actually running
+      if (this.state === "gameRunning" && this.player1 && this.player2) {
+        const p1Id = this.player1.userId;
+        const p2Id = this.player2.userId;
+        let winnerId = null;
+
+        if (isPlayer1) {
+          winnerId = p2Id;
+          this.score.right = POINTS_TO_WIN; // Give win to P2
+        } else {
+          winnerId = p1Id;
+          this.score.left = POINTS_TO_WIN; // Give win to P1
+        }
+
+        // Save Match Result to Database
+        fetch("http://database:3000/internal/match-result", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            player1_id: p1Id,
+            player2_id: p2Id,
+            score1: this.score.left,
+            score2: this.score.right,
+            winner_id: winnerId
+          })
+        }).catch(err => backend.log.error({ err }, "Failed to save forfeit result"));
       }
+
+      if (isPlayer1) this.player1 = null;
+      if (isPlayer2) this.player2 = null;
+
       this.state = "gameOver";
       this.broadcastState();
-      this.stop();
+      this.stop(false);
       this.onEmpty();
       backend.log.info(
         { gameId: this.gameId },
