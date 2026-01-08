@@ -33,12 +33,14 @@ import {
 type Side = "left" | "right";
 
 class Player {
+  public userId: number;
   public socket: WebSocket;
   public side: Side;
   public keyMap: Record<string, boolean>;
   public paddle!: Paddle;
 
-  constructor(socket: WebSocket, side: Side) {
+  constructor(userId: number, socket: WebSocket, side: Side) {
+    this.userId = userId;
     this.socket = socket;
     this.side = side;
     this.keyMap = { up: false, down: false };
@@ -106,12 +108,12 @@ class Game {
     return this.state;
   }
 
-  public addPlayer(socket: WebSocket) {
+  public addPlayer(userId: number, socket: WebSocket) {
     if (!this.player1) {
-      this.player1 = new Player(socket, "left");
+      this.player1 = new Player(userId, socket, "left");
       this.setupPlayer(this.player1);
     } else if (!this.player2) {
-      this.player2 = new Player(socket, "right");
+      this.player2 = new Player(userId, socket, "right");
       this.setupPlayer(this.player2);
     }
     
@@ -237,9 +239,11 @@ class Game {
     };
   }
 
-  public handleAction(side: Side, move: Action["move"], direction: Action["direction"]): boolean {
+  public handleAction(userId: number, side: Side, move: Action["move"], direction: Action["direction"]): boolean {
     const targetPlayer = side === "left" ? this.player1 : this.player2;
-    if (targetPlayer) {
+    
+    // Check if the user is actually the player they are trying to control
+    if (targetPlayer && targetPlayer.userId === userId) {
       targetPlayer.keyMap[direction] = move === "start";
       return true;
     }
@@ -349,13 +353,15 @@ backend.get("/api/ws/:id", { websocket: true }, (socket, req) => {
     socket.close();
     return;
   }
+  let decoded;
   try {
-    backend.jwt.verify(token);
+    decoded = backend.jwt.verify(token) as { id: number };
   } catch {
     socket.close();
     return;
   }
 
+  const userId = decoded.id;
   const params = req.params as { id: string };
   const gameId = params.id;
   if (!uuidValidate(gameId)) {
@@ -390,7 +396,7 @@ backend.get("/api/ws/:id", { websocket: true }, (socket, req) => {
     return;
   }
 
-    game.addPlayer(socket);
+    game.addPlayer(userId, socket);
 
   });
 
@@ -431,6 +437,8 @@ backend.get("/api/ws/:id", { websocket: true }, (socket, req) => {
   backend.post("/api/games/:id/action", { preHandler: [(backend as any).authenticate] }, async (request, reply) => {
 
     const { id } = request.params as { id: string };
+    // Get userId from authenticated request
+    const userId = (request as any).user.id;
 
     const body = request.body as {
 
@@ -456,7 +464,7 @@ backend.get("/api/ws/:id", { websocket: true }, (socket, req) => {
 
   
 
-    const success = game.handleAction(body.side, body.move, body.direction);
+    const success = game.handleAction(userId, body.side, body.move, body.direction);
 
   
 
@@ -466,7 +474,7 @@ backend.get("/api/ws/:id", { websocket: true }, (socket, req) => {
 
     } else {
 
-      return reply.status(400).send({ type: "error", message: "Player not connected on that side" });
+      return reply.status(403).send({ type: "error", message: "Forbidden: You cannot control this paddle" });
 
     }
 
