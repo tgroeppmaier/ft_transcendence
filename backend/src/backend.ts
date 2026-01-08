@@ -227,7 +227,7 @@ class Game {
     this.player2?.paddleMove(dt);
   }
 
-  private createGameState(): GameStateSnapshot | null {
+  public createGameState(): GameStateSnapshot | null {
     if (!this.player1 || !this.player2) return null;
 
     return {
@@ -235,6 +235,15 @@ class Game {
       b: [this.ball.x, this.ball.y],
       p: [this.player1.paddle.y, this.player2.paddle.y],
     };
+  }
+
+  public handleAction(side: Side, move: Action["move"], direction: Action["direction"]): boolean {
+    const targetPlayer = side === "left" ? this.player1 : this.player2;
+    if (targetPlayer) {
+      targetPlayer.keyMap[direction] = move === "start";
+      return true;
+    }
+    return false;
   }
 
   private handleWallCollision() {
@@ -410,13 +419,9 @@ backend.get("/api/ws/:id", { websocket: true }, (socket, req) => {
   
 
     // Return the latest snapshot (or create one if null)
-
-    // Accessing private method via bracket notation for JS interop simulation
-
-    const snapshot = game["createGameState"](); 
+    const snapshot = game.createGameState(); 
 
     return snapshot || { type: "error", message: "Game not initialized" };
-
   });
 
   
@@ -451,37 +456,15 @@ backend.get("/api/ws/:id", { websocket: true }, (socket, req) => {
 
   
 
-    // Access private players
-
-    const p1 = game["player1"];
-
-    const p2 = game["player2"];
+    const success = game.handleAction(body.side, body.move, body.direction);
 
   
 
-    let targetPlayer: Player | null = null;
-
-    
-
-    if (body.side === "left") targetPlayer = p1;
-
-    else if (body.side === "right") targetPlayer = p2;
-
-  
-
-    if (targetPlayer) {
-
-      targetPlayer.keyMap[body.direction] = body.move === "start";
+    if (success) {
 
       return { success: true, side: body.side, action: body.move, direction: body.direction };
 
     } else {
-
-      // If player doesn't exist (e.g. headless slot), we can't control it with current architecture
-
-      // unless we modify Game to allow headless players. 
-
-      // For this demo, we assume player exists or we fail.
 
       return reply.status(400).send({ type: "error", message: "Player not connected on that side" });
 
