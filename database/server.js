@@ -71,6 +71,11 @@ fastify.decorate("authenticate", async (request, reply) => {
 		if (!token) return reply.code(401).send({ message: 'Not authenticated' })
 		const decoded = fastify.jwt.verify(token)
 		request.user = decoded
+
+		// Ensure user is marked online if they are making requests
+		const db = await openDB()
+		await db.run("UPDATE users SET onlineStatus = 'online' WHERE id = ?", [decoded.id])
+		await db.close()
 	}
 	catch (err) {
 		return reply.code(401).send({ message: 'Authentication error' })
@@ -1460,6 +1465,12 @@ fastify.post('/tournament/:tournamentId/finish', { preHandler: [fastify.authenti
 
 const start = async () => {
 	try {
+		// Reset online status on startup
+		const db = await openDB()
+		await db.run("UPDATE users SET onlineStatus = 'offline'")
+		await db.close()
+		fastify.log.info('Reset all users to offline status')
+
 		await fastify.listen({
 			port: 3000,
 			host: '0.0.0.0'
