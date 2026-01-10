@@ -49,7 +49,7 @@ export function LoginView() {
       const result = await response.json();
 
       if (response.ok) {
-        // Success! Fastify sets the 'token' cookie automatically (httpOnly)
+        // Success! Fastify sets the 'token' cookie automatically (httpOnly) for xss protection
         // Navigate to the main menu
         navigateTo("/menu");
       } else {

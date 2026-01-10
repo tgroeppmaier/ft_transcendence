@@ -4,7 +4,7 @@ A robust, microservices-based implementation of the classic Pong game, featuring
 
 ## 🏗 Architecture
 
-The application is composed of **5 distinct services**, orchestrated via Docker Compose.
+The application is composed of **3 distinct services**, orchestrated via Docker Compose.
 
 ### 1. **Caddy (Reverse Proxy)**
 - **Role**: The single entry point for all client requests.
@@ -13,10 +13,23 @@ The application is composed of **5 distinct services**, orchestrated via Docker 
   - Serves the **Frontend** static files.
   - Routes API requests to the appropriate internal services based on URL paths.
 
-### 2. **Frontend (UI)**
-- **Tech**: TypeScript, Tailwind CSS.
-- **Role**: Single Page Application (SPA).
-- **Function**: Renders the interface, manages game rendering via Canvas API, and handles user interactions.
+### 2. **Backend Service (Game Gateway & Engine)**
+- **Tech**: Node.js (Fastify + WebSockets).
+- **Role**: The "Nervous System" and "Heart" of the game.
+- **Functions**:
+  - **Game Logic**: Pure physics simulation (Collision detection, velocity vectors) running at 60 FPS.
+  - **Sessions**: Manages active game instances in memory.
+  - **Real-Time**: Handles WebSocket connections (`/api/ws`) for state streaming and input.
+  - **Post-Game**: Sends final scores to the Database Service for persistence.
+
+**Endpoints:**
+- **Real-Time**
+  - `GET /api/ws/:id`: **WebSocket** endpoint for game state streaming and input.
+- **CLI / Interop**
+  - `POST /api/games`: Create an in-memory game instance.
+  - `GET /api/games`: List active game IDs.
+  - `GET /api/games/:id/state`: Get snapshot of current game state (Polling).
+  - `POST /api/games/:id/action`: Send paddle commands via HTTP.
 
 ### 3. **Database Service (Business Logic & Persistence)**
 - **Tech**: Node.js (Fastify), SQLite.
@@ -32,51 +45,40 @@ The application is composed of **5 distinct services**, orchestrated via Docker 
   - `POST /login`: Authenticate with credentials.
   - `POST /logout`: Invalidate session.
   - `GET /auth/google`: Initiate Google OAuth flow.
+  - `GET /auth/google/callback`: Handle OAuth callback.
 - **Profile**
   - `GET /profile`: Fetch current user data.
   - `PUT /profile`: Update user details.
   - `DELETE /profile`: Delete user account.
   - `POST /avatar`: Upload profile image.
+  - `DELETE /avatar`: Remove profile image.
   - `GET /search`: Search users by login.
 - **Social**
   - `GET /friends`: List accepted friends.
+  - `GET /friend-requests`: List pending friend requests.
   - `POST /friend-request`: Send a friend request.
   - `POST /friend-accept`: Accept a friend request.
+  - `POST /friend-reject`: Reject a friend request.
   - `DELETE /friend-remove`: Remove a friend.
   - `GET /match-history`: Retrieve past match results.
-- **Game & Tournament**
+- **Game Management**
   - `POST /game/create`: Initialize a new game record.
   - `POST /game/invite`: Invite a friend to a game.
+  - `POST /game/accept`: Accept a game invitation.
+  - `GET /game-pending`: Check for pending game invitations.
   - `GET /game/:id`: Get game metadata.
+  - `POST /game/:id/accept`: Accept specific game (alternative).
+  - `POST /game/:id/finish`: Mark game as finished (if not by backend).
+- **Tournament**
   - `POST /tournament/create`: Create a new tournament.
+  - `GET /tournament/invitations`: List tournament invites.
+  - `GET /tournament/:id`: Get tournament details.
+  - `POST /tournament/:id/accept`: Accept tournament invite.
+  - `POST /tournament/:id/decline`: Decline tournament invite.
   - `POST /tournament/:id/start`: Begin a tournament.
+  - `POST /tournament/:id/finish`: Mark tournament as finished.
 - **Internal**
   - `POST /internal/match-result`: Save final game scores (called by Backend).
-
-### 4. **Backend Service (Game Gateway)**
-- **Tech**: Node.js (Fastify + WebSockets).
-- **Role**: The "Nervous System" of the game.
-- **Functions**:
-  - Manages active game sessions in memory.
-  - Handles WebSocket connections (`/api/ws`).
-  - Acts as a bridge, relaying inputs from Frontend to Engine, and state from Engine to Frontend.
-  - **Post-Game**: Sends final scores to the Database Service for persistence.
-
-**Endpoints:**
-- **Real-Time**
-  - `GET /api/ws/:id`: **WebSocket** endpoint for game state streaming and input.
-- **CLI / Interop**
-  - `POST /api/games`: Create an in-memory game instance.
-  - `GET /api/games/:id/state`: Get snapshot of current game state (Polling).
-  - `POST /api/games/:id/action`: Send paddle commands via HTTP.
-
-### 5. **Engine Service (Physics)**
-- **Tech**: Node.js.
-- **Role**: The "Heart" of the simulation.
-- **Functions**:
-  - Pure physics simulation (Collision detection, velocity vectors).
-  - Runs a high-frequency game loop (60 ticks/sec).
-  - Broadcasts raw game state to the Backend.
 
 ---
 
@@ -100,23 +102,21 @@ The application is composed of **5 distinct services**, orchestrated via Docker 
 1.  Frontend initiates a WebSocket connection to `wss://localhost:8443/api/ws/123`.
 2.  **Caddy** recognizes the `/api/ws` prefix and routes it to the **Backend Service**.
 3.  **Backend** validates the Game ID and Token.
-4.  **Backend** connects to the **Engine Service** via an internal WebSocket.
+4.  **Backend** initializes the game loop if both players connect.
 
 ### 4. Gameplay Loop
-*Flow: Frontend ↔ Caddy ↔ Backend ↔ Engine*
-1.  **Engine**: Simulates one frame of physics. Sends state (Ball X/Y) to Backend.
-2.  **Backend**: Relays state to both connected clients (Frontend).
-3.  **Frontend**: Draws the frame.
-4.  **User**: Presses a key (Move Up).
-5.  **Frontend**: Sends input to Backend -> Engine.
-6.  **Engine**: Updates paddle position for the next frame.
+*Flow: Frontend ↔ Caddy ↔ Backend*
+1.  **Backend**: Simulates one frame of physics. Sends state (Ball X/Y) to both connected clients.
+2.  **Frontend**: Draws the frame based on received state.
+3.  **User**: Presses a key (Move Up).
+4.  **Frontend**: Sends input to Backend.
+5.  **Backend**: Updates paddle position for the next frame.
 
 ### 5. Game Over
-*Flow: Engine → Backend → Database Service*
-1.  **Engine** detects a win condition (Score reached).
-2.  It notifies the **Backend**.
-3.  **Backend** sends an internal HTTP POST to the **Database Service** (`http://database:3000/internal/match-result`) with the final score.
-4.  **Database Service** saves the result to `users.db` and updates user statistics (Wins/Losses).
+*Flow: Backend → Database Service*
+1.  **Backend** detects a win condition (Score reached).
+2.  **Backend** sends an internal HTTP POST to the **Database Service** (`http://database:3000/internal/match-result`) with the final score.
+3.  **Database Service** saves the result to `users.db` and updates user statistics (Wins/Losses).
 
 ---
 

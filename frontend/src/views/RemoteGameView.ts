@@ -22,10 +22,6 @@ import {
   CANVAS_HEIGHT,
 } from "../../../shared/constants.js";
 
-// const cleanupFunction = (ws: WebSocket) => {
-//   ws.close();
-// }
-
 export async function RemoteGameView(existingGameId?: string) {
   let gameId = existingGameId;
 

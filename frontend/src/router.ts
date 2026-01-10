@@ -59,9 +59,11 @@ async function render(fullPath: string) {
   if (!publicRoutes.includes(pathname)) {
     const isAuth = await checkAuth();
     if (!isAuth) {
-      if (pathname !== "/login") {
-         navigateTo("/login");
+      if (currentCleanup) {
+        currentCleanup();
+        currentCleanup = undefined;
       }
+      navigateTo("/login");
       return;
     }
   }

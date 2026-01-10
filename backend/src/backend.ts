@@ -49,7 +49,7 @@ class Player {
 
   public resetPaddle() {
     this.paddle = this.side === "left" ? { x: 0, y: CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2 }
-     : { x: CANVAS_WIDTH - PADDLE_WIDTH, y: CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2 };
+      : { x: CANVAS_WIDTH - PADDLE_WIDTH, y: CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2 };
   }
 
   public sendToSocket(msg: object) {
@@ -116,7 +116,7 @@ class Game {
       this.player2 = new Player(userId, socket, "right");
       this.setupPlayer(this.player2);
     }
-    
+
     // Broadcast state update when player joins
     this.broadcastState();
 
@@ -139,7 +139,7 @@ class Game {
         }
         player.keyMap[msg.direction] = msg.move === "start";
       } catch {
-
+        // Ignore parse errors
       }
     });
 
@@ -243,17 +243,18 @@ class Game {
 
   private handlePaddleCollision() {
     const checkYaxis = (paddle: Paddle) => {
-      return ( this.ball.y + BALL_RADIUS >= paddle.y && this.ball.y - BALL_RADIUS <= paddle.y + PADDLE_HEIGHT );
+      return (this.ball.y + BALL_RADIUS >= paddle.y && this.ball.y - BALL_RADIUS <= paddle.y + PADDLE_HEIGHT);
     };
 
-    if ( this.player1 && this.ball.vx < 0 && checkYaxis(this.player1?.paddle) &&
-      this.ball.x - BALL_RADIUS < this.player1.paddle.x + PADDLE_WIDTH ) { 
-        this.ball.x = this.player1.paddle.x + PADDLE_WIDTH + BALL_RADIUS;
-        this.bouncePaddle(this.player1.paddle.y) }
-    else if ( this.player2 && this.ball.vx > 0 && checkYaxis(this.player2.paddle) &&
-      this.ball.x + BALL_RADIUS > this.player2.paddle.x ) {
-        this.ball.x = this.player2.paddle.x - BALL_RADIUS; 
-        this.bouncePaddle(this.player2.paddle.y) }
+    if (this.player1 && this.ball.vx < 0 && checkYaxis(this.player1.paddle) &&
+      this.ball.x - BALL_RADIUS < this.player1.paddle.x + PADDLE_WIDTH) {
+      this.ball.x = this.player1.paddle.x + PADDLE_WIDTH + BALL_RADIUS;
+      this.bouncePaddle(this.player1.paddle.y);
+    } else if (this.player2 && this.ball.vx > 0 && checkYaxis(this.player2.paddle) &&
+      this.ball.x + BALL_RADIUS > this.player2.paddle.x) {
+      this.ball.x = this.player2.paddle.x - BALL_RADIUS;
+      this.bouncePaddle(this.player2.paddle.y);
+    }
   }
 
   private handlePaddleMovement(dt: number) {
@@ -273,7 +274,7 @@ class Game {
 
   public handleAction(userId: number, side: Side, move: Action["move"], direction: Action["direction"]): boolean {
     const targetPlayer = side === "left" ? this.player1 : this.player2;
-    
+
     // Check if the user is actually the player they are trying to control
     if (targetPlayer && targetPlayer.userId === userId) {
       targetPlayer.keyMap[direction] = move === "start";
@@ -308,43 +309,42 @@ class Game {
 
     this.handlePaddleMovement(dt);
     this.handlePaddleCollision();
-    
+
     let scoreChanged = false;
-    if (this.ball.x < 0) { 
-      this.resetBall(); 
-      this.score.right += 1; 
+    if (this.ball.x < 0) {
+      this.resetBall();
+      this.score.right += 1;
       scoreChanged = true;
-    }
-    else if (this.ball.x > this.canvas.width) { 
-      this.resetBall(); 
-      this.score.left += 1; 
+    } else if (this.ball.x > this.canvas.width) {
+      this.resetBall();
+      this.score.left += 1;
       scoreChanged = true;
     }
 
     if (scoreChanged) {
-        this.broadcastState();
+      this.broadcastState();
     }
 
     if (this.score.left >= POINTS_TO_WIN || this.score.right >= POINTS_TO_WIN) {
       this.state = "gameOver";
       this.broadcastState();
-      
+
       // Save Match Result to Database
       if (this.player1 && this.player2) {
-          const winnerId = this.score.left > this.score.right ? this.player1.userId : (this.score.right > this.score.left ? this.player2.userId : null);
-          
-          // Use the docker service name "database" to reach the container
-          fetch("http://database:3000/internal/match-result", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                  player1_id: this.player1.userId,
-                  player2_id: this.player2.userId,
-                  score1: this.score.left,
-                  score2: this.score.right,
-                  winner_id: winnerId
-              })
-          }).catch(err => console.error("Failed to save match result:", err));
+        const winnerId = this.score.left > this.score.right ? this.player1.userId : (this.score.right > this.score.left ? this.player2.userId : null);
+
+        // Use the docker service name "database" to reach the container
+        fetch("http://database:3000/internal/match-result", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            player1_id: this.player1.userId,
+            player2_id: this.player2.userId,
+            score1: this.score.left,
+            score2: this.score.right,
+            winner_id: winnerId
+          })
+        }).catch(err => console.error("Failed to save match result:", err));
       }
 
       this.stop(false);
@@ -447,92 +447,50 @@ backend.get("/api/ws/:id", { websocket: true }, (socket, req) => {
     return;
   }
 
-    game.addPlayer(userId, socket);
+  game.addPlayer(userId, socket);
+});
 
-  });
+// 3. REST API for Server-Side Pong Module (CLI Interop)
 
-  
+// Get Game State (Polling)
+backend.get("/api/games/:id/state", { preHandler: [(backend as any).authenticate] }, async (request, reply) => {
+  const { id } = request.params as { id: string };
+  const game = games.get(id);
 
-  // 3. REST API for Server-Side Pong Module (CLI Interop)
+  if (!game) {
+    return reply.status(404).send({ type: "error", message: "Game not found" });
+  }
 
-  
+  // Return the latest snapshot (or create one if null)
+  const snapshot = game.createGameState();
+  return snapshot || { type: "error", message: "Game not initialized" };
+});
 
-  // Get Game State (Polling)
+// Send Action (Control Paddle)
+backend.post("/api/games/:id/action", { preHandler: [(backend as any).authenticate] }, async (request, reply) => {
+  const { id } = request.params as { id: string };
+  // Get userId from authenticated request
+  const userId = (request as any).user.id;
 
-  backend.get("/api/games/:id/state", { preHandler: [(backend as any).authenticate] }, async (request, reply) => {
+  const body = request.body as {
+    side: "left" | "right";
+    move: "start" | "stop";
+    direction: "up" | "down";
+  };
 
-    const { id } = request.params as { id: string };
+  const game = games.get(id);
 
-    const game = games.get(id);
+  if (!game) {
+    return reply.status(404).send({ type: "error", message: "Game not found" });
+  }
 
-  
+  const success = game.handleAction(userId, body.side, body.move, body.direction);
 
-    if (!game) {
+  if (success) {
+    return { success: true, side: body.side, action: body.move, direction: body.direction };
+  } else {
+    return reply.status(403).send({ type: "error", message: "Forbidden: You cannot control this paddle" });
+  }
+});
 
-      return reply.status(404).send({ type: "error", message: "Game not found" });
-
-    }
-
-  
-
-    // Return the latest snapshot (or create one if null)
-    const snapshot = game.createGameState(); 
-
-    return snapshot || { type: "error", message: "Game not initialized" };
-  });
-
-  
-
-  // Send Action (Control Paddle)
-
-  backend.post("/api/games/:id/action", { preHandler: [(backend as any).authenticate] }, async (request, reply) => {
-
-    const { id } = request.params as { id: string };
-    // Get userId from authenticated request
-    const userId = (request as any).user.id;
-
-    const body = request.body as {
-
-      side: "left" | "right";
-
-      move: "start" | "stop";
-
-      direction: "up" | "down";
-
-    };
-
-    
-
-    const game = games.get(id);
-
-  
-
-    if (!game) {
-
-      return reply.status(404).send({ type: "error", message: "Game not found" });
-
-    }
-
-  
-
-    const success = game.handleAction(userId, body.side, body.move, body.direction);
-
-  
-
-    if (success) {
-
-      return { success: true, side: body.side, action: body.move, direction: body.direction };
-
-    } else {
-
-      return reply.status(403).send({ type: "error", message: "Forbidden: You cannot control this paddle" });
-
-    }
-
-  });
-
-  
-
-  await backend.listen({ host: "0.0.0.0", port: 3000 });
-
-  
+await backend.listen({ host: "0.0.0.0", port: 3000 });
