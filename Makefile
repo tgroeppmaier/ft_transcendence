@@ -1,7 +1,6 @@
-NAME = user_management_app
+NAME = ft_transcendence
 DOCKER_COMPOSE = docker compose
-PROJECT_NAME = newVersion
-DB_VOLUME = $(PROJECT_NAME)_db_volume
+DATA_DIR = ./database/data
 
 all:
 	@printf "Launching $(NAME)...\n"
@@ -40,17 +39,26 @@ clean:
 	@docker image prune -f
 	@printf "Clean completed\n"
 
-fclean:
+fclean: down
 	@printf "Full clean (containers + volumes + images)...\n"
 	@$(DOCKER_COMPOSE) down -v --rmi all
 	@docker system prune -f
 	@printf "Docker reset completed\n"
 
 reset-db:
-	@printf "Resetting database (removing DB volume only)...\n"
-	@docker volume rm $(DB_VOLUME) 2>/dev/null || true
+	@printf "Resetting database...\n"
+	@$(DOCKER_COMPOSE) down
+	@rm -f $(DATA_DIR)/users.db
 	@$(DOCKER_COMPOSE) up -d
-	@printf "Database recreated\n"
+	@printf "Database reset and application restarted\n"
+
+install:
+	@printf "Installing dependencies for all services...\n"
+	@cd backend && npm install
+	@cd frontend && npm install
+	@cd database && npm install
+	@cd shared && npm install
+	@printf "Dependencies installed.\n"
 
 ps:
 	@$(DOCKER_COMPOSE) ps
@@ -58,4 +66,4 @@ ps:
 logs:
 	@$(DOCKER_COMPOSE) logs -f
 
-.PHONY: all build down stop start restart re clean fclean reset-db ps logs
+.PHONY: all build down stop start restart re clean fclean reset-db install ps logs
