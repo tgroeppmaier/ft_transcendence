@@ -1,26 +1,9 @@
 import { navigateTo } from "../router.js";
-import {
-  drawBall,
-  drawPaddles,
-  drawScores,
-  drawMessage,
-} from "../utils/gameRenderer.js";
-import {
-  Ball,
-  Paddle,
-  Score,
-  ServerMessage,
-  GameStatus,
-  ErrorMessage,
-  Action,
-} from "../../../shared/types.js";
-import {
-  BALL_RADIUS,
-  PADDLE_WIDTH,
-  PADDLE_HEIGHT,
-  CANVAS_WIDTH,
-  CANVAS_HEIGHT,
-} from "../../../shared/constants.js";
+import { drawBall, drawPaddles, drawScores, drawMessage }
+  from "../utils/gameRenderer.js";
+import { Ball, Paddle, Score, ServerMessage, GameStatus, ErrorMessage, Action }
+  from "../../../shared/types.js";
+import { BALL_RADIUS, PADDLE_WIDTH, PADDLE_HEIGHT, CANVAS_WIDTH, CANVAS_HEIGHT } from "../../../shared/constants.js";
 
 export async function RemoteGameView(existingGameId?: string) {
   let gameId = existingGameId;
@@ -30,8 +13,25 @@ export async function RemoteGameView(existingGameId?: string) {
     const params = new URLSearchParams(window.location.search);
     gameId = params.get("gameId") || undefined;
   }
+  if (gameId) {
+    try {
+      const response = await fetch(`/api/games/${gameId}/state`, {
+        method: "GET",
+        credentials: "include" });
+      if (response.ok) {
+        const snapshot = await response.json() as any;
+        if (snapshot.status && snapshot.status !== "waiting") {
+          alert("Game is already running or finished");
+          navigateTo("/menu"); // Redirect to menu or lobby
+          return { component: document.createElement("div"), cleanup: () => {} };
+        }
+      }
+    } catch (error) {
+      console.log("Error fetching Snapshot:", error);
+    }
+  }
 
-  // If no ID is provided, create a new game 
+  // If no ID is provided, create a new game
   if (!gameId) {
     const response = await fetch("/api/games", { method: "POST"});
     const data = await response.json();
@@ -39,7 +39,7 @@ export async function RemoteGameView(existingGameId?: string) {
     // Use replaceState to avoid history loop
     window.history.replaceState({}, "", `/remote-game?gameId=${gameId}`);
   }
-  
+
   const ws = new WebSocket(`${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/api/ws/${gameId}`);
 
 
@@ -60,7 +60,7 @@ export async function RemoteGameView(existingGameId?: string) {
         </button>
     </div>
   </div>
-  
+
   <!-- Invite Modal -->
   <div id="invite-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
       <div class="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl">
@@ -91,7 +91,7 @@ export async function RemoteGameView(existingGameId?: string) {
           const res = await fetch("/api/friends", { credentials: "include" });
           const data = await res.json();
           friendsList.innerHTML = "";
-          
+
           if (data.friends && data.friends.length > 0) {
               data.friends.forEach((friend: any) => {
                   const btn = document.createElement("button");
@@ -115,27 +115,26 @@ export async function RemoteGameView(existingGameId?: string) {
       inviteModal.classList.add("hidden");
   });
 
-  async function sendInvite(friendId: number) {
-      try {
-          const res = await fetch("/api/game/invite", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ friend_id: friendId, game_uuid: gameId }),
-              credentials: "include"
-          });
-          
-          if (res.ok) {
-              alert("Invitation sent!");
-              inviteModal.classList.add("hidden");
-          } else {
-              const data = await res.json();
-              alert(`Error: ${data.message}`);
-          }
-      } catch (err) {
-          alert("Error sending invitation");
-      }
-  }
-
+    async function sendInvite(friendId: number) {
+        try {
+            const res = await fetch("/api/invite", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ targetId: friendId, gameId: gameId }),
+                credentials: "include"
+            });
+            
+            if (res.ok) {
+                alert("Invitation sent!");
+                inviteModal.classList.add("hidden");
+            } else {
+                const data = await res.json();
+                alert(`Error: ${data.message}`);
+            }
+        } catch (err) {
+            alert("Error sending invitation");
+        }
+    }
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("2D context not found");
 
@@ -145,14 +144,15 @@ export async function RemoteGameView(existingGameId?: string) {
   let score: Score = { left: 0, right: 0 };
   let gameStatus: GameStatus = "waiting";
   let mySide: "left" | "right" | null = null;
+  let errorMessage: string | null = null;
 
 
   ws.onmessage = (event) => {
     const msg = JSON.parse(event.data) as ServerMessage;
-    
+
     // 1. Error Message
     if ("type" in msg && msg.type === "error") {
-      drawMessage(ctx, canvas, `Error: ${msg.message}`);
+      errorMessage = `Error: ${msg.message}`;
       return;
     }
 
@@ -167,18 +167,18 @@ export async function RemoteGameView(existingGameId?: string) {
       gameStatus = msg.status;
       score.left = msg.score[0];
       score.right = msg.score[1];
-      
+
       if (gameStatus === "waiting") {
         if (mySide === "left") {
             inviteOverlay.classList.remove("hidden");
         }
       } else {
         inviteOverlay.classList.add("hidden");
-        inviteModal.classList.add("hidden"); 
+        inviteModal.classList.add("hidden");
       }
       return;
     }
-    
+
     // 4. Game Tick (Ball/Paddles)
     if ("t" in msg) {
       ball.x = msg.b[0];
@@ -192,12 +192,18 @@ export async function RemoteGameView(existingGameId?: string) {
 
   function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
+
+    if (errorMessage) {
+        drawMessage(ctx, canvas, errorMessage);
+        rafID = requestAnimationFrame(render);
+        return;
+    }
+
     drawScores(ctx, canvas, score);
-    
+
     if (gameStatus === "waiting") {
       drawMessage(ctx, canvas, "Waiting for other Player");
-    } 
+    }
     else if (gameStatus === "gameOver") {
        if (mySide === "left") {
         drawMessage(ctx, canvas, score.left > score.right ? "You won!" : "You lost!");

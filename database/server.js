@@ -136,6 +136,28 @@ fastify.post('/internal/match-result', async (request, reply) => {
 	}
 })
 
+fastify.post('/internal/check-friendship', async (request, reply) => {
+	let db
+	try {
+		const { user1_id, user2_id } = request.body
+		db = await openDB()
+		const friendship = await db.get(
+			`SELECT id FROM friends WHERE 
+			 ((requester_id = ? AND addressee_id = ?) OR 
+			  (requester_id = ? AND addressee_id = ?))
+			 AND status = 'accepted'`,
+			[user1_id, user2_id, user2_id, user1_id]
+		)
+		await db.close()
+		return { areFriends: !!friendship }
+	}
+	catch (err) {
+		if (db) await db.close()
+		request.log.error(err)
+		return reply.code(500).send({ message: "Error checking friendship" })
+	}
+})
+
 fastify.post('/registration', async (request, reply) => {
 	let db
 	try {
@@ -794,300 +816,10 @@ fastify.get('/auth/google/callback', async (req, reply) => {
 	}
 })
 
-//GAME SESSION
+//GAME SESSION - Obsolete endpoints removed
 
-fastify.post('/game/invite', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-	let db
-	try {
-		const { friend_id, game_uuid } = request.body
-		const player1_id = request.user.id
 
-		if (!friend_id || !game_uuid) {
-			return reply.code(400).send({ message: "Friend ID and Game UUID are required" })
-		}
-
-		db = await openDB()
-
-		// Check friendship
-		const friendship = await db.get(
-			`SELECT id FROM friends WHERE 
-			 ((requester_id = ? AND addressee_id = ?) OR 
-			  (requester_id = ? AND addressee_id = ?))
-			 AND status = 'accepted'`,
-			[player1_id, friend_id, friend_id, player1_id]
-		)
-
-		if (!friendship) {
-			await db.close()
-			return reply.code(403).send({ message: "You can only invite friends" })
-		}
-
-		// Insert game record
-		await db.run(
-			`INSERT INTO games (player1_id, player2_id, status, game_code, created_at)
-			 VALUES (?, ?, 'waiting', ?, datetime('now'))`,
-			[player1_id, friend_id, game_uuid]
-		)
-
-		await db.close()
-		return reply.code(200).send({ message: "Invitation sent" })
-	}
-	catch (err) {
-		if (db) await db.close()
-		request.log.error(err)
-		return reply.code(500).send({ message: "Error sending invitation" })
-	}
-})
-
-fastify.post('/game/create', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-	let db
-	try {
-		const { opponent_id } = request.body
-		const player1_id = request.user.id
-
-		if (!opponent_id) {
-			return reply.code(400).send({ message: "Opponent ID is required" })
-		}
-
-		db = await openDB()
-
-		const friendship = await db.get(
-			`SELECT id FROM friends WHERE 
-			 ((requester_id = ? AND addressee_id = ?) OR 
-			  (requester_id = ? AND addressee_id = ?))
-			 AND status = 'accepted'`,
-			[player1_id, opponent_id, opponent_id, player1_id]
-		)
-
-		if (!friendship) {
-			await db.close()
-			return reply.code(403).send({ message: "You can only play with friends" })
-		}
-
-		const gameCode = Math.random().toString(36).substring(2, 9).toUpperCase()
-		const result = await db.run(
-			`INSERT INTO games (player1_id, player2_id, status, game_code, created_at)
-			 VALUES (?, ?, 'waiting', ?, datetime('now'))`,
-			[player1_id, opponent_id, gameCode]
-		)
-
-		const gameId = result.lastID
-		await db.close()
-
-		return reply.code(200).send({ 
-			message: "Game created", 
-			game_id: gameId,
-			game_code: gameCode
-		})
-	}
-	catch (err) {
-		if (db) await db.close()
-		request.log.error(err)
-		return reply.code(500).send({ message: "Error creating game" })
-	}
-})
-
-fastify.post('/game/accept', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-	let db
-	try {
-		const { game_id } = request.body
-		const player2_id = request.user.id
-
-		if (!game_id) {
-			return reply.code(400).send({ message: "Game ID is required" })
-		}
-
-		db = await openDB()
-
-		const game = await db.get(
-			'SELECT * FROM games WHERE id = ? AND player2_id = ? AND status = ?',
-			[game_id, player2_id, 'waiting']
-		)
-
-		if (!game) {
-			await db.close()
-			return reply.code(404).send({ message: "Game not found or already started" })
-		}
-
-		await db.run(
-			'UPDATE games SET status = ? WHERE id = ?',
-			['active', game_id]
-		)
-
-		await db.close()
-
-		return reply.code(200).send({ 
-			message: "Game accepted",
-			game_id: game_id,
-			game_code: game.game_code
-		})
-	}
-	catch (err) {
-		if (db) await db.close()
-		request.log.error(err)
-		return reply.code(500).send({ message: "Error accepting game" })
-	}
-})
-
-fastify.get('/game/:gameId', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-	let db
-	try {
-		const { gameId } = request.params
-		const userId = request.user.id
-
-		if (!gameId) {
-			return reply.code(400).send({ message: "Game ID is required" })
-		}
-
-		db = await openDB()
-
-		const game = await db.get(
-			`SELECT g.id, g.player1_id, g.player2_id, g.status, g.game_code,
-				u1.login as player1_login, u1.avatar as player1_avatar,
-				u2.login as player2_login, u2.avatar as player2_avatar
-			 FROM games g
-			 JOIN users u1 ON g.player1_id = u1.id
-			 JOIN users u2 ON g.player2_id = u2.id
-			 WHERE g.id = ?`,
-			[gameId]
-		)
-
-		if (!game) {
-			await db.close()
-			return reply.code(404).send({ message: "Game not found" })
-		}
-
-		if (game.player1_id !== userId && game.player2_id !== userId) {
-			await db.close()
-			return reply.code(403).send({ message: "You don't have access to this game" })
-		}
-
-		await db.close()
-		return reply.send(game)
-	}
-	catch (err) {
-		if (db) await db.close()
-		request.log.error(err)
-		return reply.code(500).send({ message: "Error fetching game" })
-	}
-})
-
-fastify.get('/game-pending', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-	let db
-	try {
-		const userId = request.user.id
-
-		db = await openDB()
-
-		const game = await db.get(
-			`SELECT g.id, g.player1_id, g.player2_id, g.status, g.game_code,
-				u1.login as player1_login, u1.avatar as player1_avatar
-			 FROM games g
-			 JOIN users u1 ON g.player1_id = u1.id
-			 WHERE g.player2_id = ? AND g.status = 'waiting'`,
-			[userId]
-		)
-
-		await db.close()
-
-		if (!game) {
-			return reply.send(null)
-		}
-
-		return reply.send(game)
-	}
-	catch (err) {
-		if (db) await db.close()
-		request.log.error(err)
-		return reply.code(500).send({ message: "Error fetching pending game" })
-	}
-})
-
-fastify.post('/game/:gameId/accept', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-	let db
-	try {
-		const { gameId } = request.params
-		const player2_id = request.user.id
-
-		if (!gameId) {
-			return reply.code(400).send({ message: "Game ID is required" })
-		}
-
-		db = await openDB()
-
-		const game = await db.get(
-			'SELECT * FROM games WHERE id = ? AND player2_id = ? AND status = ?',
-			[gameId, player2_id, 'waiting']
-		)
-
-		if (!game) {
-			await db.close()
-			return reply.code(404).send({ message: "Game not found or already started" })
-		}
-
-		await db.run(
-			'UPDATE games SET status = ? WHERE id = ?',
-			['active', gameId]
-		)
-
-		await db.close()
-
-		return reply.code(200).send({
-			message: "Game accepted",
-			game_id: gameId,
-			game_code: game.game_code
-		})
-	}
-	catch (err) {
-		if (db) await db.close()
-		request.log.error(err)
-		return reply.code(500).send({ message: "Error accepting game" })
-	}
-})
-
-fastify.post('/game/:gameId/finish', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-	let db
-	try {
-		const { gameId } = request.params
-		const userId = request.user.id
-
-		if (!gameId) {
-			return reply.code(400).send({ message: "Game ID is required" })
-		}
-
-		db = await openDB()
-
-		const game = await db.get(
-			'SELECT id, status FROM games WHERE id = ? AND (player1_id = ? OR player2_id = ?)',
-			[gameId, userId, userId]
-		)
-
-		if (!game) {
-			await db.close()
-			return reply.code(404).send({ message: "Game not found" })
-		}
-
-		// Если игра еще не завершена, завершаем её
-		if (game.status !== 'finished') {
-			await db.run(
-				'UPDATE games SET status = ? WHERE id = ?',
-				['finished', gameId]
-			)
-		}
-
-		await db.close()
-
-		return reply.code(200).send({
-			message: "Game finished",
-			game_id: gameId
-		})
-	}
-	catch (err) {
-		if (db) await db.close()
-		request.log.error(err)
-		return reply.code(500).send({ message: "Error finishing game" })
-	}
-})
+// Obsolete game endpoints removed
 
 //TOURNAMENTS
 fastify.post('/tournament/create', { preHandler: [fastify.authenticate] }, async (request, reply) => {

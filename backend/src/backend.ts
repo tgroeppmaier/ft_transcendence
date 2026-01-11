@@ -207,6 +207,14 @@ class Game {
       clearInterval(this.gameInterval);
       this.gameInterval = null;
     }
+    // Force close sockets to ensure cleanup and prevent memory leaks
+    if (this.player1?.socket && this.player1.socket.readyState === 1) {
+       this.player1.socket.close();
+    }
+    if (this.player2?.socket && this.player2.socket.readyState === 1) {
+       this.player2.socket.close();
+    }
+
     if (reset) this.resetGame();
   }
 
@@ -348,6 +356,7 @@ class Game {
       }
 
       this.stop(false);
+      this.onEmpty();
       return;
     }
     this.handleWallCollision();
@@ -379,11 +388,27 @@ backend.decorate("authenticate", async (request: any, reply: any) => {
 
 const games = new Map<string, Game>();
 
+interface Invite {
+  id: string;
+  creatorId: number;
+  targetId: number;
+  gameId: string;
+  createdAt: number;
+}
+
+const invites = new Map<string, Invite>();
+
 // 1. API Endpoint for Game Creation
 backend.post("/api/games", { preHandler: [(backend as any).authenticate] }, async (request, reply) => {
   const gameId = randomUUID();
   const newGame = new Game(gameId, () => {
     games.delete(gameId);
+    // Cleanup invites associated with this game
+    for (const [inviteId, invite] of invites.entries()) {
+      if (invite.gameId === gameId) {
+        invites.delete(inviteId);
+      }
+    }
     backend.log.info(`Game ${gameId} deleted`);
   });
   games.set(gameId, newGame);
@@ -392,9 +417,103 @@ backend.post("/api/games", { preHandler: [(backend as any).authenticate] }, asyn
   return { gameId };
 });
 
+// Invite Endpoints
+backend.post("/api/invite", { preHandler: [(backend as any).authenticate] }, async (request, reply) => {
+  const creatorId = (request as any).user.id;
+  const { targetId, gameId: providedGameId } = request.body as { targetId: number, gameId?: string };
+  
+  if (!targetId) return reply.code(400).send({ message: "Target ID required" });
+  if (creatorId === targetId) return reply.code(400).send({ message: "Cannot invite yourself" });
+
+  // 1. Check friendship via Database Service
+  try {
+      const res = await fetch("http://database:3000/internal/check-friendship", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user1_id: creatorId, user2_id: targetId })
+      });
+      const data = await res.json() as { areFriends: boolean };
+      if (!data.areFriends) {
+          return reply.code(403).send({ message: "You can only invite friends" });
+      }
+  } catch (err) {
+      backend.log.error(err);
+      return reply.code(500).send({ message: "Friendship check failed" });
+  }
+
+  let gameId = providedGameId;
+
+  // 2. Use existing or Create Game
+  if (gameId) {
+      const game = games.get(gameId!);
+      if (!game) return reply.code(404).send({ message: "Game not found" });
+      if (game.getState() !== "waiting") return reply.code(400).send({ message: "Game already started" });
+  } else {
+      const newId = randomUUID();
+      gameId = newId;
+      const newGame = new Game(newId, () => {
+        games.delete(newId);
+        for (const [inviteId, invite] of invites.entries()) {
+            if (invite.gameId === newId) invites.delete(inviteId);
+        }
+        backend.log.info(`Game ${newId} deleted`);
+      });
+      games.set(newId, newGame);
+  }
+
+  // 3. Create Invite
+  const inviteId = randomUUID();
+  invites.set(inviteId, {
+      id: inviteId,
+      creatorId,
+      targetId,
+      gameId: gameId!,
+      createdAt: Date.now()
+  });
+
+  return { message: "Invite sent", gameId };
+});
+
+backend.get("/api/invites", { preHandler: [(backend as any).authenticate] }, async (request, reply) => {
+    const userId = (request as any).user.id;
+    // Return invites where user is target
+    const myInvites = Array.from(invites.values()).filter(i => i.targetId === userId);
+    
+    // Enrich with creator info? Ideally yes, but for now sending raw invites. 
+    // The frontend might need to fetch user details.
+    // Or we can do a quick lookup if we had a cache. 
+    // Let's send the ID and let frontend handle display or fetch profile.
+    
+    // Actually, to make it usable, we might need the creator's login.
+    // But since backend doesn't store users, we'd need to ask DB.
+    // Optimization: Frontend usually has friend list loaded, so it can map ID -> Name.
+    
+    return { invites: myInvites };
+});
+
+backend.post("/api/invite/accept", { preHandler: [(backend as any).authenticate] }, async (request, reply) => {
+    const userId = (request as any).user.id;
+    const { inviteId } = request.body as { inviteId: string };
+    
+    const invite = invites.get(inviteId);
+    if (!invite) return reply.code(404).send({ message: "Invite not found" });
+    if (invite.targetId !== userId) return reply.code(403).send({ message: "Not your invite" });
+    
+    const game = games.get(invite.gameId);
+    if (!game) {
+        invites.delete(inviteId); // Cleanup stale invite
+        return reply.code(404).send({ message: "Game no longer exists" });
+    }
+    
+    invites.delete(inviteId); // Consumed
+    return { gameId: invite.gameId };
+});
+
 backend.get("/api/games", { preHandler: [(backend as any).authenticate] }, async (request, reply) => {
-  const gameIds = Array.from(games.keys());
-  return { games: gameIds };
+  const availableGames = Array.from(games.values())
+    .filter(g => g.getState() === "waiting")
+    .map(g => g.gameId);
+  return { games: availableGames };
 });
 
 // 2. WebSocket Endpoint for Gameplay
@@ -463,7 +582,10 @@ backend.get("/api/games/:id/state", { preHandler: [(backend as any).authenticate
 
   // Return the latest snapshot (or create one if null)
   const snapshot = game.createGameState();
-  return snapshot || { type: "error", message: "Game not initialized" };
+  if (snapshot) {
+      return { ...snapshot, status: game.getState() };
+  }
+  return { status: game.getState() };
 });
 
 // Send Action (Control Paddle)
