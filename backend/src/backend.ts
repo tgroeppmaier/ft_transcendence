@@ -9,14 +9,11 @@ import { Game } from "./game.js";
 import { Tournament } from "./tournament.js";
 import { games, invites, tournaments } from "./state.js";
 
-
-
-
-
-
-
-
-
+declare module "fastify" {
+  interface FastifyInstance {
+    authenticate: any;
+  }
+}
 
 const backend = Fastify({ logger: true });
 await backend.register(websocket);
@@ -39,7 +36,7 @@ backend.decorate("authenticate", async (request: any, reply: any) => {
 
 
 // 1. API Endpoint for Game Creation
-backend.post("/api/games", { preHandler: [(backend as any).authenticate] }, async (request, reply) => {
+backend.post("/api/games", { preHandler: [backend.authenticate] }, async (request, reply) => {
   const gameId = randomUUID();
   const newGame = new Game(gameId, () => {
     games.delete(gameId);
@@ -58,7 +55,7 @@ backend.post("/api/games", { preHandler: [(backend as any).authenticate] }, asyn
 });
 
 // Invite Endpoints
-backend.post("/api/invite", { preHandler: [(backend as any).authenticate] }, async (request, reply) => {
+backend.post("/api/invite", { preHandler: [backend.authenticate] }, async (request, reply) => {
   const creatorId = (request as any).user.id;
   const { targetId, gameId: providedGameId } = request.body as { targetId: number, gameId?: string };
   
@@ -85,20 +82,19 @@ backend.post("/api/invite", { preHandler: [(backend as any).authenticate] }, asy
 
   // 2. Use existing or Create Game
   if (gameId) {
-      const game = games.get(gameId!);
+      const game = games.get(gameId);
       if (!game) return reply.code(404).send({ message: "Game not found" });
       if (game.getState() !== "waiting") return reply.code(400).send({ message: "Game already started" });
   } else {
-      const newId = randomUUID();
-      gameId = newId;
-      const newGame = new Game(newId, () => {
-        games.delete(newId);
+      gameId = randomUUID();
+      const newGame = new Game(gameId, () => {
+        games.delete(gameId!);
         for (const [inviteId, invite] of invites.entries()) {
-            if (invite.gameId === newId) invites.delete(inviteId);
+            if (invite.gameId === gameId) invites.delete(inviteId);
         }
-        backend.log.info(`Game ${newId} deleted`);
+        backend.log.info(`Game ${gameId} deleted`);
       });
-      games.set(newId, newGame);
+      games.set(gameId, newGame);
   }
 
   // 3. Create Invite
@@ -107,14 +103,14 @@ backend.post("/api/invite", { preHandler: [(backend as any).authenticate] }, asy
       id: inviteId,
       creatorId,
       targetId,
-      gameId: gameId!,
+      gameId: gameId,
       createdAt: Date.now()
   });
 
   return { message: "Invite sent", gameId };
 });
 
-backend.get("/api/invites", { preHandler: [(backend as any).authenticate] }, async (request, reply) => {
+backend.get("/api/invites", { preHandler: [backend.authenticate] }, async (request, reply) => {
     const userId = (request as any).user.id;
     // Return invites where user is target
     const myInvites = Array.from(invites.values()).filter(i => i.targetId === userId);
@@ -131,7 +127,7 @@ backend.get("/api/invites", { preHandler: [(backend as any).authenticate] }, asy
     return { invites: myInvites };
 });
 
-backend.post("/api/invite/accept", { preHandler: [(backend as any).authenticate] }, async (request, reply) => {
+backend.post("/api/invite/accept", { preHandler: [backend.authenticate] }, async (request, reply) => {
     const userId = (request as any).user.id;
     const { inviteId } = request.body as { inviteId: string };
     
@@ -150,7 +146,7 @@ backend.post("/api/invite/accept", { preHandler: [(backend as any).authenticate]
 });
 
 // Tournament Endpoints
-backend.post("/api/tournament/create", { preHandler: [(backend as any).authenticate] }, async (request, reply) => {
+backend.post("/api/tournament/create", { preHandler: [backend.authenticate] }, async (request, reply) => {
     const creatorId = (request as any).user.id;
     const { tournament_name, player_ids } = request.body as { tournament_name: string, player_ids: number[] };
 
@@ -196,7 +192,7 @@ backend.post("/api/tournament/create", { preHandler: [(backend as any).authentic
     return { tournament_id: tId, message: "Tournament created" };
 });
 
-backend.get("/api/tournament/invitations", { preHandler: [(backend as any).authenticate] }, async (request, reply) => {
+backend.get("/api/tournament/invitations", { preHandler: [backend.authenticate] }, async (request, reply) => {
     const userId = (request as any).user.id;
     const invitations = [];
     for (const t of tournaments.values()) {
@@ -212,7 +208,7 @@ backend.get("/api/tournament/invitations", { preHandler: [(backend as any).authe
     return { invitations };
 });
 
-backend.get("/api/tournament/:id", { preHandler: [(backend as any).authenticate] }, async (request, reply) => {
+backend.get("/api/tournament/:id", { preHandler: [backend.authenticate] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const t = tournaments.get(id);
     if (!t) return reply.code(404).send({ message: "Tournament not found" });
@@ -232,7 +228,7 @@ backend.get("/api/tournament/:id", { preHandler: [(backend as any).authenticate]
     };
 });
 
-backend.post("/api/tournament/:id/accept", { preHandler: [(backend as any).authenticate] }, async (request, reply) => {
+backend.post("/api/tournament/:id/accept", { preHandler: [backend.authenticate] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const userId = (request as any).user.id;
     const t = tournaments.get(id);
@@ -242,7 +238,7 @@ backend.post("/api/tournament/:id/accept", { preHandler: [(backend as any).authe
     return { message: "Accepted" };
 });
 
-backend.post("/api/tournament/:id/decline", { preHandler: [(backend as any).authenticate] }, async (request, reply) => {
+backend.post("/api/tournament/:id/decline", { preHandler: [backend.authenticate] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const userId = (request as any).user.id;
     const t = tournaments.get(id);
@@ -252,7 +248,7 @@ backend.post("/api/tournament/:id/decline", { preHandler: [(backend as any).auth
     return { message: "Declined" };
 });
 
-backend.post("/api/tournament/:id/start", { preHandler: [(backend as any).authenticate] }, async (request, reply) => {
+backend.post("/api/tournament/:id/start", { preHandler: [backend.authenticate] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const userId = (request as any).user.id;
     const t = tournaments.get(id);
@@ -266,7 +262,7 @@ backend.post("/api/tournament/:id/start", { preHandler: [(backend as any).authen
     return { message: "Tournament started" };
 });
 
-backend.get("/api/games", { preHandler: [(backend as any).authenticate] }, async (request, reply) => {
+backend.get("/api/games", { preHandler: [backend.authenticate] }, async (request, reply) => {
   const availableGames = Array.from(games.values())
     .filter(g => g.getState() === "waiting")
     .map(g => g.gameId);
@@ -329,7 +325,7 @@ backend.get("/api/ws/:id", { websocket: true }, (socket, req) => {
 // 3. REST API for Server-Side Pong Module (CLI Interop)
 
 // Get Game State (Polling)
-backend.get("/api/games/:id/state", { preHandler: [(backend as any).authenticate] }, async (request, reply) => {
+backend.get("/api/games/:id/state", { preHandler: [backend.authenticate] }, async (request, reply) => {
   const { id } = request.params as { id: string };
   const game = games.get(id);
 
@@ -346,7 +342,7 @@ backend.get("/api/games/:id/state", { preHandler: [(backend as any).authenticate
 });
 
 // Send Action (Control Paddle)
-backend.post("/api/games/:id/action", { preHandler: [(backend as any).authenticate] }, async (request, reply) => {
+backend.post("/api/games/:id/action", { preHandler: [backend.authenticate] }, async (request, reply) => {
   const { id } = request.params as { id: string };
   // Get userId from authenticated request
   const userId = (request as any).user.id;

@@ -75,8 +75,8 @@ export class Tournament {
         const shuffled = playerIds.sort(() => Math.random() - 0.5);
         
         while (shuffled.length >= 2) {
-            const p1 = shuffled.pop()!;
-            const p2 = shuffled.pop()!;
+            const p1 = shuffled.pop();
+            const p2 = shuffled.pop();
             
             // Create Game
             const gameId = randomUUID();
@@ -117,7 +117,7 @@ export class Tournament {
         // Check if round complete
         const allFinished = this.currentRound.every(m => m.winner !== null);
         if (allFinished) {
-            const winners = this.currentRound.map(m => m.winner!);
+            const winners = this.currentRound.map(m => m.winner);
             if (winners.length === 1) {
                 this.finish(winners[0]);
             } else {
