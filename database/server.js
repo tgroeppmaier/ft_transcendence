@@ -24,7 +24,12 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || "https://olomova.42.fr/auth/google/callback"
 const UPLOADS_DIR = '/app/uploads'
-const JWT_SECRET = process.env.JWT_SECRET || 'change_this_to_a_strong_secret'
+
+const JWT_SECRET = process.env.JWT_SECRET
+if (!JWT_SECRET) {
+	console.error("FATAL: JWT_SECRET environment variable is required.")
+	process.exit(1)
+}
 
 const fastify = Fastify({
 	logger: true,

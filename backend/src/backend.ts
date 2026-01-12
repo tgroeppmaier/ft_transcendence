@@ -16,7 +16,12 @@ declare module "fastify" {
 const backend = Fastify({ logger: true });
 await backend.register(websocket);
 
-const JWT_SECRET = process.env.JWT_SECRET || 'change_this_to_a_strong_secret';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error("FATAL: JWT_SECRET environment variable is required.");
+  process.exit(1);
+}
+
 await backend.register(cookie, { secret: JWT_SECRET });
 await backend.register(jwt, { secret: JWT_SECRET });
 

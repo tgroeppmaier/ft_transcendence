@@ -16,14 +16,14 @@ services:
       dockerfile: ./backend/Dockerfile
     container_name: transcendence-backend
     environment:
-      - JWT_SECRET=supersecret
+      - JWT_SECRET=${JWT_SECRET}
     networks: [transnet]
 
   database:
     build: ./database
     container_name: transcendence-db
     environment:
-      - JWT_SECRET=supersecret
+      - JWT_SECRET=${JWT_SECRET}
       - FRONTEND_URL=https://localhost:8443
       - GOOGLE_REDIRECT_URI=https://localhost:8443/api/auth/google/callback
       - DB_PATH=/app/data/users.db

@@ -2,15 +2,21 @@ NAME = ft_transcendence
 DOCKER_COMPOSE = docker compose
 DATA_DIR = ./database/data
 
-all:
+all: setup
 	@printf "Launching $(NAME)...\n"
 	@$(DOCKER_COMPOSE) up -d
 	@printf "Application started\n"
 
-build:
+build: setup
 	@printf "Building $(NAME)...\n"
 	@$(DOCKER_COMPOSE) up -d --build
 	@printf "Application built and started\n"
+
+setup:
+	@if [ ! -f .env ]; then \
+		printf "Generating random JWT_SECRET in .env...\n"; \
+		node -e "console.log('JWT_SECRET=' + require('crypto').randomBytes(32).toString('hex'))" > .env; \
+	fi
 
 down:
 	@printf "Stopping $(NAME)...\n"
@@ -28,7 +34,7 @@ restart:
 	@printf "Restarting $(NAME)...\n"
 	@$(DOCKER_COMPOSE) restart
 
-re:
+re: setup
 	@printf "Rebuilding $(NAME)...\n"
 	@$(DOCKER_COMPOSE) down -v
 	@$(DOCKER_COMPOSE) up -d --build
