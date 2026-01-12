@@ -3,8 +3,8 @@ import { validate as uuidValidate } from "uuid";
 import { ErrorMessage } from "../../../shared/types.js";
 import { games } from "../state.js";
 
-export async function wsRoutes(fastify: FastifyInstance) {
-  fastify.get("/api/ws/:id", { websocket: true }, (socket, req) => {
+export async function wsRoutes(backend: FastifyInstance) {
+  backend.get("/api/ws/:id", { websocket: true }, (socket, req) => {
     const token = req.cookies?.token;
     if (!token) {
       socket.close();
@@ -12,7 +12,7 @@ export async function wsRoutes(fastify: FastifyInstance) {
     }
     let decoded;
     try {
-      decoded = fastify.jwt.verify(token) as { id: number };
+      decoded = backend.jwt.verify(token) as { id: number };
     } catch {
       socket.close();
       return;

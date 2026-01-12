@@ -3,9 +3,9 @@ import { randomUUID } from "crypto";
 import { Game } from "../game.js";
 import { games, invites } from "../state.js";
 
-export async function gameRoutes(fastify: FastifyInstance) {
+export async function gameRoutes(backend: FastifyInstance) {
   // Create Game
-  fastify.post("/api/games", { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  backend.post("/api/games", { preHandler: [backend.authenticate] }, async (request, reply) => {
     const gameId = randomUUID();
     const newGame = new Game(gameId, () => {
       games.delete(gameId);
@@ -15,16 +15,16 @@ export async function gameRoutes(fastify: FastifyInstance) {
           invites.delete(inviteId);
         }
       }
-      console.log(`Game ${gameId} deleted`);
+      backend.log.info(`Game ${gameId} deleted`);
     });
     games.set(gameId, newGame);
-    console.log({ gameId }, "New game created");
+    backend.log.info({ gameId }, "New game created");
 
     return { gameId };
   });
 
   // List Waiting Games
-  fastify.get("/api/games", { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  backend.get("/api/games", { preHandler: [backend.authenticate] }, async (request, reply) => {
     const availableGames = Array.from(games.values())
       .filter(g => g.getState() === "waiting")
       .map(g => g.gameId);
@@ -32,7 +32,7 @@ export async function gameRoutes(fastify: FastifyInstance) {
   });
 
   // Get Game State (Polling)
-  fastify.get("/api/games/:id/state", { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  backend.get("/api/games/:id/state", { preHandler: [backend.authenticate] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const game = games.get(id);
 
@@ -48,7 +48,7 @@ export async function gameRoutes(fastify: FastifyInstance) {
   });
 
   // Send Action
-  fastify.post("/api/games/:id/action", { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  backend.post("/api/games/:id/action", { preHandler: [backend.authenticate] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const userId = (request as any).user.id;
 

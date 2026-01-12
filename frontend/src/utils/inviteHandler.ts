@@ -5,7 +5,7 @@ export async function checkAndShowInvites() {
         // Prevent duplicate notifications
         if (document.getElementById('invite-notification')) return;
 
-        const res = await fetch('/api/invites', { credentials: 'include' });
+        const res = await fetch('/api/invites', { credentials: 'include', cache: 'no-store' });
         
         // 404 means no pending game, which is normal
         if (!res.ok) return; 

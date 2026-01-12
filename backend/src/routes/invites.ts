@@ -4,9 +4,9 @@ import { Game } from "../game.js";
 import { games, invites } from "../state.js";
 import { db } from "../db.js";
 
-export async function inviteRoutes(fastify: FastifyInstance) {
+export async function inviteRoutes(backend: FastifyInstance) {
   // Create Invite
-  fastify.post("/api/invite", { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  backend.post("/api/invite", { preHandler: [backend.authenticate] }, async (request, reply) => {
     const creatorId = (request as any).user.id;
     const { targetId, gameId: providedGameId } = request.body as { targetId: number, gameId?: string };
     
@@ -40,6 +40,13 @@ export async function inviteRoutes(fastify: FastifyInstance) {
         games.set(gameId, newGame);
     }
 
+    // Prevent duplicate invites
+    for (const invite of invites.values()) {
+        if (invite.creatorId === creatorId && invite.targetId === targetId && invite.gameId === gameId) {
+            return { message: "Invite already sent", gameId };
+        }
+    }
+
     const inviteId = randomUUID();
     invites.set(inviteId, {
         id: inviteId,
@@ -53,14 +60,14 @@ export async function inviteRoutes(fastify: FastifyInstance) {
   });
 
   // List Invites
-  fastify.get("/api/invites", { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  backend.get("/api/invites", { preHandler: [backend.authenticate] }, async (request, reply) => {
       const userId = (request as any).user.id;
       const myInvites = Array.from(invites.values()).filter(i => i.targetId === userId);
       return { invites: myInvites };
   });
 
   // Accept Invite
-  fastify.post("/api/invite/accept", { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  backend.post("/api/invite/accept", { preHandler: [backend.authenticate] }, async (request, reply) => {
       const userId = (request as any).user.id;
       const { inviteId } = request.body as { inviteId: string };
       

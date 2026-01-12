@@ -4,9 +4,9 @@ import { Tournament } from "../tournament.js";
 import { tournaments } from "../state.js";
 import { db } from "../db.js";
 
-export async function tournamentRoutes(fastify: FastifyInstance) {
+export async function tournamentRoutes(backend: FastifyInstance) {
   // Create Tournament
-  fastify.post("/api/tournament/create", { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  backend.post("/api/tournament/create", { preHandler: [backend.authenticate] }, async (request, reply) => {
       const creatorId = (request as any).user.id;
       const { tournament_name, player_ids } = request.body as { tournament_name: string, player_ids: number[] };
 
@@ -45,7 +45,7 @@ export async function tournamentRoutes(fastify: FastifyInstance) {
   });
 
   // List Invitations
-  fastify.get("/api/tournament/invitations", { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  backend.get("/api/tournament/invitations", { preHandler: [backend.authenticate] }, async (request, reply) => {
       const userId = (request as any).user.id;
       const invitations = [];
       for (const t of tournaments.values()) {
@@ -62,7 +62,7 @@ export async function tournamentRoutes(fastify: FastifyInstance) {
   });
 
   // Get Details
-  fastify.get("/api/tournament/:id", { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  backend.get("/api/tournament/:id", { preHandler: [backend.authenticate] }, async (request, reply) => {
       const { id } = request.params as { id: string };
       const t = tournaments.get(id);
       if (!t) return reply.code(404).send({ message: "Tournament not found" });
@@ -82,7 +82,7 @@ export async function tournamentRoutes(fastify: FastifyInstance) {
   });
 
   // Accept
-  fastify.post("/api/tournament/:id/accept", { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  backend.post("/api/tournament/:id/accept", { preHandler: [backend.authenticate] }, async (request, reply) => {
       const { id } = request.params as { id: string };
       const userId = (request as any).user.id;
       const t = tournaments.get(id);
@@ -93,7 +93,7 @@ export async function tournamentRoutes(fastify: FastifyInstance) {
   });
 
   // Decline
-  fastify.post("/api/tournament/:id/decline", { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  backend.post("/api/tournament/:id/decline", { preHandler: [backend.authenticate] }, async (request, reply) => {
       const { id } = request.params as { id: string };
       const userId = (request as any).user.id;
       const t = tournaments.get(id);
@@ -104,7 +104,7 @@ export async function tournamentRoutes(fastify: FastifyInstance) {
   });
 
   // Start
-  fastify.post("/api/tournament/:id/start", { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  backend.post("/api/tournament/:id/start", { preHandler: [backend.authenticate] }, async (request, reply) => {
       const { id } = request.params as { id: string };
       const userId = (request as any).user.id;
       const t = tournaments.get(id);
