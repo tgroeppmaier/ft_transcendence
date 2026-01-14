@@ -1,25 +1,9 @@
-// src/utils/gameRenderer.ts
-
 import { Ball, Paddle, Score } from "../../../shared/types.js";
-import {
-  BALL_RADIUS,
-  PADDLE_WIDTH,
-  PADDLE_HEIGHT,
-} from "../../../shared/constants.js";
+import { BALL_RADIUS, PADDLE_WIDTH, PADDLE_HEIGHT, } from "../../../shared/constants.js";
 
-export function drawBall(
-  ctx: CanvasRenderingContext2D,
-  canvas: HTMLCanvasElement,
-  ball: Ball
-) {
+export function drawBall( ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, ball: Ball ) {
   ctx.beginPath();
-  ctx.arc(
-    ball.x * canvas.width,
-    ball.y * canvas.height,
-    BALL_RADIUS * canvas.width,
-    0,
-    Math.PI * 2,
-  );
+  ctx.arc( ball.x * canvas.width, ball.y * canvas.height, BALL_RADIUS * canvas.width, 0, Math.PI * 2, );
   ctx.fillStyle = "white";
   ctx.fill();
   ctx.closePath();
@@ -61,10 +45,11 @@ export function drawScores(
 export function drawMessage(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
-  text: string
+  text: string,
+  y = canvas.height / 2
 ) {
   ctx.fillStyle = "white";
   ctx.font = "30px Arial";
   ctx.textAlign = "center";
-  ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+  ctx.fillText(text, canvas.width / 2, y);
 }

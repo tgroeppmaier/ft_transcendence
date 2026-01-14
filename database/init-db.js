@@ -50,7 +50,6 @@ async function initDatabase() {
 
 		console.log('Table "friends" created')
 
-		// table match_history (unused)
 		await db.exec(`CREATE TABLE IF NOT EXISTS match_history (id INTEGER PRIMARY KEY AUTOINCREMENT,
 		player1_id INTEGER NOT NULL,
 		player2_id INTEGER NOT NULL,
