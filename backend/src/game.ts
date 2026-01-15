@@ -28,7 +28,6 @@ export class Game {
   public gameId: string;
 
   private ball: Ball;
-  private canvas: { width: number; height: number };
   private score: Score;
   private state: GameStatus;
   private lastUpdate: number;
@@ -43,7 +42,6 @@ export class Game {
     this.onEmpty = onEmpty;
     this.onResult = onResult;
     this.ball = { x: 0.5, y: 0.5, vx: BALL_X_SPEED, vy: BALL_Y_SPEED };
-    this.canvas = { width: 1, height: 1 };
     this.score = { left: 0, right: 0 };
     this.state = "waiting";
     this.lastUpdate = Date.now();
@@ -158,7 +156,7 @@ export class Game {
 
   private start() {
     this.lastUpdate = Date.now();
-    this.gameInterval = setInterval(() => this.update(), FPS);
+    this.gameInterval = setInterval(() => this.tick(), FPS);
   }
 
   private stop(reset = true) {
@@ -178,8 +176,8 @@ export class Game {
   }
 
   private resetBall() {
-    this.ball.x = this.canvas.width / 2;
-    this.ball.y = this.canvas.height / 2;
+    this.ball.x = CANVAS_WIDTH / 2;
+    this.ball.y = CANVAS_HEIGHT / 2;
     this.ball.vx = this.ball.vx > 0 ? -BALL_X_SPEED : BALL_X_SPEED;
     this.ball.vy = (Math.random() - 0.5) * BALL_Y_SPEED * 3;
   }
@@ -251,8 +249,8 @@ export class Game {
   }
 
   private handleWallCollision() {
-    if (this.ball.y + BALL_RADIUS > this.canvas.height) {
-      this.ball.y = this.canvas.height - BALL_RADIUS;
+    if (this.ball.y + BALL_RADIUS > CANVAS_HEIGHT) {
+      this.ball.y = CANVAS_HEIGHT - BALL_RADIUS;
       this.ball.vy *= -1;
     }
     if (this.ball.y - BALL_RADIUS < 0) {
@@ -261,7 +259,24 @@ export class Game {
     }
   }
 
-  private update() {
+  private handleScore() {
+    let scoreChanged = false;
+    if (this.ball.x < 0) {
+      this.resetBall();
+      this.score.right += 1;
+      scoreChanged = true;
+    } else if (this.ball.x > CANVAS_WIDTH) {
+      this.resetBall();
+      this.score.left += 1;
+      scoreChanged = true;
+    }
+
+    if (scoreChanged) {
+      this.broadcastState();
+    }
+  }
+
+  private tick() {
     const now = Date.now();
     const dt = (now - this.lastUpdate) / 1000;
     this.lastUpdate = now;
@@ -276,21 +291,7 @@ export class Game {
 
     this.handlePaddleMovement(dt);
     this.handlePaddleCollision();
-
-    let scoreChanged = false;
-    if (this.ball.x < 0) {
-      this.resetBall();
-      this.score.right += 1;
-      scoreChanged = true;
-    } else if (this.ball.x > this.canvas.width) {
-      this.resetBall();
-      this.score.left += 1;
-      scoreChanged = true;
-    }
-
-    if (scoreChanged) {
-      this.broadcastState();
-    }
+    this.handleScore();
 
     if (this.score.left >= POINTS_TO_WIN || this.score.right >= POINTS_TO_WIN) {
       this.state = "gameOver";

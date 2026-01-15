@@ -1,9 +1,6 @@
 import { navigateTo } from "../router.js";
-import { drawBall, drawPaddles, drawScores, drawMessage }
-  from "../utils/gameRenderer.js";
-import { Ball, Paddle, Score, ServerMessage, GameStatus, ErrorMessage, Action }
-  from "../../../shared/types.js";
-import { BALL_RADIUS, PADDLE_WIDTH, PADDLE_HEIGHT, CANVAS_WIDTH, CANVAS_HEIGHT } from "../../../shared/constants.js";
+import { RemoteGame } from "../utils/remoteGame.js";
+import { GameStatus, Score } from "../../../shared/types.js";
 
 export async function RemoteGameView(existingGameId?: string) {
   let gameId = existingGameId;
@@ -39,15 +36,6 @@ export async function RemoteGameView(existingGameId?: string) {
     // Use replaceState to avoid history loop
     window.history.replaceState({}, "", `/remote-game?gameId=${gameId}`);
   }
-
-  const ws = new WebSocket(`${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/api/ws/${gameId}`);
-
-
-  ws.addEventListener("open", () => console.log("[ws] open"));
-  ws.addEventListener("close", (e) =>
-    console.log("[ws] close", e.code, e.reason),
-  );
-  ws.addEventListener("error", (e) => console.log("[ws] error", e));
 
   const gameContainer = document.createElement("div");
   gameContainer.className = "flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4";
@@ -135,134 +123,25 @@ export async function RemoteGameView(existingGameId?: string) {
             alert("Error sending invitation");
         }
     }
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("2D context not found");
 
-  let ball: Ball = { x: 0.5, y: 0.5, vx: 0, vy: 0 };
-  let leftPaddle: Paddle = { x: 0, y: (CANVAS_HEIGHT - PADDLE_HEIGHT) / 2 };
-  let rightPaddle: Paddle = { x: CANVAS_WIDTH - PADDLE_WIDTH, y: (CANVAS_HEIGHT - PADDLE_HEIGHT) / 2 };
-  let score: Score = { left: 0, right: 0 };
-  let gameStatus: GameStatus = "waiting";
-  let mySide: "left" | "right" | null = null;
-  let errorMessage: string | null = null;
-
-
-  ws.onmessage = (event) => {
-    const msg = JSON.parse(event.data) as ServerMessage;
-
-    // 1. Error Message
-    if ("type" in msg && msg.type === "error") {
-      errorMessage = `Error: ${msg.message}`;
-      return;
-    }
-
-    // 2. Init Message
-    if ("type" in msg && msg.type === "init") {
-      mySide = msg.side;
-      return;
-    }
-
-    // 3. State Update (Score/Status)
-    if ("type" in msg && msg.type === "state") {
-      gameStatus = msg.status;
-      score.left = msg.score[0];
-      score.right = msg.score[1];
-
-      if (gameStatus === "waiting") {
-        if (mySide === "left") {
+  const onStateChange = (status: GameStatus, side: "left" | "right" | null, score: Score) => {
+      if (status === "waiting") {
+        if (side === "left") {
             inviteOverlay.classList.remove("hidden");
         }
       } else {
         inviteOverlay.classList.add("hidden");
         inviteModal.classList.add("hidden");
       }
-      return;
-    }
-
-    // 4. Game Tick (Ball/Paddles)
-    if ("t" in msg) {
-      ball.x = msg.b[0];
-      ball.y = msg.b[1];
-      leftPaddle.y = msg.p[0];
-      rightPaddle.y = msg.p[1];
-    }
   };
 
-  let rafID = 0;
-
-  function render() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    if (errorMessage) {
-        drawMessage(ctx, canvas, errorMessage);
-        rafID = requestAnimationFrame(render);
-        return;
-    }
-
-    drawScores(ctx, canvas, score);
-
-    if (gameStatus === "waiting") {
-      drawMessage(ctx, canvas, "Waiting for other Player");
-    }
-    else if (gameStatus === "gameOver") {
-       if (mySide === "left") {
-        drawMessage(ctx, canvas, score.left > score.right ? "You won!" : "You lost!");
-      } else if (mySide === "right") {
-        drawMessage(ctx, canvas, score.right > score.left ? "You won!" : "You lost!");
-      } else {
-        drawMessage(ctx, canvas, "Game Over");
-      }
-    } else {
-      // Game Running
-      drawBall(ctx, canvas, ball);
-      drawPaddles(ctx, canvas, leftPaddle, rightPaddle);
-    }
-
-    rafID = requestAnimationFrame(render);
-  }
-
-  // Start render loop
-  rafID = requestAnimationFrame(render);
-
-  const keyMap: Record<string, boolean> = { up: false, down: false };
-
-  const sendAction = (action: Action) => {
-    if (ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify(action));
-  };
-
-  const onKeyDown = (e: KeyboardEvent) => {
-    if (e.key === "w" && !keyMap[e.key]) {
-      keyMap[e.key] = true;
-      sendAction({ move: "start", direction: "up" });
-    }
-    if (e.key === "s" && !keyMap[e.key]) {
-      keyMap[e.key] = true;
-      sendAction({ move: "start", direction: "down" });
-    }
-  };
-
-  const onKeyUp = (e: KeyboardEvent) => {
-    if (e.key === "w") {
-      keyMap[e.key] = false;
-      sendAction({ move: "stop", direction: "up" });
-    }
-    if (e.key === "s") {
-      keyMap[e.key] = false;
-      sendAction({ move: "stop", direction: "down" });
-    }
-  };
-
-  window.addEventListener("keydown", onKeyDown);
-  window.addEventListener("keyup", onKeyUp);
+  const game = new RemoteGame(gameId, canvas, onStateChange);
+  game.start();
 
   return {
     component: gameContainer,
     cleanup: () => {
-      cancelAnimationFrame(rafID);
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("keyup", onKeyUp);
-      ws.close();
+      game.stop();
     },
   };
 }
