@@ -10,6 +10,7 @@ import { FriendsView } from "./views/FriendsView.js";
 import { RequestsView } from "./views/RequestsView.js";
 import { SearchView } from "./views/SearchView.js";
 import { ProfileView } from "./views/ProfileView.js";
+import { LocalTournamentView } from "./views/LocalTournamentView.js";
 
 type View = {
   component: HTMLElement;
@@ -22,6 +23,7 @@ const routes: Record<string, (existingGameId?: string) => View | Promise<View>> 
   "/register": RegisterView,
   "/menu": MainMenuView,
   "/local-game": LocalGameView,
+  "/local-tournament": LocalTournamentView,
   "/remote-game": RemoteGameView,
   "/game-lobby": gameLobby,
   "/tournament": TournamentView,
@@ -50,7 +52,7 @@ async function checkAuth(): Promise<boolean> {
 }
 
 async function render(fullPath: string) {
-  if (!root) 
+  if (!root)
     return;
 
   const pathname = fullPath.split('?')[0];
