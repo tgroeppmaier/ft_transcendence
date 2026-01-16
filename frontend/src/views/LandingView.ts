@@ -7,7 +7,10 @@ export function LandingView() {
     <h1 class="text-6xl font-extrabold text-blue-900 mb-8 drop-shadow-lg">PONG</h1>
     <div class="flex flex-col gap-4 w-full max-w-xs">
       <button id="local-game-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-xl shadow-md transition duration-200 transform hover:scale-105">
-        Play Local 1v1
+        Play Local 1vs1
+      </button>
+      <button id="agent-game-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-xl shadow-md transition duration-200 transform hover:scale-105">
+        Play with Agent
       </button>
       <button id="local-tournament-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-xl shadow-md transition duration-200 transform hover:scale-105">
         Play Local Tournament
@@ -25,6 +28,7 @@ export function LandingView() {
 
   landing.querySelector("#local-game-btn")?.addEventListener("click", () => navigateTo("/local-game"));
   landing.querySelector("#local-tournament-btn")?.addEventListener("click", () => navigateTo("/local-tournament"));
+  landing.querySelector("#agent-game-btn")?.addEventListener("click", () => navigateTo("/agent-game"));
   landing.querySelector("#login-btn")?.addEventListener("click", () => navigateTo("/login"));
   landing.querySelector("#register-btn")?.addEventListener("click", () => navigateTo("/register"));
 

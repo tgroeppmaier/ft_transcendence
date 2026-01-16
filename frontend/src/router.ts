@@ -1,5 +1,6 @@
 import { MainMenuView } from "./views/MainMenuView.js";
 import { LocalGameView } from "./views/LocalGameView.js";
+import { AgentGameView } from "./views/AgentGameView.js";
 import { TournamentView } from "./views/TournamentView.js";
 import { RemoteGameView } from "./views/RemoteGameView.js";
 import { gameLobby } from "./views/LobbyView.js";
@@ -24,6 +25,7 @@ const routes: Record<string, (existingGameId?: string) => View | Promise<View>> 
   "/menu": MainMenuView,
   "/local-game": LocalGameView,
   "/local-tournament": LocalTournamentView,
+  "/agent-game": AgentGameView,
   "/remote-game": RemoteGameView,
   "/game-lobby": gameLobby,
   "/tournament": TournamentView,
@@ -56,7 +58,7 @@ async function render(fullPath: string) {
     return;
 
   const pathname = fullPath.split('?')[0];
-  const publicRoutes = ["/", "/login", "/register", "/local-game"];
+  const publicRoutes = ["/", "/login", "/register", "/local-game", "/agent-game"];
 
   if (!publicRoutes.includes(pathname)) {
     const isAuth = await checkAuth();
@@ -86,5 +88,3 @@ async function render(fullPath: string) {
 }
 
 render(window.location.pathname);
-
-
