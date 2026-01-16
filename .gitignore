@@ -31,6 +31,6 @@ yarn-error.log*
 .caddy/
 
 # Vim
-.swp
-.swo
-.swx
+*.swp
+*.swo
+*.swx
