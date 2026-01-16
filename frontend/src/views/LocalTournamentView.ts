@@ -69,6 +69,8 @@ export function LocalTournamentView() {
         const input = document.createElement("input");
         input.type = "text";
         input.value = name;
+        input.maxLength = 15;
+        input.placeholder = "Max 15 characters";
         input.className = "shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline";
         input.oninput = (e) => {
           playerNames[index] = (e.target as HTMLInputElement).value;
@@ -94,8 +96,23 @@ export function LocalTournamentView() {
       startBtn.className = "flex-1 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition";
       startBtn.textContent = "Start Tournament";
       startBtn.onclick = () => {
-        console.log("Starting tournament with:", playerNames);
-        alert(`Tournament ready with players: ${playerNames.join(", ")}`);
+        const trimmedNames = playerNames.map(name => name.trim());
+
+        // Check for empty names
+        if (trimmedNames.some(name => !name)) {
+            alert("Please ensure all player names are filled out.");
+            return;
+        }
+
+        // Check for duplicates
+        const uniqueNames = new Set(trimmedNames);
+        if (uniqueNames.size !== trimmedNames.length) {
+            alert("Player names must be unique. Please choose different names.");
+            return;
+        }
+
+        console.log("Starting tournament with:", trimmedNames);
+        alert(`Tournament ready with players: ${trimmedNames.join(", ")}`);
         // TODO: Proceed to tournament logic
       };
 
