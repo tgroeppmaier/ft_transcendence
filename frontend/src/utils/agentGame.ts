@@ -18,6 +18,8 @@ export class AgentGame {
   private ctx: CanvasRenderingContext2D;
 
   private ball: Ball = { x: 0.5, y: 0.5, vx: BALL_X_SPEED, vy: BALL_Y_SPEED };
+	private bounce_balls_list: Ball[] = [];
+  //private reference_ball: Ball = { x: 0.5, y: 0.5, vx: BALL_X_SPEED, vy: BALL_Y_SPEED };
   private score: Score = { left: 0, right: 0};
   private lastUpdate: number;
   private keyAgentMap: Record<string, boolean> = { "w": false, "s": false };
@@ -98,10 +100,15 @@ private render() {
       drawBall(this.ctx, this.canvas, this.ball);
       drawPaddles(this.ctx, this.canvas, this.leftPaddle, this.rightPaddle);
       drawScores(this.ctx, this.canvas, this.score);
-			if (this.keyDebugMap['p']) {
-				drawMessage(this.ctx, this.canvas, `w: ${this.keyAgentMap['w']}, s: ${this.keyAgentMap['s']}, p: ${this.keyDebugMap['p']}`);
+			if (this.keyDebugMap['p'] || true) {
+				drawMessage(this.ctx, this.canvas, `w: ${this.keyAgentMap['w']}, \
+								s: ${this.keyAgentMap['s']}, p: ${this.keyDebugMap['p']}`);
 				drawMessage(this.ctx, this.canvas, `${(this.leftPaddle.y).toFixed(5)} -- ${(this.leftPaddle.y + PADDLE_HEIGHT / 2).toFixed(5)} -- ${(this.leftPaddle.y + PADDLE_HEIGHT).toFixed(5)}`, this.canvas.height * 2/3);
 				drawMessage(this.ctx, this.canvas, `${this.ball.y.toFixed(5)}, vx:${this.ball.vx.toFixed(5)}, vy:${this.ball.vy.toFixed(5)}`, this.canvas.height * 3/4);
+				drawMessage(this.ctx, this.canvas, `rafID: ${(this.rafID/60).toFixed(5)}`, this.canvas.height* 4/5);
+				for (let reference_ball of this.bounce_balls_list) {
+					drawBall(this.ctx, this.canvas, reference_ball);
+				}
 			}
     }
   }
@@ -147,14 +154,104 @@ private render() {
   }
 
 	private agentMove() {
-		console.log(this.leftPaddle.y);
-		this.keyAgentMap["w"] = false;
-		this.keyAgentMap["s"] = false;
-		if (this.leftPaddle.y + 0.5*PADDLE_HEIGHT / 2 >= this.ball.y) {
-			this.keyAgentMap["w"] = true;
+		//console.log(this.leftPaddle.y);
+		if (0 == this.rafID % 120) {
+			this.keyAgentMap["w"] = false;
+			this.keyAgentMap["s"] = false;
+			if (this.leftPaddle.y + 0.5*PADDLE_HEIGHT / 2 >= this.ball.y) {
+				this.keyAgentMap["w"] = true;
+			}
+			else if (this.leftPaddle.y + 1.5*PADDLE_HEIGHT / 2 <= this.ball.y) {
+				this.keyAgentMap["s"] = true;
+			}
+			if (this.ball.vx > 0) {
+				this.bounce_balls_list = [];
+				let delta = (2 * CANVAS_WIDTH - BALL_RADIUS - this.ball.x) / this.ball.vx;
+				let reference_ball: Ball = { x: BALL_RADIUS, 
+						y: (this.ball.y + delta * this.ball.vy ) % CANVAS_HEIGHT, 
+						vx: 0, vy: 0
+					}
+				this.bounce_balls_list.push(reference_ball);
+			}
+			this.find_bounces();
 		}
-		else if (this.leftPaddle.y + 1.5*PADDLE_HEIGHT / 2 <= this.ball.y) {
-			this.keyAgentMap["s"] = true;
+	}
+
+	private find_bounces() {
+		let reference_ball: Ball = { x: this.ball.x, y: this.ball.y, 
+															vx: this.ball.vx, vy: this.ball.vy };
+		let delta_time_x: number, delta_time_y: number, delta: number;
+		let vx_tmp: number, vy_tmp: number;
+		//this.bounce_balls_list = [];
+		let keep_doing: boolean = true;
+		let cnt: number = 0;
+		while (keep_doing || cnt < 10) {
+			cnt += 1;
+			if (reference_ball.vx > 0) {
+				delta_time_x = (CANVAS_WIDTH - BALL_RADIUS - reference_ball.x) / reference_ball.vx;
+				if (delta_time_x < 0) {
+					delta_time_x = 0;
+				}
+			}
+			else if (reference_ball.vx < 0) {
+				delta_time_x = (BALL_RADIUS - reference_ball.x) / reference_ball.vx;
+				if (delta_time_x < 0) {
+					delta_time_x = 0;
+				}
+			}
+			else {
+				delta_time_x = -1;
+			}
+			if (reference_ball.vy > 0) {
+				delta_time_y = (CANVAS_HEIGHT - BALL_RADIUS - reference_ball.y) / reference_ball.vy;
+				if (delta_time_y < 0) {
+					delta_time_y = 0;
+				}
+			}
+			else if (reference_ball.vy < 0) {
+				delta_time_y = (BALL_RADIUS - reference_ball.y) / reference_ball.vy;
+				if (delta_time_y < 0) {
+					delta_time_y = 0;
+				}
+			}
+			else {
+				delta_time_y = -1;
+			}
+			if (delta_time_x < 0 && delta_time_y < 0) {
+				delta = -1;
+			}
+			else if (delta_time_x >= 0 && (delta_time_y < 0 || delta_time_y > delta_time_x)) {
+				delta = delta_time_x;
+        reference_ball.x = reference_ball.x + delta * reference_ball.vx;
+        reference_ball.y = reference_ball.y + delta * reference_ball.vy;
+				reference_ball.vx *= -1.05;
+				if (reference_ball.vx > 0) {
+					keep_doing = false;
+				}
+			}
+			else if (delta_time_y >= 0 && (delta_time_x < 0 || delta_time_x > delta_time_y)) {
+				delta = delta_time_y;
+        reference_ball.x = reference_ball.x + delta * reference_ball.vx;
+        reference_ball.y = reference_ball.y + delta * reference_ball.vy;
+				reference_ball.vy *= -1;
+			}
+			else if (delta_time_x == delta_time_y) {
+				delta = delta_time_x;
+        reference_ball.x = reference_ball.x + delta * reference_ball.vx;
+        reference_ball.y = reference_ball.y + delta * reference_ball.vy;
+				reference_ball.vy *= -1;
+				reference_ball.vx *= -1.05;
+				if (reference_ball.vx > 0) {
+					keep_doing = false;
+				}
+			}
+			else {
+				console.log("What are the other options?", delta_time_x, delta_time_y, BALL_RADIUS, CANVAS_HEIGHT, CANVAS_WIDTH);
+        console.log("reference_ball: ", reference_ball.x, reference_ball.y, reference_ball.vx, reference_ball.y);
+			}
+      this.bounce_balls_list.push(reference_ball);
+      console.log("delta_x, delta_y, r, h, w:", delta_time_x, delta_time_y, BALL_RADIUS, CANVAS_HEIGHT, CANVAS_WIDTH);
+      console.log("reference_ball: ", reference_ball.x, reference_ball.y, reference_ball.vx, reference_ball.y);
 		}
 	}
 
