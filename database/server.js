@@ -22,7 +22,7 @@ const fsMkdir = promisify(fs.mkdir)
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
-const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || "https://olomova.42.fr/auth/google/callback"
+const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || "https://localhost:8443/api/auth/google/callback"
 const UPLOADS_DIR = '/app/uploads'
 
 const JWT_SECRET = process.env.JWT_SECRET
@@ -191,7 +191,7 @@ fastify.post('/registration', async (request, reply) => {
 		request.log.info('Starting password hashing...')
 		const hashedPassword = await bcrypt.hashSync(password, 10)
 		request.log.info('Hashing successful.')
-		await db.run('INSERT INTO users (login, email, password, onlineStatus) VALUES (?, ?, ?, ?)', [login, email, hashedPassword, onlineStatus])
+		await db.run('INSERT INTO users (login, email, password, onlineStatus, avatar) VALUES (?, ?, ?, ?, ?)', [login, email, hashedPassword, onlineStatus, 'default.png'])
 		await db.close()
 		return reply.code(200).send({ message: 'Registration successful!' })
 	}
@@ -628,9 +628,9 @@ fastify.get('/match-history', { preHandler: [fastify.authenticate] }, async (req
 
 fastify.post('/avatar', { preHandler: [fastify.authenticate] }, async (request, reply) => {
 	let db
+	let id
 	try {
-		// Auth handled by preHandler
-		const { id } = request.user
+		id = request.user.id
 	}
 	catch (err) {
 		request.log.error(err)
@@ -764,8 +764,8 @@ fastify.get('/auth/google/callback', async (req, reply) => {
 		if (!user) {
 			req.log.info('[DB] Creating new user with login:', login)
 			await db.run(
-				`INSERT INTO users (login, email, password, onlineStatus)
-				 VALUES (?, ?, ?, 'online')`,
+				`INSERT INTO users (login, email, password, onlineStatus, avatar)
+				 VALUES (?, ?, ?, 'online', 'default.png')`,
 				[login, email, null]
 			)
 			req.log.info('[DB] Insert completed, fetching user...')
@@ -799,7 +799,8 @@ fastify.get('/auth/google/callback', async (req, reply) => {
 		req.log.info('[DB] Database closed successfully')
 
 		req.log.info('=== Google Callback Success ===')
-		return reply.redirect(process.env.FRONTEND_URL || 'https://olomova.42.fr/')
+		const redirectUrl = (process.env.FRONTEND_URL || 'https://localhost:8443') + '/menu'
+		return reply.redirect(redirectUrl)
 
 	}
 	catch (err) {

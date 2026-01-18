@@ -39,6 +39,16 @@ localhost {
         file_server
         try_files {path} /index.html
     }
+    # 3. Google OAuth callback
+    @google_auth {
+        path /api/auth/google
+        path /api/auth/google/*
+    }
+    handle @google_auth {
+        uri strip_prefix /api
+        reverse_proxy database:3000
+    }
+
 }
 
 # Redirect HTTP
