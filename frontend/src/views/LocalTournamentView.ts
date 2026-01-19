@@ -9,6 +9,7 @@ export function LocalTournamentView() {
   let step = 1;
   let playerCount = 3;
   let playerNames: string[] = [];
+  let tournamentCleanup: (() => void) | null = null;
 
   const render = () => {
     container.innerHTML = "";
@@ -155,14 +156,9 @@ export function LocalTournamentView() {
         if (!ctx)
           throw new Error("Context not found");
 
-        const cleanup = () => {
-          tournament.stop();
-          document.removeEventListener("keydown", onKeyDown);
-          document.removeEventListener("keyup", onKeyUp);
-          canvas.removeEventListener("click", onCanvasClick);
-        };
-
-        const tournament = new LocalTournament(canvas, ctx, trimmedNames, cleanup);
+        const tournament = new LocalTournament(canvas, ctx, trimmedNames, () => {
+             // Tournament naturally ended
+        });
 
         const onKeyDown = (e: KeyboardEvent) => {
           tournament.onKeyDown(e.key);
@@ -176,6 +172,13 @@ export function LocalTournamentView() {
           tournament.handleClick();
         };
 
+        tournamentCleanup = () => {
+          tournament.stop();
+          document.removeEventListener("keydown", onKeyDown);
+          document.removeEventListener("keyup", onKeyUp);
+          canvas.removeEventListener("click", onCanvasClick);
+        };
+
         // Adding event listeners
         document.addEventListener("keydown", onKeyDown);
         document.addEventListener("keyup", onKeyUp);
@@ -184,9 +187,6 @@ export function LocalTournamentView() {
         tournament.start();
 
         container.appendChild(gameContainer);
-
-        // Override the return to include cleanup
-        return { component: container, cleanup };
       };
 
       btnGroup.appendChild(backBtn);
@@ -201,5 +201,10 @@ export function LocalTournamentView() {
 
   render();
 
-  return { component: container };
+  return { 
+    component: container,
+    cleanup: () => {
+      if (tournamentCleanup) tournamentCleanup();
+    }
+  };
 }

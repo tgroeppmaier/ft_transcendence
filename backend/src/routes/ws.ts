@@ -10,7 +10,7 @@ export async function wsRoutes(backend: FastifyInstance) {
       socket.close();
       return;
     }
-    let decoded;
+    let decoded: { id: number };
     try {
       decoded = backend.jwt.verify(token) as { id: number };
     } catch {
