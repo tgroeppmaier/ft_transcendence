@@ -17,6 +17,7 @@ export class LocalGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
 
+  private winner: string | null = null;
   private ball: Ball = { x: 0.5, y: 0.5, vx: BALL_X_SPEED, vy: BALL_Y_SPEED };
   private score: Score = { left: 0, right: 0};
   private lastUpdate: number;
@@ -29,14 +30,18 @@ export class LocalGame {
   private countdown = 5;
   private gameStarted = false;
   private rafID: number;
+  private isTournamentGame: boolean;
+  private onTournamentMatchEnd: ((winner: string) => void) | null;
 
-  constructor(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, player1?: string, player2?: string) {
+  constructor(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, player1?: string, player2?: string, tG?: boolean, cb?: (winner: string) => void) {
     this.canvas = canvas;
     this.ctx = ctx;
     this.lastUpdate = Date.now();
     this.player1 = player1 ?? "Player1";
     this.player2 = player2 ?? "Player2";
+    this.isTournamentGame = tG ?? false;
     this.resetPaddles();
+    this.onTournamentMatchEnd = cb ?? null;
   }
 
   public start() {
@@ -57,18 +62,19 @@ export class LocalGame {
   }
 
   public resetGame = () => {
-    if (this.gameOver) {
-      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      this.score.left = 0;
-      this.score.right = 0;
-      this.resetPaddles();
-      this.resetBall();
-      cancelAnimationFrame(this.rafID);
-      this.gameOver = false;
-      this.lastUpdate = performance.now();
-      this.render()
-      this.rafID = requestAnimationFrame(this.tick);
-    }
+    if (!this.gameOver) return;
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.score.left = 0;
+    this.score.right = 0;
+    this.resetPaddles();
+    this.resetBall();
+    cancelAnimationFrame(this.rafID);
+    this.gameOver = false;
+    this.gameStarted = false;
+    this.countdown = 3;
+    this.lastUpdate = performance.now();
+    this.render()
+    this.rafID = requestAnimationFrame(this.tick);
   }
 
     private resetBall() {
@@ -83,9 +89,7 @@ export class LocalGame {
     this.rightPaddle = { x: CANVAS_WIDTH - PADDLE_WIDTH, y: CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2 };
   }
 
-
-
-private render() {
+  private render() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     if (!this.gameStarted) {
       drawMessage(this.ctx, this.canvas, `${this.player1}: W/S keys | ${this.player2}: Arrow Up/Down` , this.canvas.height / 3);
@@ -157,6 +161,20 @@ private render() {
     }
   }
 
+  private handleGameEnd() {
+    this.winner = this.score.left > this.score.right ? this.player1 : this.player2
+    this.gameOver = true;
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    drawScores(this.ctx, this.canvas, this.score);
+    drawMessage(this.ctx, this.canvas, `${this.winner} wins`);
+    if (this.isTournamentGame && this.onTournamentMatchEnd) {
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      this.onTournamentMatchEnd(this.winner);
+      return;
+    }
+    drawMessage(this.ctx, this.canvas, "click to play again", (this.canvas.height / 3) * 2);
+  }
+
   private tick = (now: number) => {
     const dt = (now - this.lastUpdate) / 1000;
     this.lastUpdate = now;
@@ -177,13 +195,10 @@ private render() {
     this.handleScore();
 
     if (this.score.left >= POINTS_TO_WIN || this.score.right >= POINTS_TO_WIN) {
-      this.gameOver = true;
-      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      drawScores(this.ctx, this.canvas, this.score);
-      drawMessage(this.ctx, this.canvas, this.score.left > this.score.right ? `${this.player1} wins` : `${this.player2} wins`);
-      drawMessage(this.ctx, this.canvas, "click to play again", (this.canvas.height / 3) * 2);
+      this.handleGameEnd();
       return;
     }
+
     this.render();
     this.rafID = requestAnimationFrame(this.tick);
   }

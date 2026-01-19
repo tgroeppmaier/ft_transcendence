@@ -1,4 +1,5 @@
 import { navigateTo } from "../router.js";
+import { LocalTournament } from "../utils/localTournament.js";
 
 export function LocalTournamentView() {
   const container = document.createElement("div");
@@ -14,9 +15,9 @@ export function LocalTournamentView() {
 
     const card = document.createElement("div");
     card.className = "bg-white p-8 rounded-xl shadow-md w-full max-w-md";
-    
+
     const title = document.createElement("h2");
-    title.className = "text-2xl font-bold mb-6 text-center text-gray-800";
+    title.className = "text-2xl font-bold mb-6 text-center text-gray-800"
     title.textContent = "Local Tournament Setup";
     card.appendChild(title);
 
@@ -24,18 +25,18 @@ export function LocalTournamentView() {
       const label = document.createElement("label");
       label.className = "block text-gray-700 text-sm font-bold mb-2";
       label.textContent = "Number of Players (3-6):";
-      
+
       const input = document.createElement("input");
       input.type = "number";
       input.min = "3";
       input.max = "6";
       input.value = String(playerCount);
       input.className = "shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-4";
-      
+
       const nextBtn = document.createElement("button");
       nextBtn.className = "w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition";
       nextBtn.textContent = "Next";
-      
+
       nextBtn.onclick = () => {
         const val = parseInt(input.value);
         if (val >= 3 && val <= 6) {
@@ -61,7 +62,7 @@ export function LocalTournamentView() {
 
       playerNames.forEach((name, index) => {
         const group = document.createElement("div");
-        
+
         const label = document.createElement("label");
         label.className = "block text-gray-700 text-sm font-bold mb-1";
         label.textContent = `Player ${index + 1} Name:`;
@@ -71,6 +72,7 @@ export function LocalTournamentView() {
         input.value = name;
         input.maxLength = 15;
         input.placeholder = "Max 15 characters";
+        input.autocomplete = "off";
         input.className = "shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline";
         input.oninput = (e) => {
           playerNames[index] = (e.target as HTMLInputElement).value;
@@ -111,14 +113,85 @@ export function LocalTournamentView() {
             return;
         }
 
+        // Check for allowed characters (Alphanumeric, spaces, hyphens, apostrophes)
+        const nameRegex = /^[a-zA-Z0-9\s-']+$/;
+        const invalidName = trimmedNames.find(name => !nameRegex.test(name));
+        if (invalidName) {
+            alert(`Invalid name: "${invalidName}".\nNames can only contain letters, numbers, spaces, hyphens, and apostrophes.`);
+            return;
+        }
+
         console.log("Starting tournament with:", trimmedNames);
-        alert(`Tournament ready with players: ${trimmedNames.join(", ")}`);
-        // TODO: Proceed to tournament logic
+
+        // Create game container
+        container.innerHTML = "";
+        container.className = "flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4";
+
+        const gameContainer = document.createElement("div");
+        gameContainer.className = "flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4";
+        gameContainer.id = "local-tournament";
+        gameContainer.innerHTML = `
+          <div class="mb-4">
+            <button id="back-to-main" class="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition shadow-sm">
+              ← Back to Home
+            </button>
+          </div>
+          <canvas id="board" width="800" height="600" class="rounded-xl shadow-2xl border-4 border-gray-800" style="background-color: #000;"></canvas>
+        `;
+
+        const backButton = gameContainer.querySelector("#back-to-main");
+        if (backButton) {
+          backButton.addEventListener("click", (e) => {
+            e.preventDefault();
+            navigateTo("/");
+          });
+        }
+
+        const canvas = gameContainer.querySelector<HTMLCanvasElement>("#board");
+        if (!(canvas instanceof HTMLCanvasElement))
+          throw new Error("Canvas not found");
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx)
+          throw new Error("Context not found");
+
+        const cleanup = () => {
+          tournament.stop();
+          document.removeEventListener("keydown", onKeyDown);
+          document.removeEventListener("keyup", onKeyUp);
+          canvas.removeEventListener("click", onCanvasClick);
+        };
+
+        const tournament = new LocalTournament(canvas, ctx, trimmedNames, cleanup);
+
+        const onKeyDown = (e: KeyboardEvent) => {
+          tournament.onKeyDown(e.key);
+        };
+
+        const onKeyUp = (e: KeyboardEvent) => {
+          tournament.onKeyUp(e.key);
+        };
+
+        const onCanvasClick = () => {
+          tournament.handleClick();
+        };
+
+        // Adding event listeners
+        document.addEventListener("keydown", onKeyDown);
+        document.addEventListener("keyup", onKeyUp);
+        canvas.addEventListener("click", onCanvasClick);
+
+        tournament.start();
+
+        container.appendChild(gameContainer);
+
+        // Override the return to include cleanup
+        return { component: container, cleanup };
       };
 
       btnGroup.appendChild(backBtn);
       btnGroup.appendChild(startBtn);
-      
+
       card.appendChild(form);
       card.appendChild(btnGroup);
     }

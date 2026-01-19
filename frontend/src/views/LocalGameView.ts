@@ -30,6 +30,9 @@ export function LocalGameView() {
   if (!ctx)
     throw new Error("Context not found");
 
+  const game = new LocalGame(canvas, ctx);
+  game.start();
+
   const onKeyDown = (e: KeyboardEvent) => {
     game.onKeyDown(e.key);
   }
@@ -46,9 +49,6 @@ export function LocalGameView() {
   document.addEventListener("keydown", onKeyDown);
   document.addEventListener("keyup", onKeyUp);
   canvas.addEventListener("click", onCanvasClick);
-
-  const game = new LocalGame(canvas, ctx);
-  game.start();
 
   const cleanup = () => {
     game.stop();
