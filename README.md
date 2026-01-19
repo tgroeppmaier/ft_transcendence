@@ -1,5 +1,7 @@
 # ft_transcendence
 
+[Project Subject (PDF)](./transcendence.pdf)
+
 A robust, microservices-based implementation of the classic Pong game, featuring real-time multiplayer, social features, and a scalable architecture.
 
 ## 🏗 Architecture
@@ -23,7 +25,7 @@ The application is composed of **3 distinct services**, orchestrated via Docker 
   - **Real-Time**: Handles WebSocket connections (`/api/ws`) for state streaming and input.
   - **Post-Game**: Sends final scores to the Database Service for persistence.
 
-**Endpoints:**
+**Endpoints**:
 - **Real-Time**
   - `GET /api/ws/:id`: **WebSocket** endpoint for game state streaming and input.
 - **Game Management**
@@ -45,7 +47,7 @@ The application is composed of **3 distinct services**, orchestrated via Docker 
   - **Persistence**: Stores Users, Friends, Match History, and Tournament configurations.
   - **Internal Verification**: Provides internal endpoints for the Backend to verify relationships (e.g., Friendship).
 
-**Endpoints:**
+**Endpoints**:
 - **Authentication**
   - `POST /registration`: Register a new user.
   - `POST /login`: Authenticate with credentials.
@@ -78,6 +80,36 @@ The application is composed of **3 distinct services**, orchestrated via Docker 
 - **Internal (Service-to-Service)**
   - `POST /internal/match-result`: Save final game scores (called by Backend).
   - `POST /internal/check-friendship`: Verify friendship status (called by Backend).
+
+## 🌟 Features & Modules
+
+### Web
+- **Backend Framework**: Built with **Fastify** for high performance and low overhead.
+- **Frontend**: Developed using **TypeScript** and styled with **Tailwind CSS**.
+- **Database**: **SQLite** used for persistent data storage (Users, History, Friends).
+
+### User Management
+- **Standard Auth**: Secure registration and login with JWT.
+- **Remote Auth**: Google OAuth integration.
+- **Profile**: Avatar upload, stats tracking (wins/losses), and match history.
+- **Social**: Friend requests, accept/block/remove friends, and online status tracking.
+
+### Gameplay
+- **Local Game**: Play 1v1 on the same keyboard.
+- **Local Tournament**: 3-6 players on a single machine with automated bracket management.
+- **Remote Game**: Real-time 1v1 multiplayer over WebSockets.
+- **Remote Tournament**: Online tournament system with single elimination.
+
+### AI & Algorithms
+- **AI Opponent**: Play against a server-side bot. The AI uses a periodic update system (1Hz refresh) with position prediction to simulate human reaction times and satisfy project constraints.
+- **Stats**: Detailed user statistics and match history dashboards.
+
+### Server-Side Pong
+- **Authoritative Server**: All physics and game state are calculated on the backend to prevent cheating.
+- **API**: Game state and controls exposed via HTTP endpoints for CLI or external integrations.
+
+### DevOps & Architecture
+- **Microservices Architecture**: The system is designed as a suite of loosely-coupled services (Backend, Database, Caddy). The Game Engine is completely decoupled from the User Management and Persistence layers, communicating via internal REST APIs to ensure scalability and modularity.
 
 ---
 
@@ -125,16 +157,70 @@ The application is composed of **3 distinct services**, orchestrated via Docker 
 
 ## 🚀 Quick Start
 
-1. **Build and Run**
+1. **Prerequisites**
+   A `.env` file containing a `JWT_SECRET` is required. This can be generated automatically by running:
    ```bash
+   make setup
+   ```
+   Alternatively, create a `.env` file manually in the root directory and add `JWT_SECRET=your_secret_here`.
+
+2. **Build and Run**
+   ```bash
+   make build
+   # OR
    docker compose up --build
    ```
 
-2. **Access the App**
-   Open [https://localhost:8443](https://localhost:8443) in your browser.
-   *(Accept the self-signed certificate warning)*
+3. **Access the App**
+   Navigate to [https://localhost:8443](https://localhost:8443).
+   *(Accept self-signed certificate warning)*
 
 3. **Stop**
    ```bash
    docker compose down
    ```
+
+---
+
+## 💻 CLI Interoperability
+
+The project exposes a REST API that allows for monitoring and controlling games directly from the terminal.
+
+### 1. Authenticate
+Interacting with the API requires a JWT token. One can be obtained by logging in:
+```bash
+curl -X POST https://localhost:8443/api/login \
+     -H "Content-Type: application/json" \
+     -c cookies.txt -k \
+     -d '{"login": "username", "password": "password"}'
+```
+*Note: `-c cookies.txt` saves the session cookie for subsequent requests.*
+
+### 2. Poll Game State
+Retrieves the current position of the ball and paddles:
+```bash
+# Replace <GAME_ID> with a valid UUID
+curl -X GET https://localhost:8443/api/games/<GAME_ID>/state \
+     -b cookies.txt -k
+```
+
+### 3. Control the Paddle
+Movement commands can be sent to the assigned paddle. 
+- `move`: "start" or "stop"
+- `direction`: "up" or "down"
+
+**Move Up:**
+```bash
+curl -X POST https://localhost:8443/api/games/<GAME_ID>/action \
+     -H "Content-Type: application/json" \
+     -b cookies.txt -k \
+     -d '{"side": "left", "move": "start", "direction": "up"}'
+```
+
+**Stop Movement:**
+```bash
+curl -X POST https://localhost:8443/api/games/<GAME_ID>/action \
+     -H "Content-Type: application/json" \
+     -b cookies.txt -k \
+     -d '{"side": "left", "move": "stop", "direction": "up"}'
+```
