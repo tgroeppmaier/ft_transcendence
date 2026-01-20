@@ -10,27 +10,29 @@ import {
   POINTS_TO_WIN,
   MAX_BALL_SPEED,
 } from "../../../shared/constants.js";
-import { Ball, Paddle, Score } from "../../../shared/types.js";
-import { drawBall, drawPaddles, drawMessage, drawScores } from "../utils/gameRenderer.js";
+import { Ball, ColoredBall, Paddle, Score } from "../../../shared/types.js";
+import { drawBall, drawColoredBall, drawPaddles, drawMessage, drawScores } from "../utils/gameRenderer.js";
 
 export class AgentGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
 
   private ball: Ball = { x: 0.5, y: 0.5, vx: BALL_X_SPEED, vy: BALL_Y_SPEED };
-	private bounce_balls_list: Ball[] = [];
+	private bounce_balls_list: ColoredBall[] = [];
+	private anticipated_bounce_position: number = 0.5;
   //private reference_ball: Ball = { x: 0.5, y: 0.5, vx: BALL_X_SPEED, vy: BALL_Y_SPEED };
   private score: Score = { left: 0, right: 0};
   private lastUpdate: number;
   private keyAgentMap: Record<string, boolean> = { "w": false, "s": false };
   private keyPlayerMap: Record<string, boolean> = { "ArrowUp": false, "ArrowDown": false };
-	private keyDebugMap: Record<string, boolean> = { "p": false }
+	/* p: pause, d: debug mode, a: autopilot */
+	private keyDebugMap: Record<string, boolean> = { "p": false, "d": false, "a": false }
   private player1: string;
   private player2: string;
   private leftPaddle: Paddle;
   private rightPaddle: Paddle;
   private gameOver = false;
-  private countdown = 5;
+  private countdown = 3;
   private gameStarted = false;
   private rafID: number;
 
@@ -100,19 +102,19 @@ private render() {
       drawBall(this.ctx, this.canvas, this.ball);
       drawPaddles(this.ctx, this.canvas, this.leftPaddle, this.rightPaddle);
       drawScores(this.ctx, this.canvas, this.score);
-			if (this.keyDebugMap['p'] || true) {
+			if (this.keyDebugMap['d']) {
 				drawMessage(this.ctx, this.canvas, `w: ${this.keyAgentMap['w']}, \
 								s: ${this.keyAgentMap['s']}, p: ${this.keyDebugMap['p']}`);
 				drawMessage(this.ctx, this.canvas, `${(this.leftPaddle.y).toFixed(5)} -- ${(this.leftPaddle.y + PADDLE_HEIGHT / 2).toFixed(5)} -- ${(this.leftPaddle.y + PADDLE_HEIGHT).toFixed(5)}`, this.canvas.height * 2/3);
 				drawMessage(this.ctx, this.canvas, `${this.ball.y.toFixed(5)}, vx:${this.ball.vx.toFixed(5)}, vy:${this.ball.vy.toFixed(5)}`, this.canvas.height * 3/4);
 				drawMessage(this.ctx, this.canvas, `rafID: ${(this.rafID/60).toFixed(5)}`, this.canvas.height* 4/5);
+				drawMessage(this.ctx, this.canvas, `${this.anticipated_bounce_position}`, this.canvas.height * 0.85);
 				for (let reference_ball of this.bounce_balls_list) {
-					drawBall(this.ctx, this.canvas, reference_ball);
+					drawColoredBall(this.ctx, this.canvas, reference_ball);
 				}
 			}
     }
   }
-	// aaa
 
   private bouncePaddle(paddleY: number) {
     this.ball.vx = -this.ball.vx * 1.05;
@@ -154,105 +156,74 @@ private render() {
   }
 
 	private agentMove() {
-		//console.log(this.leftPaddle.y);
-		if (0 == this.rafID % 120) {
-			this.keyAgentMap["w"] = false;
-			this.keyAgentMap["s"] = false;
-			if (this.leftPaddle.y + 0.5*PADDLE_HEIGHT / 2 >= this.ball.y) {
-				this.keyAgentMap["w"] = true;
-			}
-			else if (this.leftPaddle.y + 1.5*PADDLE_HEIGHT / 2 <= this.ball.y) {
-				this.keyAgentMap["s"] = true;
-			}
-			if (this.ball.vx > 0) {
-				this.bounce_balls_list = [];
-				let delta = (2 * CANVAS_WIDTH - BALL_RADIUS - this.ball.x) / this.ball.vx;
-				let reference_ball: Ball = { x: BALL_RADIUS, 
-						y: (this.ball.y + delta * this.ball.vy ) % CANVAS_HEIGHT, 
-						vx: 0, vy: 0
-					}
-				this.bounce_balls_list.push(reference_ball);
-			}
+		if (0 == this.rafID % 60) {
 			this.find_bounces();
+		}
+		this.keyAgentMap["w"] = false;
+		this.keyAgentMap["s"] = false;
+		if (this.leftPaddle.y + 0.9*PADDLE_HEIGHT <= this.anticipated_bounce_position) {
+			this.keyAgentMap["s"] = true;
+		}
+		else if (this.leftPaddle.y + 0.1*PADDLE_HEIGHT >= this.anticipated_bounce_position) {
+			this.keyAgentMap["w"] = true;
 		}
 	}
 
 	private find_bounces() {
-		let reference_ball: Ball = { x: this.ball.x, y: this.ball.y, 
-															vx: this.ball.vx, vy: this.ball.vy };
-		let delta_time_x: number, delta_time_y: number, delta: number;
-		let vx_tmp: number, vy_tmp: number;
-		//this.bounce_balls_list = [];
+		let reference_ball: ColoredBall = { x: this.ball.x, y: this.ball.y, 
+															vx: this.ball.vx, vy: this.ball.vy, color: "white" };
+		let delta_time_x: number;
+		let delta_time_y: number;
+		let delta: number;
+		let vx_tmp: number;
+		let vy_tmp: number;
+		let colors: string[] = ["green", "red", "blue", "pink", "yellow"];
 		let keep_doing: boolean = true;
-		let cnt: number = 0;
-		while (keep_doing || cnt < 10) {
+		let cnt: number = -1;
+		this.bounce_balls_list = [];
+		while (keep_doing && cnt < 10) {
 			cnt += 1;
+			// determine delta_time_x
 			if (reference_ball.vx > 0) {
 				delta_time_x = (CANVAS_WIDTH - BALL_RADIUS - reference_ball.x) / reference_ball.vx;
-				if (delta_time_x < 0) {
-					delta_time_x = 0;
-				}
 			}
 			else if (reference_ball.vx < 0) {
 				delta_time_x = (BALL_RADIUS - reference_ball.x) / reference_ball.vx;
-				if (delta_time_x < 0) {
-					delta_time_x = 0;
-				}
 			}
-			else {
-				delta_time_x = -1;
-			}
+			// determine delta_time_y
 			if (reference_ball.vy > 0) {
 				delta_time_y = (CANVAS_HEIGHT - BALL_RADIUS - reference_ball.y) / reference_ball.vy;
-				if (delta_time_y < 0) {
-					delta_time_y = 0;
-				}
 			}
 			else if (reference_ball.vy < 0) {
 				delta_time_y = (BALL_RADIUS - reference_ball.y) / reference_ball.vy;
-				if (delta_time_y < 0) {
-					delta_time_y = 0;
-				}
 			}
-			else {
-				delta_time_y = -1;
+			else if (reference_ball.vy == 0) {
+				delta_time_y = delta_time_x + 1;
 			}
-			if (delta_time_x < 0 && delta_time_y < 0) {
-				delta = -1;
-			}
-			else if (delta_time_x >= 0 && (delta_time_y < 0 || delta_time_y > delta_time_x)) {
-				delta = delta_time_x;
-        reference_ball.x = reference_ball.x + delta * reference_ball.vx;
-        reference_ball.y = reference_ball.y + delta * reference_ball.vy;
+			delta = (delta_time_x <= delta_time_y) ? delta_time_x : delta_time_y;
+      reference_ball.x = reference_ball.x + delta * reference_ball.vx;
+      reference_ball.y = reference_ball.y + delta * reference_ball.vy;
+			if (delta_time_x == delta) {
 				reference_ball.vx *= -1.05;
 				if (reference_ball.vx > 0) {
 					keep_doing = false;
+					this.anticipated_bounce_position = reference_ball.y;
 				}
 			}
-			else if (delta_time_y >= 0 && (delta_time_x < 0 || delta_time_x > delta_time_y)) {
-				delta = delta_time_y;
-        reference_ball.x = reference_ball.x + delta * reference_ball.vx;
-        reference_ball.y = reference_ball.y + delta * reference_ball.vy;
+			if (delta_time_y == delta) {
 				reference_ball.vy *= -1;
 			}
-			else if (delta_time_x == delta_time_y) {
-				delta = delta_time_x;
-        reference_ball.x = reference_ball.x + delta * reference_ball.vx;
-        reference_ball.y = reference_ball.y + delta * reference_ball.vy;
-				reference_ball.vy *= -1;
-				reference_ball.vx *= -1.05;
-				if (reference_ball.vx > 0) {
-					keep_doing = false;
-				}
+			if (cnt < colors.length) {
+				reference_ball.color = colors[cnt];
+			}	else {
+				reference_ball.color = colors[colors.length-1];
 			}
-			else {
-				console.log("What are the other options?", delta_time_x, delta_time_y, BALL_RADIUS, CANVAS_HEIGHT, CANVAS_WIDTH);
-        console.log("reference_ball: ", reference_ball.x, reference_ball.y, reference_ball.vx, reference_ball.y);
-			}
-      this.bounce_balls_list.push(reference_ball);
-      console.log("delta_x, delta_y, r, h, w:", delta_time_x, delta_time_y, BALL_RADIUS, CANVAS_HEIGHT, CANVAS_WIDTH);
-      console.log("reference_ball: ", reference_ball.x, reference_ball.y, reference_ball.vx, reference_ball.y);
+			let ball_to_push: ColoredBall = { x: reference_ball.x, y: reference_ball.y, 
+																				vx: reference_ball.vx, vy: reference_ball.vy, 
+																				color: reference_ball.color };
+      this.bounce_balls_list.push(ball_to_push);
 		}
+		//this.keyDebugMap['p'] = true;
 	}
 
   private handleWallCollision() {
@@ -298,7 +269,9 @@ private render() {
 			//this.leftPaddle.y = this.ball.y - 0.5*PADDLE_HEIGHT;
 
 			// aaa	
-			//this.rightPaddle.y = this.ball.y;	
+			if (this.keyDebugMap['a']) {
+				this.rightPaddle.y = this.ball.y - PADDLE_HEIGHT / 2;
+			}
 
 			this.agentMove();
 	    this.handlePaddleMovement(dt);

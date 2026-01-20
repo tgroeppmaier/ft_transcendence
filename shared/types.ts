@@ -7,6 +7,14 @@ export interface Ball {
   vy: number;
 }
 
+export interface ColoredBall {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+	color: string;
+}
+
 export interface Paddle {
   x: number;
   y: number;
