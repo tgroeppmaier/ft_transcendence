@@ -20,9 +20,9 @@ export class AgentGame {
   private ball: Ball = { x: 0.5, y: 0.5, vx: BALL_X_SPEED, vy: BALL_Y_SPEED };
 	private bounce_balls_list: ColoredBall[] = [];
 	private anticipated_bounce_position: number = 0.5;
-  //private reference_ball: Ball = { x: 0.5, y: 0.5, vx: BALL_X_SPEED, vy: BALL_Y_SPEED };
-  private score: Score = { left: 0, right: 0};
+  private score: Score = { left: 0, right: 0 };
   private lastUpdate: number;
+	private lastAgentUpdate: number;
   private keyAgentMap: Record<string, boolean> = { "w": false, "s": false };
   private keyPlayerMap: Record<string, boolean> = { "ArrowUp": false, "ArrowDown": false };
 	/* p: pause, d: debug mode, a: autopilot */
@@ -32,7 +32,7 @@ export class AgentGame {
   private leftPaddle: Paddle;
   private rightPaddle: Paddle;
   private gameOver = false;
-  private countdown = 3;
+  private countdown = 5;
   private gameStarted = false;
   private rafID: number;
 
@@ -40,6 +40,7 @@ export class AgentGame {
     this.canvas = canvas;
     this.ctx = ctx;
     this.lastUpdate = Date.now();
+    this.lastAgentUpdate = Date.now();
     this.player1 = player1 ?? "Agent";
     this.player2 = player2 ?? "Player";
     this.resetPaddles();
@@ -109,6 +110,7 @@ private render() {
 				drawMessage(this.ctx, this.canvas, `${this.ball.y.toFixed(5)}, vx:${this.ball.vx.toFixed(5)}, vy:${this.ball.vy.toFixed(5)}`, this.canvas.height * 3/4);
 				drawMessage(this.ctx, this.canvas, `rafID: ${(this.rafID/60).toFixed(5)}`, this.canvas.height* 4/5);
 				drawMessage(this.ctx, this.canvas, `${this.anticipated_bounce_position}`, this.canvas.height * 0.85);
+				drawMessage(this.ctx, this.canvas, `${((Date.now() - this.lastAgentUpdate)/1000).toFixed(5)}`, this.canvas.height * 0.9);
 				for (let reference_ball of this.bounce_balls_list) {
 					drawColoredBall(this.ctx, this.canvas, reference_ball);
 				}
@@ -120,6 +122,7 @@ private render() {
     this.ball.vx = -this.ball.vx * 1.05;
     if (Math.abs(this.ball.vx) > MAX_BALL_SPEED) {
       this.ball.vx = this.ball.vx > 0 ? MAX_BALL_SPEED : -MAX_BALL_SPEED;
+			this.ball.vy *= 1.05;
     }
     if (this.ball.y < paddleY + PADDLE_HEIGHT * 0.25) {
       this.ball.vy = -Math.abs(this.ball.vy) - 0.01;
@@ -156,8 +159,10 @@ private render() {
   }
 
 	private agentMove() {
-		if (0 == this.rafID % 60) {
+		if (Date.now() - this.lastAgentUpdate >= 1000) {
+		// if (0 == this.rafID % 60) {
 			this.find_bounces();
+			this.lastAgentUpdate = Date.now();
 		}
 		this.keyAgentMap["w"] = false;
 		this.keyAgentMap["s"] = false;

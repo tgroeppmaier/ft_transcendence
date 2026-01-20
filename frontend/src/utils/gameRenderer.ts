@@ -14,7 +14,6 @@ export function drawColoredBall( ctx: CanvasRenderingContext2D, canvas: HTMLCanv
   ctx.arc( ball.x * canvas.width, ball.y * canvas.height, BALL_RADIUS * canvas.width, 0, Math.PI * 2, );
   ctx.fillStyle = ball.color;
   ctx.fill();
-	console.log(ball.color);
   ctx.closePath();
 }
 
