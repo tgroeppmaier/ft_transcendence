@@ -122,7 +122,7 @@ private render() {
     this.ball.vx = -this.ball.vx * 1.05;
     if (Math.abs(this.ball.vx) > MAX_BALL_SPEED) {
       this.ball.vx = this.ball.vx > 0 ? MAX_BALL_SPEED : -MAX_BALL_SPEED;
-			this.ball.vy *= 1.05;
+			//this.ball.vy *= 1.05;
     }
     if (this.ball.y < paddleY + PADDLE_HEIGHT * 0.25) {
       this.ball.vy = -Math.abs(this.ball.vy) - 0.01;
