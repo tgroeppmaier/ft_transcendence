@@ -8,15 +8,29 @@ import {
 import { Ball, Paddle } from "./types.js";
 
 export function bouncePaddle(ball: Ball, paddleY: number) {
-  ball.vx = -ball.vx * 1.05;
-  if (Math.abs(ball.vx) > MAX_BALL_SPEED) {
-    ball.vx = ball.vx > 0 ? MAX_BALL_SPEED : -MAX_BALL_SPEED;
-  }
-  if (ball.y < paddleY + PADDLE_HEIGHT * 0.25) {
-    ball.vy = -Math.abs(ball.vy) - 0.01;
-  } else if (ball.y > paddleY + PADDLE_HEIGHT * 0.75) {
-    ball.vy = Math.abs(ball.vy) + 0.01;
-  }
+  // 1. Calculate relative impact point (-1 is top, 0 is center, 1 is bottom)
+  const paddleCenter = paddleY + PADDLE_HEIGHT / 2;
+  const impactPoint = ball.y - paddleCenter;
+  let normalizedImpact = impactPoint / (PADDLE_HEIGHT / 2);
+
+  // Clamp value between -1 and 1
+  normalizedImpact = Math.max(-1, Math.min(1, normalizedImpact));
+
+  // 2. Calculate current speed and increase it
+  const currentSpeed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+  let newSpeed = currentSpeed * 1.05;
+  if (newSpeed > MAX_BALL_SPEED) newSpeed = MAX_BALL_SPEED;
+
+  // 3. Calculate bounce angle (Max 45 degrees or PI/4)
+  const MAX_BOUNCE_ANGLE = Math.PI / 4;
+  const bounceAngle = normalizedImpact * MAX_BOUNCE_ANGLE;
+
+  // 4. Update Velocities
+  // Flip horizontal direction
+  const direction = ball.vx > 0 ? -1 : 1;
+
+  ball.vx = direction * newSpeed * Math.cos(bounceAngle);
+  ball.vy = newSpeed * Math.sin(bounceAngle);
 }
 
 export function handlePaddleCollision(
