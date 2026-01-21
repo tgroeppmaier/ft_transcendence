@@ -11,6 +11,7 @@ import {
   MAX_BALL_SPEED,
 } from "../../../shared/constants.js";
 import { Ball, Paddle, Score } from "../../../shared/types.js";
+import { handlePaddleCollision, handleWallCollision } from "../../../shared/physics.js";
 import { drawBall, drawPaddles, drawMessage, drawScores } from "../utils/gameRenderer.js";
 
 export class LocalGame {
@@ -102,34 +103,6 @@ export class LocalGame {
     }
   }
 
-  private bouncePaddle(paddleY: number) {
-    this.ball.vx = -this.ball.vx * 1.05;
-    if (Math.abs(this.ball.vx) > MAX_BALL_SPEED) {
-      this.ball.vx = this.ball.vx > 0 ? MAX_BALL_SPEED : -MAX_BALL_SPEED;
-    }
-    if (this.ball.y < paddleY + PADDLE_HEIGHT * 0.25) {
-      this.ball.vy = -Math.abs(this.ball.vy) - 0.01;
-    } else if (this.ball.y > paddleY + PADDLE_HEIGHT * 0.75) {
-      this.ball.vy = Math.abs(this.ball.vy) + 0.01;
-    }
-  }
-
-  private handlePaddleCollision() {
-    const checkYaxis = (paddle: Paddle) => {
-      return (this.ball.y + BALL_RADIUS >= paddle.y && this.ball.y - BALL_RADIUS <= paddle.y + PADDLE_HEIGHT);
-    };
-
-    if (this.ball.vx < 0 && checkYaxis(this.leftPaddle) &&
-      this.ball.x - BALL_RADIUS < this.leftPaddle.x + PADDLE_WIDTH) {
-      this.ball.x = this.leftPaddle.x + PADDLE_WIDTH + BALL_RADIUS;
-      this.bouncePaddle(this.leftPaddle.y);
-    } else if (this.ball.vx > 0 && checkYaxis(this.rightPaddle) &&
-      this.ball.x + BALL_RADIUS > this.rightPaddle.x) {
-      this.ball.x = this.rightPaddle.x - BALL_RADIUS;
-      this.bouncePaddle(this.rightPaddle.y);
-    }
-  }
-
   private handlePaddleMovement(dt: number) {
     if (this.keyMap["w"]) this.leftPaddle.y -= PADDLE_SPEED * dt;
     if (this.keyMap["s"]) this.leftPaddle.y += PADDLE_SPEED * dt;
@@ -138,17 +111,6 @@ export class LocalGame {
 
     this.leftPaddle.y = Math.max(0, Math.min(CANVAS_HEIGHT - PADDLE_HEIGHT, this.leftPaddle.y));
     this.rightPaddle.y = Math.max(0, Math.min(CANVAS_HEIGHT - PADDLE_HEIGHT, this.rightPaddle.y));
-  }
-
-  private handleWallCollision() {
-    if (this.ball.y + BALL_RADIUS > CANVAS_HEIGHT) {
-      this.ball.y = CANVAS_HEIGHT - BALL_RADIUS;
-      this.ball.vy *= -1;
-    }
-    if (this.ball.y - BALL_RADIUS < 0) {
-      this.ball.y = BALL_RADIUS;
-      this.ball.vy *= -1;
-    }
   }
 
   private handleScore() {
@@ -190,8 +152,8 @@ export class LocalGame {
     this.ball.y += this.ball.vy * dt;
 
     this.handlePaddleMovement(dt);
-    this.handlePaddleCollision();
-    this.handleWallCollision();
+    handlePaddleCollision(this.ball, this.leftPaddle, this.rightPaddle);
+    handleWallCollision(this.ball);
     this.handleScore();
 
     if (this.score.left >= POINTS_TO_WIN || this.score.right >= POINTS_TO_WIN) {

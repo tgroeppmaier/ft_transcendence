@@ -22,6 +22,7 @@ import {
   GameStateSnapshot,
   Action,
 } from "../../shared/types.js";
+import { handlePaddleCollision, handleWallCollision } from "../../shared/physics.js";
 import { Player, Side } from "./player.js";
 
 export class Game {
@@ -194,34 +195,6 @@ export class Game {
     this.resetPaddles();
   }
 
-  private bouncePaddle(paddleY: number) {
-    this.ball.vx = -this.ball.vx * 1.05;
-    if (Math.abs(this.ball.vx) > MAX_BALL_SPEED) {
-      this.ball.vx = this.ball.vx > 0 ? MAX_BALL_SPEED : -MAX_BALL_SPEED;
-    }
-    if (this.ball.y < paddleY + PADDLE_HEIGHT * 0.25) {
-      this.ball.vy = -Math.abs(this.ball.vy) - 0.01;
-    } else if (this.ball.y > paddleY + PADDLE_HEIGHT * 0.75) {
-      this.ball.vy = Math.abs(this.ball.vy) + 0.01;
-    }
-  }
-
-  private handlePaddleCollision() {
-    const checkYaxis = (paddle: Paddle) => {
-      return (this.ball.y + BALL_RADIUS >= paddle.y && this.ball.y - BALL_RADIUS <= paddle.y + PADDLE_HEIGHT);
-    };
-
-    if (this.player1 && this.ball.vx < 0 && checkYaxis(this.player1.paddle) &&
-      this.ball.x - BALL_RADIUS < this.player1.paddle.x + PADDLE_WIDTH) {
-      this.ball.x = this.player1.paddle.x + PADDLE_WIDTH + BALL_RADIUS;
-      this.bouncePaddle(this.player1.paddle.y);
-    } else if (this.player2 && this.ball.vx > 0 && checkYaxis(this.player2.paddle) &&
-      this.ball.x + BALL_RADIUS > this.player2.paddle.x) {
-      this.ball.x = this.player2.paddle.x - BALL_RADIUS;
-      this.bouncePaddle(this.player2.paddle.y);
-    }
-  }
-
   private handlePaddleMovement(dt: number) {
     this.player1?.paddleMove(dt);
     this.player2?.paddleMove(dt);
@@ -246,17 +219,6 @@ export class Game {
       return true;
     }
     return false;
-  }
-
-  private handleWallCollision() {
-    if (this.ball.y + BALL_RADIUS > CANVAS_HEIGHT) {
-      this.ball.y = CANVAS_HEIGHT - BALL_RADIUS;
-      this.ball.vy *= -1;
-    }
-    if (this.ball.y - BALL_RADIUS < 0) {
-      this.ball.y = BALL_RADIUS;
-      this.ball.vy *= -1;
-    }
   }
 
   private handleScore() {
@@ -290,7 +252,7 @@ export class Game {
     this.ball.y += this.ball.vy * dt;
 
     this.handlePaddleMovement(dt);
-    this.handlePaddleCollision();
+    handlePaddleCollision(this.ball, this.player1?.paddle, this.player2?.paddle);
     this.handleScore();
 
     if (this.score.left >= POINTS_TO_WIN || this.score.right >= POINTS_TO_WIN) {
@@ -321,7 +283,7 @@ export class Game {
       this.onEmpty();
       return;
     }
-    this.handleWallCollision();
+    handleWallCollision(this.ball);
 
     const snapshot = this.createGameState();
     if (snapshot) {
