@@ -11,8 +11,7 @@ export function AgentGameView() {
         ← Back to Home
       </button>
     </div>
-    <canvas id="board" width="800" height="600" class="rounded-xl shadow-2xl border-4 border-gray-800" style="background-color: #000;"></canvas>
-  `;
+          <canvas id="board" width="800" height="600" class="shadow-2xl" style="background-color: #000;"></canvas>  `;
 
   const backButton = gameContainer.querySelector("#back-to-main");
   if (backButton) {

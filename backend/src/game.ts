@@ -2,19 +2,13 @@ import { WebSocket } from "@fastify/websocket";
 import {
   CANVAS_WIDTH,
   CANVAS_HEIGHT,
-  PADDLE_WIDTH,
-  PADDLE_HEIGHT,
-  PADDLE_SPEED,
   BALL_X_SPEED,
   BALL_Y_SPEED,
-  BALL_RADIUS,
   POINTS_TO_WIN,
   FPS,
-  MAX_BALL_SPEED,
 } from "../../shared/constants.js";
 import {
   Ball,
-  Paddle,
   GameStatus,
   Score,
   InitMessage,
@@ -22,7 +16,7 @@ import {
   GameStateSnapshot,
   Action,
 } from "../../shared/types.js";
-import { handlePaddleCollision, handleWallCollision } from "../../shared/physics.js";
+import { handlePaddleCollision, handleWallCollision, resetBall } from "../../shared/gameLogic.js";
 import { Player, Side } from "./player.js";
 
 export class Game {
@@ -176,20 +170,13 @@ export class Game {
     if (reset) this.resetGame();
   }
 
-  private resetBall() {
-    this.ball.x = CANVAS_WIDTH / 2;
-    this.ball.y = CANVAS_HEIGHT / 2;
-    this.ball.vx = this.ball.vx > 0 ? -BALL_X_SPEED : BALL_X_SPEED;
-    this.ball.vy = (Math.random() - 0.5) * BALL_Y_SPEED * 3;
-  }
-
   private resetPaddles() {
     this.player1?.resetPaddle();
     this.player2?.resetPaddle();
   }
 
   private resetGame() {
-    this.resetBall();
+    resetBall(this.ball);
     this.score.left = 0;
     this.score.right = 0;
     this.resetPaddles();
@@ -224,11 +211,11 @@ export class Game {
   private handleScore() {
     let scoreChanged = false;
     if (this.ball.x < 0) {
-      this.resetBall();
+      resetBall(this.ball);
       this.score.right += 1;
       scoreChanged = true;
     } else if (this.ball.x > CANVAS_WIDTH) {
-      this.resetBall();
+      resetBall(this.ball);
       this.score.left += 1;
       scoreChanged = true;
     }

@@ -1,11 +1,21 @@
+import { Ball, Paddle } from "./types.js";
 import {
+  CANVAS_WIDTH,
   CANVAS_HEIGHT,
+  BALL_X_SPEED,
+  BALL_Y_SPEED,
   PADDLE_WIDTH,
   PADDLE_HEIGHT,
   MAX_BALL_SPEED,
   BALL_RADIUS,
 } from "./constants.js";
-import { Ball, Paddle } from "./types.js";
+
+export function resetBall(ball: Ball) {
+  ball.x = CANVAS_WIDTH / 2;
+  ball.y = CANVAS_HEIGHT / 2;
+  ball.vx = ball.vx > 0 ? -BALL_X_SPEED : BALL_X_SPEED;
+  ball.vy = (Math.random() - 0.5) * BALL_Y_SPEED * 1;
+}
 
 export function bouncePaddle(ball: Ball, paddleY: number) {
   // 1. Calculate relative impact point (-1 is top, 0 is center, 1 is bottom)

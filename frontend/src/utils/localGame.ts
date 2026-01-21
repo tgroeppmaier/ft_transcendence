@@ -11,7 +11,7 @@ import {
   MAX_BALL_SPEED,
 } from "../../../shared/constants.js";
 import { Ball, Paddle, Score } from "../../../shared/types.js";
-import { handlePaddleCollision, handleWallCollision } from "../../../shared/physics.js";
+import { handlePaddleCollision, handleWallCollision, resetBall } from "../../../shared/gameLogic.js";
 import { drawBall, drawPaddles, drawMessage, drawScores } from "../utils/gameRenderer.js";
 
 export class LocalGame {
@@ -68,7 +68,7 @@ export class LocalGame {
     this.score.left = 0;
     this.score.right = 0;
     this.resetPaddles();
-    this.resetBall();
+    resetBall(this.ball);
     cancelAnimationFrame(this.rafID);
     this.gameOver = false;
     this.gameStarted = false;
@@ -76,13 +76,6 @@ export class LocalGame {
     this.lastUpdate = performance.now();
     this.render()
     this.rafID = requestAnimationFrame(this.tick);
-  }
-
-    private resetBall() {
-    this.ball.x = CANVAS_WIDTH / 2;
-    this.ball.y = CANVAS_HEIGHT / 2;
-    this.ball.vx = this.ball.vx > 0 ? -BALL_X_SPEED : BALL_X_SPEED;
-    this.ball.vy = (Math.random() - 0.5) * BALL_Y_SPEED * 3;
   }
 
   private resetPaddles() {
@@ -115,10 +108,10 @@ export class LocalGame {
 
   private handleScore() {
     if (this.ball.x < 0) {
-      this.resetBall();
+      resetBall(this.ball);
       this.score.right += 1;
     } else if (this.ball.x > CANVAS_WIDTH) {
-      this.resetBall();
+      resetBall(this.ball);
       this.score.left += 1;
     }
   }
