@@ -1,10 +1,18 @@
-import { Ball, Paddle, Score } from "../../../shared/types.js";
+import { Ball, ColoredBall, Paddle, Score } from "../../../shared/types.js";
 import { BALL_RADIUS, PADDLE_WIDTH, PADDLE_HEIGHT, } from "../../../shared/constants.js";
 
 export function drawBall( ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, ball: Ball ) {
   ctx.beginPath();
   ctx.arc( ball.x * canvas.width, ball.y * canvas.height, BALL_RADIUS * canvas.width, 0, Math.PI * 2, );
   ctx.fillStyle = "white";
+  ctx.fill();
+  ctx.closePath();
+}
+
+export function drawColoredBall( ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, ball: ColoredBall ) {
+  ctx.beginPath();
+  ctx.arc( ball.x * canvas.width, ball.y * canvas.height, BALL_RADIUS * canvas.width, 0, Math.PI * 2, );
+  ctx.fillStyle = ball.color;
   ctx.fill();
   ctx.closePath();
 }
