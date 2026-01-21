@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import websocket from "@fastify/websocket";
 import cookie from "@fastify/cookie";
 import jwt from "@fastify/jwt";
+import rateLimit from "@fastify/rate-limit";
 import { gameRoutes } from "./routes/games.js";
 import { inviteRoutes } from "./routes/invites.js";
 import { tournamentRoutes } from "./routes/tournaments.js";
@@ -13,8 +14,15 @@ declare module "fastify" {
   }
 }
 
-const backend = Fastify({ logger: true });
+const backend = Fastify({ 
+  logger: true,
+  trustProxy: true 
+});
 await backend.register(websocket);
+await backend.register(rateLimit, {
+  max: 100,
+  timeWindow: '1 minute'
+});
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
