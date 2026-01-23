@@ -130,7 +130,10 @@ export class RemoteGame {
   }
 
   private render() {
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    //this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+    this.ctx.fillStyle = "black";
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
     if (this.errorMessage) {
         drawMessage(this.ctx, this.canvas, this.errorMessage);
