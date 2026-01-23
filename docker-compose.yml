@@ -29,8 +29,9 @@ services:
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI}
       - JWT_SECRET=${JWT_SECRET}
-      - FRONTEND_URL=https://localhost:8443
-      - DB_PATH=/app/data/users.db
+      - FRONTEND_URL=${FRONTEND_URL}
+      - DB_PATH=${DB_PATH}
+      - UPLOADS_DIR=${UPLOADS_DIR}
 
     volumes:
       - ./database/data:/app/data

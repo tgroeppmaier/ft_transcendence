@@ -2,381 +2,422 @@ import { navigateTo } from "../router.js";
 import { checkAndShowInvites } from "../utils/inviteHandler.js";
 
 export function ProfileView() {
-    const container = document.createElement("div");
-    container.className = "max-w-lg mx-auto p-4";
-    container.innerHTML = `
-        <div class="mb-4">
-             <button id="back-to-menu" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition">Back to Menu</button>
-        </div>
+	const container = document.createElement("div");
+	container.className = "max-w-lg mx-auto p-4";
+	container.innerHTML = `
+	<div class="mb-4">
+	<button id="back-to-menu" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition">Back to Menu</button>
+	</div>
 
-        <!-- Personal account -->
-        <section class="bg-white rounded-2xl p-5 mb-8 text-center shadow">
-            <h2 class="text-2xl font-semibold mb-4">Personal account</h2>
-            <div id="avatarBlock" class="mb-5">
-                <img id="avatarImg" src="/uploads/default.png" class="w-[120px] h-[120px] rounded-full object-cover mx-auto">
-            </div>
-            <p id="Welcome" class="mb-4 text-lg">Loading...</p>
-            <form>
-                <button id="logoutBtn" type="button" class="bg-blue-800 text-white py-2 px-4 rounded-lg hover:opacity-50 transition">
-                    Log out
-                </button>
-            </form>
-        </section>
+	<!-- Personal account -->
+	<section class="bg-white rounded-2xl p-5 mb-8 text-center shadow">
+	<h2 class="text-2xl font-semibold mb-4">Personal account</h2>
+	<div id="avatarBlock" class="mb-5">
+	<img id="avatarImg" src="/uploads/default.png" class="w-[120px] h-[120px] rounded-full object-cover mx-auto">
+	</div>
+	<p id="Welcome" class="mb-4 text-lg">Loading...</p>
+	<form>
+	<button id="logoutBtn" type="button" class="bg-blue-800 text-white py-2 px-4 rounded-lg hover:opacity-50 transition">
+	Log out
+	</button>
+	</form>
+	</section>
 
-        <!-- Game Statistics -->
-        <section class="bg-white rounded-2xl p-5 mb-8 shadow">
-            <h2 class="text-2xl font-semibold mb-4">Game Statistics</h2>
-            <div class="grid grid-cols-2 gap-4 mb-4">
-                <div class="bg-green-50 p-4 rounded-lg text-center">
-                    <p class="text-gray-600 text-sm">Wins</p>
-                    <p id="winsCount" class="text-2xl font-bold text-green-600">0</p>
-                </div>
-                <div class="bg-red-50 p-4 rounded-lg text-center">
-                    <p class="text-gray-600 text-sm">Losses</p>
-                    <p id="lossesCount" class="text-2xl font-bold text-red-600">0</p>
-                </div>
-                <div class="bg-blue-50 p-4 rounded-lg text-center">
-                    <p class="text-gray-600 text-sm">Draws</p>
-                    <p id="drawsCount" class="text-2xl font-bold text-blue-600">0</p>
-                </div>
-                <div class="bg-purple-50 p-4 rounded-lg text-center">
-                    <p class="text-gray-600 text-sm">Total Games</p>
-                    <p id="totalGamesCount" class="text-2xl font-bold text-purple-600">0</p>
-                </div>
-            </div>
-            <div class="bg-gray-50 p-4 rounded-lg text-center">
-                <p class="text-gray-600 text-sm">Win Rate</p>
-                <p id="winRate" class="text-xl font-bold text-gray-800">0%</p>
-            </div>
-        </section>
+	<!-- Game Statistics -->
+	<section class="bg-white rounded-2xl p-5 mb-8 shadow">
+	<h2 class="text-2xl font-semibold mb-4">Game Statistics</h2>
+	<div class="grid grid-cols-2 gap-4 mb-4">
+	<div class="bg-green-50 p-4 rounded-lg text-center">
+	<p class="text-gray-600 text-sm">Wins</p>
+	<p id="winsCount" class="text-2xl font-bold text-green-600">0</p>
+	</div>
+	<div class="bg-red-50 p-4 rounded-lg text-center">
+	<p class="text-gray-600 text-sm">Losses</p>
+	<p id="lossesCount" class="text-2xl font-bold text-red-600">0</p>
+	</div>
+	<div class="bg-blue-50 p-4 rounded-lg text-center">
+	<p class="text-gray-600 text-sm">Draws</p>
+	<p id="drawsCount" class="text-2xl font-bold text-blue-600">0</p>
+	</div>
+	<div class="bg-purple-50 p-4 rounded-lg text-center">
+	<p class="text-gray-600 text-sm">Total Games</p>
+	<p id="totalGamesCount" class="text-2xl font-bold text-purple-600">0</p>
+	</div>
+	</div>
+	<div class="bg-gray-50 p-4 rounded-lg text-center">
+	<p class="text-gray-600 text-sm">Win Rate</p>
+	<p id="winRate" class="text-xl font-bold text-gray-800">0%</p>
+	</div>
+	<div class="space-y-2 mt-2">
+	<div class="flex items-center">
+	<span class="w-16 text-sm">Wins</span>
+	<div class="flex-1 h-4 bg-gray-200 rounded">
+	<div id="winsBar" class="h-4 bg-green-600 rounded" class="w-0"></div>
+	</div>
+	<span id="winsPercent" class="w-10 text-right text-sm ml-2">0%</span>
+	</div>
 
-        <!-- Match History -->
-        <section class="bg-white rounded-2xl p-5 mb-8 shadow">
-            <h2 class="text-2xl font-semibold mb-4">Match History</h2>
-            <div id="matchHistoryList" class="flex flex-col gap-3">
-                <p class="text-gray-500 text-center">Loading history...</p>
-            </div>
-        </section>
+	<div class="flex items-center">
+	<span class="w-16 text-sm">Losses</span>
+	<div class="flex-1 h-4 bg-gray-200 rounded">
+	<div id="lossesBar" class="h-4 bg-red-600 rounded" class="w-0"></div>
+	</div>
+	<span id="lossesPercent" class="w-10 text-right text-sm ml-2">0%</span>
+	</div>
 
-        <!-- Change personal data -->
-        <section class="bg-white rounded-2xl p-5 mb-8 shadow">
-            <h2 class="text-2xl font-semibold mb-4">Change personal data</h2>
-            <form id="editForm" class="flex flex-col gap-3">
-                <label class="flex flex-col text-left">
-                    <span class="mb-1">Login:</span>
-                    <input id="loginInput" name="login" type="text" required pattern="[a-zA-Z0-9_]+"
-                                                 title="Only letters, numbers and underscore"
-                                                 class="p-2 rounded-lg border border-gray-400 w-full outline-none" />
-                </label>
+	<div class="flex items-center">
+	<span class="w-16 text-sm">Draws</span>
+	<div class="flex-1 h-4 bg-gray-200 rounded">
+	<div id="drawsBar" class="h-4 bg-blue-600 rounded" class="w-0"></div>
+	</div>
+	<span id="drawsPercent" class="w-10 text-right text-sm ml-2">0%</span>
+	</div>
+	</div>
+	</section>
 
-                <label class="flex flex-col text-left">
-                    <span class="mb-1">Email:</span>
-                    <input id="emailInput" name="email" type="text" required
-                                        class="p-2 rounded-lg border border-gray-400 w-full outline-none" />
-                </label>
+	<!-- Match History -->
+	<section class="bg-white rounded-2xl p-5 mb-8 shadow">
+	<h2 class="text-2xl font-semibold mb-4">Match History</h2>
+	<div id="matchHistoryList" class="flex flex-col gap-3">
+	<p class="text-gray-500 text-center">Loading history...</p>
+	</div>
+	</section>
 
-                <label class="flex flex-col text-left">
-                    <span class="mb-1">New password:</span>
-                    <input id="passwordInput" name="password" type="password" minlength="6" placeholder="Leave empty to keep current"
-                                                        class="p-2 rounded-lg border border-gray-400 w-full outline-none" />
-                </label>
+	<!-- Change personal data -->
+	<section class="bg-white rounded-2xl p-5 mb-8 shadow">
+	<h2 class="text-2xl font-semibold mb-4">Change personal data</h2>
+	<form id="editForm" class="flex flex-col gap-3">
+	<label class="flex flex-col text-left">
+	<span class="mb-1">Login:</span>
+	<input id="loginInput" name="login" type="text" required pattern="[a-zA-Z0-9_]+"
+	title="Only letters, numbers and underscore"
+	class="p-2 rounded-lg border border-gray-400 w-full outline-none" />
+	</label>
 
-                <button type="submit" class="bg-blue-800 text-white py-2 rounded-lg w-full hover:opacity-50 transition">Save</button>
-                <button id="deleteProfileBtn" type="button" class="bg-red-600 text-white py-2 rounded-lg w-full hover:opacity-50 transition">Delete profile</button>
-            </form>
-            <p id="editMessage" class="mt-3 text-red-600"></p>
-        </section>
+	<label class="flex flex-col text-left">
+	<span class="mb-1">Email:</span>
+	<input id="emailInput" name="email" type="text" required
+	class="p-2 rounded-lg border border-gray-400 w-full outline-none" />
+	</label>
 
-        <!-- Avatar settings -->
-        <section class="bg-white rounded-2xl p-5 mb-8 shadow">
-            <h2 class="text-2xl font-semibold mb-4">Avatar settings</h2>
-            <form id="avatarForm" enctype="multipart/form-data" class="flex flex-col gap-3">
-                <input type="file" name="avatar" accept="image/*" class="border border-gray-400 rounded-lg p-2" required>
-                <button type="submit" class="bg-blue-800 text-white py-2 rounded-lg w-full hover:opacity-50 transition">Upload avatar</button>
-                <button id="deleteAvatarBtn" type="button" class="bg-red-600 text-white py-2 rounded-lg w-full hover:opacity-50 transition">Delete avatar</button>
-            </form>
-            <p id="avatarMessage" class="mt-3 text-red-600"></p>
-        </section>
-    `;
+	<label class="flex flex-col text-left">
+	<span class="mb-1">New password:</span>
+	<input id="passwordInput" name="password" type="password" minlength="6" placeholder="Leave empty to keep current"
+	class="p-2 rounded-lg border border-gray-400 w-full outline-none" />
+	</label>
 
-    const backBtn = container.querySelector("#back-to-menu") as HTMLButtonElement;
-    backBtn.addEventListener("click", () => navigateTo("/menu"));
+	<button type="submit" class="bg-blue-800 text-white py-2 rounded-lg w-full hover:opacity-50 transition">Save</button>
+	<button id="deleteProfileBtn" type="button" class="bg-red-600 text-white py-2 rounded-lg w-full hover:opacity-50 transition">Delete profile</button>
+	</form>
+	<p id="editMessage" class="mt-3 text-red-600"></p>
+	</section>
 
-    let isSubmitting = false;
+	<!-- Avatar settings -->
+	<section class="bg-white rounded-2xl p-5 mb-8 shadow">
+	<h2 class="text-2xl font-semibold mb-4">Avatar settings</h2>
+	<form id="avatarForm" enctype="multipart/form-data" class="flex flex-col gap-3">
+	<input type="file" name="avatar" accept="image/*" class="border border-gray-400 rounded-lg p-2" required>
+	<button type="submit" class="bg-blue-800 text-white py-2 rounded-lg w-full hover:opacity-50 transition">Upload avatar</button>
+	<button id="deleteAvatarBtn" type="button" class="bg-red-600 text-white py-2 rounded-lg w-full hover:opacity-50 transition">Delete avatar</button>
+	</form>
+	<p id="avatarMessage" class="mt-3 text-red-600"></p>
+	</section>
+	`;
 
-    loadProfile();
+	const backBtn = container.querySelector("#back-to-menu") as HTMLButtonElement;
+	backBtn.addEventListener("click", () => navigateTo("/menu"));
 
-    async function loadProfile() {
-        try {
-            const res = await fetch('/api/profile', { credentials: 'include' });
-            if (!res.ok) {
-                navigateTo('/login');
-                return;
-            }
-            const data = await res.json();
-            
-            const welcomeEl = container.querySelector('#Welcome');
-            if (welcomeEl) welcomeEl.textContent = "Welcome, " + data.login + "!";
+	let isSubmitting = false;
 
-            const avatarEl = container.querySelector('#avatarImg') as HTMLImageElement;
-            if (avatarEl) {
-                avatarEl.src = data.avatar
-                    ? '/uploads/' + encodeURIComponent(data.avatar)
-                    : '/uploads/default.png';
-            }
+	loadProfile();
 
-            const loginInput = container.querySelector('#loginInput') as HTMLInputElement;
-            const emailInput = container.querySelector('#emailInput') as HTMLInputElement;
+	async function loadProfile() {
+		try {
+			const res = await fetch('/api/profile', { credentials: 'include' });
+			if (!res.ok) {
+				navigateTo('/login');
+				return;
+			}
+			const data = await res.json();
 
-            if (loginInput) loginInput.value = data.login;
-            if (emailInput) emailInput.value = data.email;
-            updateGameStats(data);
-            
-            await checkAndShowInvites();
-            await loadMatchHistory(data);
-        }
-        catch (err) {
-            console.error('Error loading profile:', err);
-            navigateTo('/login');
-        }
-    }
+			const welcomeEl = container.querySelector('#Welcome');
+			if (welcomeEl) welcomeEl.textContent = "Welcome, " + data.login + "!";
 
-    async function loadMatchHistory(currentUser: any) {
-        try {
-            const res = await fetch('/api/match-history', { credentials: 'include' });
-            const data = await res.json();
-            const listEl = container.querySelector('#matchHistoryList') as HTMLElement;
-            
-            if (data.history && data.history.length > 0) {
-                listEl.innerHTML = data.history.map((m: any) => {
-                    const date = new Date(m.played_at).toLocaleDateString();
-                    
-                    let resultClass = 'bg-gray-50';
-                    let resultText = '';
-                    
-                    if (m.winner_id) {
-                        if (m.winner_id === currentUser.id) {
-                            resultClass = 'bg-green-50 border border-green-200';
-                            resultText = '<span class="text-green-600 font-bold text-xs uppercase ml-2">Win</span>';
-                        } else {
-                            resultClass = 'bg-red-50 border border-red-200';
-                            resultText = '<span class="text-red-600 font-bold text-xs uppercase ml-2">Loss</span>';
-                        }
-                    } else if (m.score_player1 === m.score_player2) {
-                             resultClass = 'bg-blue-50 border border-blue-200';
-                             resultText = '<span class="text-blue-600 font-bold text-xs uppercase ml-2">Draw</span>';
-                    }
+			const avatarEl = container.querySelector('#avatarImg') as HTMLImageElement;
+			if (avatarEl) {
+				avatarEl.src = data.avatar
+					? '/uploads/' + encodeURIComponent(data.avatar)
+					: '/uploads/default.png';
+			}
 
-                    return `
-                    <div class="flex justify-between items-center p-3 rounded-lg ${resultClass}">
-                        <div class="text-sm text-gray-500">${date}</div>
-                        <div class="font-semibold flex items-center">
-                            ${m.p1_login} <span class="text-blue-600 mx-1">${m.score_player1}</span> - <span class="text-blue-600 mx-1">${m.score_player2}</span> ${m.p2_login}
-                            ${resultText}
-                        </div>
-                    </div>
-                    `;
-                }).join('');
-            } else {
-                listEl.innerHTML = '<p class="text-gray-500 text-center">No matches played yet.</p>';
-            }
-        } catch (e) {
-            console.error("History load error", e);
-        }
-    }
+			const loginInput = container.querySelector('#loginInput') as HTMLInputElement;
+			const emailInput = container.querySelector('#emailInput') as HTMLInputElement;
 
-    function updateGameStats(data: any): void {
-        const wins = data.wins || 0;
-        const losses = data.losses || 0;
-        const draws = data.draws || 0;
-        const totalGames = data.total_games || 0;
+			if (loginInput) loginInput.value = data.login;
+			if (emailInput) emailInput.value = data.email;
+			updateGameStats(data);
+			
+			await checkAndShowInvites();
+			await loadMatchHistory(data);
+		}
+		catch (err) {
+			console.error('Error loading profile:', err);
+			navigateTo('/login');
+		}
+	}
 
-        const winsEl = container.querySelector('#winsCount');
-        const lossesEl = container.querySelector('#lossesCount');
-        const drawsEl = container.querySelector('#drawsCount');
-        const totalEl = container.querySelector('#totalGamesCount');
-        const winRateEl = container.querySelector('#winRate');
+	async function loadMatchHistory(currentUser: any) {
+		try {
+			const res = await fetch('/api/match-history', { credentials: 'include' });
+			const data = await res.json();
+			const listEl = container.querySelector('#matchHistoryList') as HTMLElement;
 
-        if (winsEl) winsEl.textContent = wins.toString();
-        if (lossesEl) lossesEl.textContent = losses.toString();
-        if (drawsEl) drawsEl.textContent = draws.toString();
-        if (totalEl) totalEl.textContent = totalGames.toString();
+			if (data.history && data.history.length > 0) {
+				listEl.innerHTML = data.history.map((m: any) => {
+					const date = new Date(m.played_at).toLocaleDateString();
 
-        const winRate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0;
-        if (winRateEl) winRateEl.textContent = winRate + '%';
-    }
+					let resultClass = 'bg-gray-50';
+					let resultText = '';
 
-    const logoutBtn = container.querySelector('#logoutBtn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', async () => {
-            try {
-                await fetch('/api/logout', {
-                    method: 'POST',
-                    credentials: 'include'
-                });
-                navigateTo('/login');
-            }
-            catch (err) {
-                console.error('Logout error:', err);
-                navigateTo('/login');
-            }
-        });
-    }
+					if (m.winner_id) {
+						if (m.winner_id === currentUser.id) {
+							resultClass = 'bg-green-50 border border-green-200';
+							resultText = '<span class="text-green-600 font-bold text-xs uppercase ml-2">Win</span>';
+						} else {
+							resultClass = 'bg-red-50 border border-red-200';
+							resultText = '<span class="text-red-600 font-bold text-xs uppercase ml-2">Loss</span>';
+						}
+					} else if (m.score_player1 === m.score_player2) {
+						resultClass = 'bg-blue-50 border border-blue-200';
+						resultText = '<span class="text-blue-600 font-bold text-xs uppercase ml-2">Draw</span>';
+					}
 
-    const editForm = container.querySelector('#editForm') as HTMLFormElement;
-    if (editForm) {
-        editForm.addEventListener('submit', async (e: Event) => {
-            e.preventDefault();
-            if (isSubmitting) return;
-            isSubmitting = true;
+					return `
+					<div class="flex justify-between items-center p-3 rounded-lg ${resultClass}">
+					<div class="text-sm text-gray-500">${date}</div>
+					<div class="font-semibold flex items-center">
+					${m.p1_login} <span class="text-blue-600 mx-1">${m.score_player1}</span> - <span class="text-blue-600 mx-1">${m.score_player2}</span> ${m.p2_login}
+					${resultText}
+					</div>
+					</div>
+					`;
+				}).join('');
+			} else {
+				listEl.innerHTML = '<p class="text-gray-500 text-center">No matches played yet.</p>';
+			}
+		} catch (e) {
+			console.error("History load error", e);
+		}
+	}
 
-            try {
-                const loginInput = container.querySelector('#loginInput') as HTMLInputElement;
-                const emailInput = container.querySelector('#emailInput') as HTMLInputElement;
-                const passwordInput = container.querySelector('#passwordInput') as HTMLInputElement;
+	function updateGameStats(data: any): void {
+		const wins = data.wins || 0;
+		const losses = data.losses || 0;
+		const draws = data.draws || 0;
+		const totalGames = data.total_games || 0;
 
-                const body = {
-                    login: loginInput?.value || '',
-                    email: emailInput?.value || '',
-                    password: passwordInput?.value || ''
-                };
+		const winsEl = container.querySelector('#winsCount');
+		const lossesEl = container.querySelector('#lossesCount');
+		const drawsEl = container.querySelector('#drawsCount');
+		const totalEl = container.querySelector('#totalGamesCount');
+		const winRateEl = container.querySelector('#winRate');
 
-                const res = await fetch('/api/profile', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body),
-                    credentials: 'include'
-                });
+		if (winsEl) winsEl.textContent = wins.toString();
+		if (lossesEl) lossesEl.textContent = losses.toString();
+		if (drawsEl) drawsEl.textContent = draws.toString();
+		if (totalEl) totalEl.textContent = totalGames.toString();
 
-                const msg = await res.json();
-                const messageEl = container.querySelector('#editMessage');
-                if (messageEl) messageEl.textContent = msg.message || 'Update failed';
+		const winRate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0;
+		if (winRateEl) winRateEl.textContent = winRate + '%';
+		updateBars(wins, losses, draws, totalGames);
+	}
 
-                if (res.ok) {
-                    await loadProfile();
-                }
-            }
-            catch (err) {
-                console.error('Profile update error:', err);
-                const messageEl = container.querySelector('#editMessage');
-                if (messageEl) messageEl.textContent = 'Error updating profile';
-            }
-            finally {
-                isSubmitting = false;
-            }
-        });
-    }
+	function updateBars(wins: number, losses: number, draws: number, totalGames: number) {
+		const winPercent = totalGames ? Math.round((wins / totalGames) * 100) : 0;
+		const lossPercent = totalGames ? Math.round((losses / totalGames) * 100) : 0;
+		const drawPercent = totalGames ? Math.round((draws / totalGames) * 100) : 0;
 
-    const avatarForm = container.querySelector('#avatarForm') as HTMLFormElement;
-    if (avatarForm) {
-        avatarForm.addEventListener('submit', async (e: Event) => {
-            e.preventDefault();
-            if (isSubmitting) return;
-            isSubmitting = true;
+		(document.getElementById('winsBar') as HTMLElement).style.width = winPercent + '%';
+		(document.getElementById('winsPercent') as HTMLElement).textContent = winPercent + '%';
 
-            try {
-                const fileInput = (e.target as HTMLFormElement).querySelector('input[name="avatar"]') as HTMLInputElement;
-                const file = fileInput?.files?.[0];
-                if (!file) {
-                    const msgEl = container.querySelector('#avatarMessage');
-                    if (msgEl) msgEl.textContent = 'Please select a file';
-                    return;
-                }
+		(document.getElementById('lossesBar') as HTMLElement).style.width = lossPercent + '%';
+		(document.getElementById('lossesPercent') as HTMLElement).textContent = lossPercent + '%';
 
-                if (file.size > 5 * 1024 * 1024) {
-                    const msgEl = container.querySelector('#avatarMessage');
-                    if (msgEl) msgEl.textContent = 'File too large! Max 5MB';
-                    return;
-                }
+		(document.getElementById('drawsBar') as HTMLElement).style.width = drawPercent + '%';
+		(document.getElementById('drawsPercent') as HTMLElement).textContent = drawPercent + '%';
+	}
 
-                const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-                if (!allowedTypes.includes(file.type)) {
-                    const msgEl = container.querySelector('#avatarMessage');
-                    if (msgEl) msgEl.textContent = 'Invalid file type! Only JPEG, PNG, WebP allowed';
-                    return;
-                }
+	const logoutBtn = container.querySelector('#logoutBtn');
+	if (logoutBtn) {
+		logoutBtn.addEventListener('click', async () => {
+			try {
+				await fetch('/api/logout', {
+					method: 'POST',
+					credentials: 'include'
+				});
+				navigateTo('/login');
+			}
+			catch (err) {
+				console.error('Logout error:', err);
+				navigateTo('/login');
+			}
+		});
+	}
 
-                const formData = new FormData();
-                formData.append('avatar', file);
+	const editForm = container.querySelector('#editForm') as HTMLFormElement;
+	if (editForm) {
+		editForm.addEventListener('submit', async (e: Event) => {
+			e.preventDefault();
+			if (isSubmitting) return;
+			isSubmitting = true;
 
-                const res = await fetch('/api/avatar', {
-                    method: 'POST',
-                    body: formData,
-                    credentials: 'include'
-                });
+			try {
+				const loginInput = container.querySelector('#loginInput') as HTMLInputElement;
+				const emailInput = container.querySelector('#emailInput') as HTMLInputElement;
+				const passwordInput = container.querySelector('#passwordInput') as HTMLInputElement;
 
-                const msg = await res.json();
-                const msgEl = container.querySelector('#avatarMessage');
-                if (msgEl) msgEl.textContent = msg.message || 'Upload failed';
+				const body = {
+					login: loginInput?.value || '',
+					email: emailInput?.value || '',
+					password: passwordInput?.value || ''
+				};
 
-                if (res.ok) {
-                    await loadProfile();
-                    fileInput.value = '';
-                }
-            }
-            catch (err) {
-                console.error('Avatar upload error:', err);
-                const msgEl = container.querySelector('#avatarMessage');
-                if (msgEl) msgEl.textContent = 'Error uploading avatar';
-            }
-            finally {
-                isSubmitting = false;
-            }
-        });
-    }
+				const res = await fetch('/api/profile', {
+					method: 'PUT',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(body),
+					credentials: 'include'
+				});
 
-    const deleteAvatarBtn = container.querySelector('#deleteAvatarBtn');
-    if (deleteAvatarBtn) {
-        deleteAvatarBtn.addEventListener('click', async () => {
-            if (!confirm('Delete your avatar?')) return;
+				const msg = await res.json();
+				const messageEl = container.querySelector('#editMessage');
+				if (messageEl) messageEl.textContent = msg.message || 'Update failed';
 
-            try {
-                const res = await fetch('/api/avatar', {
-                    method: 'DELETE',
-                    credentials: 'include'
-                });
+				if (res.ok) {
+					await loadProfile();
+				}
+			}
+			catch (err) {
+				console.error('Profile update error:', err);
+				const messageEl = container.querySelector('#editMessage');
+				if (messageEl) messageEl.textContent = 'Error updating profile';
+			}
+			finally {
+				isSubmitting = false;
+			}
+		});
+	}
 
-                const msg = await res.json();
-                const msgEl = container.querySelector('#avatarMessage');
-                if (msgEl) msgEl.textContent = msg.message || 'Delete failed';
+	const avatarForm = container.querySelector('#avatarForm') as HTMLFormElement;
+	if (avatarForm) {
+		avatarForm.addEventListener('submit', async (e: Event) => {
+			e.preventDefault();
+			if (isSubmitting) return;
+			isSubmitting = true;
 
-                if (res.ok) {
-                    await loadProfile();
-                }
-            }
-            catch (err) {
-                console.error('Avatar delete error:', err);
-                const msgEl = container.querySelector('#avatarMessage');
-                if (msgEl) msgEl.textContent = 'Error deleting avatar';
-            }
-        });
-    }
+			try {
+				const fileInput = (e.target as HTMLFormElement).querySelector('input[name="avatar"]') as HTMLInputElement;
+				const file = fileInput?.files?.[0];
+				if (!file) {
+					const msgEl = container.querySelector('#avatarMessage');
+					if (msgEl) msgEl.textContent = 'Please select a file';
+					return;
+				}
 
-    const deleteProfileBtn = container.querySelector('#deleteProfileBtn');
-    if (deleteProfileBtn) {
-        deleteProfileBtn.addEventListener('click', async () => {
-            if (!confirm('Are you sure you want to delete your profile? This cannot be undone.')) {
-                return;
-            }
+				if (file.size > 5 * 1024 * 1024) {
+					const msgEl = container.querySelector('#avatarMessage');
+					if (msgEl) msgEl.textContent = 'File too large! Max 5MB';
+					return;
+				}
 
-            try {
-                const res = await fetch('/api/profile', {
-                    method: 'DELETE',
-                    credentials: 'include'
-                });
+				const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+				if (!allowedTypes.includes(file.type)) {
+					const msgEl = container.querySelector('#avatarMessage');
+					if (msgEl) msgEl.textContent = 'Invalid file type! Only JPEG, PNG, WebP allowed';
+					return;
+				}
 
-                if (res.ok) {
-                    navigateTo('/');
-                } else {
-                    alert('Failed to delete profile');
-                }
-            }
-            catch (err) {
-                console.error('Profile delete error:', err);
-                alert('Error deleting profile');
-            }
-        });
-    }
+				const formData = new FormData();
+				formData.append('avatar', file);
 
-    return { component: container };
+				const res = await fetch('/api/avatar', {
+					method: 'POST',
+					body: formData,
+					credentials: 'include'
+				});
+
+				const msg = await res.json();
+				const msgEl = container.querySelector('#avatarMessage');
+				if (msgEl) msgEl.textContent = msg.message || 'Upload failed';
+
+				if (res.ok) {
+					await loadProfile();
+					fileInput.value = '';
+				}
+			}
+			catch (err) {
+				console.error('Avatar upload error:', err);
+				const msgEl = container.querySelector('#avatarMessage');
+				if (msgEl) msgEl.textContent = 'Error uploading avatar';
+			}
+			finally {
+				isSubmitting = false;
+			}
+		});
+	}
+
+	const deleteAvatarBtn = container.querySelector('#deleteAvatarBtn');
+	if (deleteAvatarBtn) {
+		deleteAvatarBtn.addEventListener('click', async () => {
+			if (!confirm('Delete your avatar?')) return;
+
+			try {
+				const res = await fetch('/api/avatar', {
+					method: 'DELETE',
+					credentials: 'include'
+				});
+
+				const msg = await res.json();
+				const msgEl = container.querySelector('#avatarMessage');
+				if (msgEl) msgEl.textContent = msg.message || 'Delete failed';
+
+				if (res.ok) {
+					await loadProfile();
+				}
+			}
+			catch (err) {
+				console.error('Avatar delete error:', err);
+				const msgEl = container.querySelector('#avatarMessage');
+				if (msgEl) msgEl.textContent = 'Error deleting avatar';
+			}
+		});
+	}
+
+	const deleteProfileBtn = container.querySelector('#deleteProfileBtn');
+	if (deleteProfileBtn) {
+		deleteProfileBtn.addEventListener('click', async () => {
+			if (!confirm('Are you sure you want to delete your profile? This cannot be undone.')) {
+				return;
+			}
+
+			try {
+				const res = await fetch('/api/profile', {
+					method: 'DELETE',
+					credentials: 'include'
+				});
+
+				if (res.ok) {
+					navigateTo('/');
+				} else {
+					alert('Failed to delete profile');
+				}
+			}
+			catch (err) {
+				console.error('Profile delete error:', err);
+				alert('Error deleting profile');
+			}
+		});
+	}
+
+	return { component: container };
 }

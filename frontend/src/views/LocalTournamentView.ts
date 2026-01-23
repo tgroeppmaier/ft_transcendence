@@ -137,7 +137,7 @@ export function LocalTournamentView() {
               ← Back to Home
             </button>
           </div>
-          <canvas id="board" width="800" height="600" class="shadow-2xl" style="background-color: #000;"></canvas>
+          <canvas id="board" width="800" height="600" class="shadow-2xl" class="bg-black"></canvas>
         `;
 
         const backButton = gameContainer.querySelector("#back-to-main");

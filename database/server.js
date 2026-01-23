@@ -23,7 +23,7 @@ const fsMkdir = promisify(fs.mkdir)
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || "https://localhost:8443/api/auth/google/callback"
-const UPLOADS_DIR = '/app/uploads'
+const UPLOADS_DIR = process.env.UPLOADS_DIR || '/app/uploads'
 
 const JWT_SECRET = process.env.JWT_SECRET
 if (!JWT_SECRET) {
@@ -189,7 +189,7 @@ fastify.post('/registration', async (request, reply) => {
 			return reply.code(400).send({ message: 'This email is already taken!' })
 		}
 		request.log.info('Starting password hashing...')
-		const hashedPassword = await bcrypt.hashSync(password, 10)
+		const hashedPassword = await bcrypt.hash(password, 10)
 		request.log.info('Hashing successful.')
 		await db.run('INSERT INTO users (login, email, password, onlineStatus, avatar) VALUES (?, ?, ?, ?, ?)', [login, email, hashedPassword, onlineStatus, 'default.png'])
 		await db.close()
@@ -327,7 +327,7 @@ fastify.delete('/profile', { preHandler: [fastify.authenticate] }, async (reques
 		if (oldAvatar && oldAvatar !== 'default.png') {
 			const fp = path.join(UPLOADS_DIR, oldAvatar)
 			try {
-				await import('fs/promises').then(fs => fs.unlink(fp))
+				 await fsUnlink(fp)
 			} catch (e) { /* ignore */ }
 		}
 		await db.run('DELETE FROM users WHERE id = ?', [id])

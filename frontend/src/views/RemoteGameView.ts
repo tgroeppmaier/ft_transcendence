@@ -41,7 +41,7 @@ export async function RemoteGameView(existingGameId?: string) {
   gameContainer.className = "flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4";
   gameContainer.innerHTML = `
   <div class="relative">
-    <canvas id="board" width="800" height="600" class="shadow-2xl" style="background-color: #000;"></canvas>
+    <canvas id="board" width="800" height="600" class="shadow-2xl" class="bg-black"></canvas>
     <div id="invite-overlay" class="absolute top-4 right-4 hidden">
         <button id="invite-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition">
             Invite Friend

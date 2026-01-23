@@ -1,3 +1,29 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+	/* Main menu styling */
+	.main-menu {
+		@apply mb-[33vh];
+	}
+
+	/* Game mode selector buttons */
+	.game-button {
+		@apply text-lg px-5 py-2.5 m-2.5 cursor-pointer
+		border border-gray-300 rounded bg-white
+		hover:bg-gray-50 transition-colors;
+	}
+
+	/* Back to main button */
+	.back-button {
+		@apply mb-2.5 text-base px-2.5 py-1.5 cursor-pointer
+		border border-gray-300 rounded bg-white
+		hover:bg-gray-50 transition-colors;
+	}
+
+	/* Game board */
+	.game-board {
+		@apply bg-black;
+	}
+}
