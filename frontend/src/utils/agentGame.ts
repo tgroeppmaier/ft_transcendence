@@ -33,7 +33,7 @@ export class AgentGame {
   private leftPaddle: Paddle;
   private rightPaddle: Paddle;
   private gameOver = false;
-  private countdown = 5;
+  private countdown = 3;
   private gameStarted = false;
   private rafID: number;
 
@@ -126,12 +126,25 @@ export class AgentGame {
       this.find_bounces();
       this.lastAgentUpdate = Date.now();
     }
+
+		let ywanted: number;
+		if (this.rightPaddle.y + PADDLE_HEIGHT / 2 < CANVAS_WIDTH / 2) {
+			ywanted = CANVAS_WIDTH - BALL_RADIUS;
+		} else {
+			ywanted = BALL_RADIUS;
+		}
+		let tanphi = (ywanted - this.anticipated_bounce_position) / (CANVAS_WIDTH - 2 * BALL_RADIUS);
+		let phi = Math.atan(tanphi);
+		let y_to_take = this.anticipated_bounce_position - PADDLE_HEIGHT * (1/2 + 2/Math.PI*phi);
+		if (y_to_take <= 0 || y_to_take + PADDLE_HEIGHT >= CANVAS_HEIGHT) {
+			//this.keyDebugMap['p'] = true;
+		}
     this.keyAgentMap["w"] = false;
     this.keyAgentMap["s"] = false;
-    if (this.leftPaddle.y + 0.9*PADDLE_HEIGHT <= this.anticipated_bounce_position) {
+    if (this.leftPaddle.y + 0.04*PADDLE_HEIGHT <= y_to_take) {
       this.keyAgentMap["s"] = true;
     }
-    else if (this.leftPaddle.y + 0.1*PADDLE_HEIGHT >= this.anticipated_bounce_position) {
+    else if (this.leftPaddle.y - 0.04*PADDLE_HEIGHT >= y_to_take) {
       this.keyAgentMap["w"] = true;
     }
   }
@@ -146,6 +159,7 @@ export class AgentGame {
     let keep_doing: boolean = true;
     let cnt: number = -1;
     this.bounce_balls_list = [];
+		console.log("New logic");
     while (keep_doing && cnt < 10) {
       cnt += 1;
       // determine delta_time_x
@@ -173,11 +187,21 @@ export class AgentGame {
       reference_ball.x = reference_ball.x + delta * reference_ball.vx;
       reference_ball.y = reference_ball.y + delta * reference_ball.vy;
       if (delta_time_x == delta) {
-        reference_ball.vx *= -1.05;
-        if (reference_ball.vx > 0) {
+        if (reference_ball.vx < 0) {
           keep_doing = false;
           this.anticipated_bounce_position = reference_ball.y;
+					console.log("New logic hitting agent side");
         }
+				else {
+					let currentSpeed = Math.sqrt(reference_ball.vx * reference_ball.vx + reference_ball.vy * reference_ball.vy);
+					let newSpeed = currentSpeed * 1.05;
+					newSpeed =(newSpeed <= MAX_BALL_SPEED ? newSpeed : MAX_BALL_SPEED);
+        	reference_ball.vx = -newSpeed;
+					reference_ball.vy = 0;
+          this.anticipated_bounce_position = reference_ball.y;
+          //keep_doing = false;
+					console.log("New logic hitting player side");
+				}
       }
       if (delta_time_y == delta) {
         reference_ball.vy *= -1;
@@ -191,8 +215,15 @@ export class AgentGame {
                                         vx: reference_ball.vx, vy: reference_ball.vy, 
                                         color: reference_ball.color };
       this.bounce_balls_list.push(ball_to_push);
+			this.compute_position_to_send_to_ywanted(CANVAS_HEIGHT - BALL_RADIUS);
     }
   }
+
+	private compute_position_to_send_to_ywanted(ywanted: number) {
+		let tanphi: number = (ywanted - this.anticipated_bounce_position) / (CANVAS_WIDTH - 2 * BALL_RADIUS);
+		let phi = Math.atan(tanphi);
+		console.log("tanphi: ", tanphi, "phi:", phi);
+	}
 
   private handleScore() {
     if (this.ball.x < 0) {
