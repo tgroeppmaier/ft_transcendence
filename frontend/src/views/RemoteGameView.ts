@@ -138,10 +138,18 @@ export async function RemoteGameView(existingGameId?: string) {
   const game = new RemoteGame(gameId, canvas, onStateChange);
   game.start();
 
+  const handleKeyDown = (e: KeyboardEvent) => game.onKeyDown(e.key);
+  const handleKeyUp = (e: KeyboardEvent) => game.onKeyUp(e.key);
+
+  window.addEventListener("keydown", handleKeyDown);
+  window.addEventListener("keyup", handleKeyUp);
+
   return {
     component: gameContainer,
     cleanup: () => {
       game.stop();
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
     },
   };
 }

@@ -52,12 +52,6 @@ export class RemoteGame {
     this.ws.addEventListener("close", (e) => console.log(`[ws] close ${gameId}`, e.code));
     this.ws.addEventListener("error", (e) => console.log(`[ws] error`, e));
     this.ws.onmessage = this.handleMessage.bind(this);
-
-    // Bind inputs
-    this.handleKeyDown = this.handleKeyDown.bind(this);
-    this.handleKeyUp = this.handleKeyUp.bind(this);
-    window.addEventListener("keydown", this.handleKeyDown);
-    window.addEventListener("keyup", this.handleKeyUp);
   }
 
   public start() {
@@ -66,8 +60,6 @@ export class RemoteGame {
 
   public stop() {
     cancelAnimationFrame(this.rafID);
-    window.removeEventListener("keydown", this.handleKeyDown);
-    window.removeEventListener("keyup", this.handleKeyUp);
     if (this.ws.readyState === WebSocket.OPEN) {
       this.ws.close();
     }
@@ -107,23 +99,23 @@ export class RemoteGame {
     this.ws.send(JSON.stringify(action));
   }
 
-  private handleKeyDown(e: KeyboardEvent) {
-    if (e.key === "w" && !this.keyMap["up"]) {
+  public onKeyDown(key: string) {
+    if (key === "w" && !this.keyMap["up"]) {
       this.keyMap["up"] = true;
       this.sendAction({ move: "start", direction: "up" });
     }
-    if (e.key === "s" && !this.keyMap["down"]) {
+    if (key === "s" && !this.keyMap["down"]) {
       this.keyMap["down"] = true;
       this.sendAction({ move: "start", direction: "down" });
     }
   }
 
-  private handleKeyUp(e: KeyboardEvent) {
-    if (e.key === "w") {
+  public onKeyUp(key: string) {
+    if (key === "w") {
       this.keyMap["up"] = false;
       this.sendAction({ move: "stop", direction: "up" });
     }
-    if (e.key === "s") {
+    if (key === "s") {
       this.keyMap["down"] = false;
       this.sendAction({ move: "stop", direction: "down" });
     }
