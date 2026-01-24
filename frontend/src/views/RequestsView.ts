@@ -30,7 +30,7 @@ export function RequestsView() {
         try {
             emptyMessage.textContent = "Loading...";
 
-            const res = await fetch("/api/friend-requests", {
+            const res = await fetch("/db/friend-requests", {
                 credentials: "include"
             });
 
@@ -100,7 +100,7 @@ export function RequestsView() {
 
     async function handleRequest(requestId: number, action: 'accept' | 'reject', cardElement: HTMLElement) {
         try {
-            const endpoint = action === 'accept' ? '/api/friend-accept' : '/api/friend-reject';
+            const endpoint = action === 'accept' ? '/db/friend-accept' : '/db/friend-reject';
 
             const res = await fetch(endpoint, {
                 method: "POST",

@@ -34,7 +34,7 @@ export function FriendsView() {
                  message.textContent = "Loading...";
             }
             
-            const res = await fetch("/api/friends", {
+            const res = await fetch("/db/friends", {
                 credentials: "include"
             });
             const data = await res.json();
@@ -94,7 +94,7 @@ export function FriendsView() {
 
     async function removeFriend(friendId: number, cardElement: HTMLElement) {
         try {
-            const res = await fetch("/api/friend-remove", {
+            const res = await fetch("/db/friend-remove", {
                 method: "DELETE",
                 headers: {
                     "Content-Type": "application/json"

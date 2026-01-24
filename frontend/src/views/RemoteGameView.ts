@@ -76,7 +76,7 @@ export async function RemoteGameView(existingGameId?: string) {
   inviteBtn.addEventListener("click", async () => {
       inviteModal.classList.remove("hidden");
       try {
-          const res = await fetch("/api/friends", { credentials: "include" });
+          const res = await fetch("/db/friends", { credentials: "include" });
           const data = await res.json();
           friendsList.innerHTML = "";
 

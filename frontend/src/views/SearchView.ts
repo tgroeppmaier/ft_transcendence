@@ -47,7 +47,7 @@ export function SearchView() {
         if (!currentQuery) return;
         
         try {
-            const res = await fetch(`/api/search?query=${encodeURIComponent(currentQuery)}`, {
+            const res = await fetch(`/db/search?query=${encodeURIComponent(currentQuery)}`, {
                 credentials: "include"
             });
 
@@ -146,7 +146,7 @@ export function SearchView() {
             btn.disabled = true;
             btn.textContent = "Sending...";
 
-            const res = await fetch("/api/friend-request", {
+            const res = await fetch("/db/friend-request", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"

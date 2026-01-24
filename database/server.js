@@ -22,7 +22,7 @@ const fsMkdir = promisify(fs.mkdir)
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
-const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || "https://localhost:8443/api/auth/google/callback"
+const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || "https://localhost:8443/db/auth/google/callback"
 const UPLOADS_DIR = process.env.UPLOADS_DIR || '/app/uploads'
 
 const JWT_SECRET = process.env.JWT_SECRET

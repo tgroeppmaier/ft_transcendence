@@ -27,9 +27,9 @@ localhost {
     }
 
     # 3. Database API
-    @api path /api/*
-    handle @api {
-        uri strip_prefix /api
+    @db path /db/*
+    handle @db {
+        uri strip_prefix /db
         reverse_proxy database:3000
     }
 
@@ -41,11 +41,11 @@ localhost {
     }
     # 3. Google OAuth callback
     @google_auth {
-        path /api/auth/google
-        path /api/auth/google/*
+        path /db/auth/google
+        path /db/auth/google/*
     }
     handle @google_auth {
-        uri strip_prefix /api
+        uri strip_prefix /db
         reverse_proxy database:3000
     }
 

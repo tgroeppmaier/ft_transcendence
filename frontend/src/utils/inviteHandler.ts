@@ -18,7 +18,7 @@ export async function checkAndShowInvites() {
         // Fetch friend details to show name
         let creatorName = "Unknown";
         try {
-            const friendsRes = await fetch('/api/friends', { credentials: 'include' });
+            const friendsRes = await fetch('/db/friends', { credentials: 'include' });
             if (friendsRes.ok) {
                 const friendsData = await friendsRes.json();
                 const friend = friendsData.friends.find((f: any) => f.id === invite.creatorId);

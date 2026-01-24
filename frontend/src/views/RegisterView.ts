@@ -46,7 +46,7 @@ export function RegisterView() {
     const data = Object.fromEntries(formData.entries());
 
     try {
-      const response = await fetch("/api/registration", {
+      const response = await fetch("/db/registration", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),

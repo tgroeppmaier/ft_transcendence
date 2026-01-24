@@ -46,7 +46,7 @@ export function navigateTo(pathname: string) {
 
 async function checkAuth(): Promise<boolean> {
   try {
-    const res = await fetch("/api/profile", { credentials: "include" });
+    const res = await fetch("/db/profile", { credentials: "include" });
     return res.ok;
   } catch {
     return false;

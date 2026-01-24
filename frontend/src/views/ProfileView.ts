@@ -133,7 +133,7 @@ export function ProfileView() {
 
 	async function loadProfile() {
 		try {
-			const res = await fetch('/api/profile', { credentials: 'include' });
+			const res = await fetch('/db/profile', { credentials: 'include' });
 			if (!res.ok) {
 				navigateTo('/login');
 				return;
@@ -168,7 +168,7 @@ export function ProfileView() {
 
 	async function loadMatchHistory(currentUser: any) {
 		try {
-			const res = await fetch('/api/match-history', { credentials: 'include' });
+			const res = await fetch('/db/match-history', { credentials: 'include' });
 			const data = await res.json();
 			const listEl = container.querySelector('#matchHistoryList') as HTMLElement;
 
@@ -251,7 +251,7 @@ export function ProfileView() {
 	if (logoutBtn) {
 		logoutBtn.addEventListener('click', async () => {
 			try {
-				await fetch('/api/logout', {
+				await fetch('/db/logout', {
 					method: 'POST',
 					credentials: 'include'
 				});
@@ -282,7 +282,7 @@ export function ProfileView() {
 					password: passwordInput?.value || ''
 				};
 
-				const res = await fetch('/api/profile', {
+				const res = await fetch('/db/profile', {
 					method: 'PUT',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify(body),
@@ -340,7 +340,7 @@ export function ProfileView() {
 				const formData = new FormData();
 				formData.append('avatar', file);
 
-				const res = await fetch('/api/avatar', {
+				const res = await fetch('/db/avatar', {
 					method: 'POST',
 					body: formData,
 					credentials: 'include'
@@ -372,7 +372,7 @@ export function ProfileView() {
 			if (!confirm('Delete your avatar?')) return;
 
 			try {
-				const res = await fetch('/api/avatar', {
+				const res = await fetch('/db/avatar', {
 					method: 'DELETE',
 					credentials: 'include'
 				});
@@ -401,7 +401,7 @@ export function ProfileView() {
 			}
 
 			try {
-				const res = await fetch('/api/profile', {
+				const res = await fetch('/db/profile', {
 					method: 'DELETE',
 					credentials: 'include'
 				});
