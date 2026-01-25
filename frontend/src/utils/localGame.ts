@@ -6,9 +6,7 @@ import {
   PADDLE_SPEED,
   BALL_X_SPEED,
   BALL_Y_SPEED,
-  BALL_RADIUS,
   POINTS_TO_WIN,
-  MAX_BALL_SPEED,
 } from "../../../shared/constants.js";
 import { Ball, Paddle, Score } from "../../../shared/types.js";
 import { handlePaddleCollision, handleWallCollision, resetBall } from "../../../shared/gameLogic.js";

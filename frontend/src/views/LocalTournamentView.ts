@@ -6,9 +6,8 @@ export function LocalTournamentView() {
   container.className = "flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4";
 
   // State
-  let step = 1;
-  let playerCount = 3;
-  let playerNames: string[] = [];
+  // Default to 4 empty strings for the 4 required players
+  let playerNames: string[] = ["", "", "", ""];
   let tournamentCleanup: (() => void) | null = null;
 
   const render = () => {
@@ -19,189 +18,151 @@ export function LocalTournamentView() {
 
     const title = document.createElement("h2");
     title.className = "text-2xl font-bold mb-6 text-center text-gray-800"
-    title.textContent = "Local Tournament Setup";
+    title.textContent = "Local Tournament (4 Players)";
     card.appendChild(title);
 
-    if (step === 1) {
+    const form = document.createElement("div");
+    form.className = "flex flex-col gap-3 mb-6";
+
+    playerNames.forEach((name, index) => {
+      const group = document.createElement("div");
+
       const label = document.createElement("label");
-      label.className = "block text-gray-700 text-sm font-bold mb-2";
-      label.textContent = "Number of Players (3-6):";
+      label.className = "block text-gray-700 text-sm font-bold mb-1";
+      label.textContent = `Player ${index + 1} Name:`;
 
       const input = document.createElement("input");
-      input.type = "number";
-      input.min = "3";
-      input.max = "6";
-      input.value = String(playerCount);
-      input.className = "shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-4";
-
-      const nextBtn = document.createElement("button");
-      nextBtn.className = "w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition";
-      nextBtn.textContent = "Next";
-
-      nextBtn.onclick = () => {
-        const val = parseInt(input.value);
-        if (val >= 3 && val <= 6) {
-          playerCount = val;
-          step = 2;
-          // Initialize empty names if not set
-          if (playerNames.length !== playerCount) {
-             playerNames = Array(playerCount).fill("").map((_, i) => `Player ${i + 1}`);
-          }
-          render();
-        } else {
-          alert("Please enter a number between 3 and 6");
-        }
+      input.type = "text";
+      input.value = name;
+      input.maxLength = 15;
+      input.placeholder = "Max 15 characters";
+      input.autocomplete = "off";
+      input.className = "shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline";
+      input.oninput = (e) => {
+        playerNames[index] = (e.target as HTMLInputElement).value;
       };
 
-      card.appendChild(label);
-      card.appendChild(input);
-      card.appendChild(nextBtn);
+      group.appendChild(label);
+      group.appendChild(input);
+      form.appendChild(group);
+    });
 
-    } else if (step === 2) {
-      const form = document.createElement("div");
-      form.className = "flex flex-col gap-3 mb-6";
+    const btnGroup = document.createElement("div");
+    btnGroup.className = "flex gap-4";
 
-      playerNames.forEach((name, index) => {
-        const group = document.createElement("div");
+    const backBtn = document.createElement("button");
+    backBtn.className = "flex-1 bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition";
+    backBtn.textContent = "Back";
+    backBtn.onclick = () => {
+      navigateTo("/");
+    };
 
-        const label = document.createElement("label");
-        label.className = "block text-gray-700 text-sm font-bold mb-1";
-        label.textContent = `Player ${index + 1} Name:`;
+    const startBtn = document.createElement("button");
+    startBtn.className = "flex-1 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition";
+    startBtn.textContent = "Start Tournament";
+    startBtn.onclick = () => {
+      const trimmedNames = playerNames.map(name => name.trim());
 
-        const input = document.createElement("input");
-        input.type = "text";
-        input.value = name;
-        input.maxLength = 15;
-        input.placeholder = "Max 15 characters";
-        input.autocomplete = "off";
-        input.className = "shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline";
-        input.oninput = (e) => {
-          playerNames[index] = (e.target as HTMLInputElement).value;
-        };
+      // Check for empty names
+      if (trimmedNames.some(name => !name)) {
+          alert("Please ensure all player names are filled out.");
+          return;
+      }
 
-        group.appendChild(label);
-        group.appendChild(input);
-        form.appendChild(group);
+      // Check for duplicates
+      const uniqueNames = new Set(trimmedNames);
+      if (uniqueNames.size !== trimmedNames.length) {
+          alert("Player names must be unique. Please choose different names.");
+          return;
+      }
+
+      // Check for allowed characters
+      const nameRegex = /^[a-zA-Z0-9\s-']+$/;
+      const invalidName = trimmedNames.find(name => !nameRegex.test(name));
+      if (invalidName) {
+          alert(`Invalid name: "${invalidName}".\nNames can only contain letters, numbers, spaces, hyphens, and apostrophes.`);
+          return;
+      }
+
+      console.log("Starting tournament with:", trimmedNames);
+
+      // Create game container
+      container.innerHTML = "";
+      container.className = "flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4";
+
+      const gameContainer = document.createElement("div");
+      gameContainer.className = "flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4";
+      gameContainer.id = "local-tournament";
+      gameContainer.innerHTML = `
+        <div class="mb-4">
+          <button id="back-to-main" class="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition shadow-sm">
+            ← Back to Home
+          </button>
+        </div>
+        <canvas id="board" width="800" height="600" class="shadow-2xl bg-black"></canvas>
+      `;
+
+      const backButton = gameContainer.querySelector("#back-to-main");
+      if (backButton) {
+        backButton.addEventListener("click", (e) => {
+          e.preventDefault();
+          navigateTo("/");
+        });
+      }
+
+      const canvas = gameContainer.querySelector<HTMLCanvasElement>("#board");
+      if (!(canvas instanceof HTMLCanvasElement))
+        throw new Error("Canvas not found");
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx)
+        throw new Error("Context not found");
+
+      const tournament = new LocalTournament(canvas, ctx, trimmedNames, () => {
+            // Tournament naturally ended
       });
 
-      const btnGroup = document.createElement("div");
-      btnGroup.className = "flex gap-4";
-
-      const backBtn = document.createElement("button");
-      backBtn.className = "flex-1 bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition";
-      backBtn.textContent = "Back";
-      backBtn.onclick = () => {
-        step = 1;
-        render();
+      const onKeyDown = (e: KeyboardEvent) => {
+        tournament.activeGame?.onKeyDown(e.key);
       };
 
-      const startBtn = document.createElement("button");
-      startBtn.className = "flex-1 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition";
-      startBtn.textContent = "Start Tournament";
-      startBtn.onclick = () => {
-        const trimmedNames = playerNames.map(name => name.trim());
-
-        // Check for empty names
-        if (trimmedNames.some(name => !name)) {
-            alert("Please ensure all player names are filled out.");
-            return;
-        }
-
-        // Check for duplicates
-        const uniqueNames = new Set(trimmedNames);
-        if (uniqueNames.size !== trimmedNames.length) {
-            alert("Player names must be unique. Please choose different names.");
-            return;
-        }
-
-        // Check for allowed characters (Alphanumeric, spaces, hyphens, apostrophes)
-        const nameRegex = /^[a-zA-Z0-9\s-']+$/;
-        const invalidName = trimmedNames.find(name => !nameRegex.test(name));
-        if (invalidName) {
-            alert(`Invalid name: "${invalidName}".\nNames can only contain letters, numbers, spaces, hyphens, and apostrophes.`);
-            return;
-        }
-
-        console.log("Starting tournament with:", trimmedNames);
-
-        // Create game container
-        container.innerHTML = "";
-        container.className = "flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4";
-
-        const gameContainer = document.createElement("div");
-        gameContainer.className = "flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4";
-        gameContainer.id = "local-tournament";
-        gameContainer.innerHTML = `
-          <div class="mb-4">
-            <button id="back-to-main" class="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition shadow-sm">
-              ← Back to Home
-            </button>
-          </div>
-          <canvas id="board" width="800" height="600" class="shadow-2xl bg-black"></canvas>
-        `;
-
-        const backButton = gameContainer.querySelector("#back-to-main");
-        if (backButton) {
-          backButton.addEventListener("click", (e) => {
-            e.preventDefault();
-            navigateTo("/");
-          });
-        }
-
-        const canvas = gameContainer.querySelector<HTMLCanvasElement>("#board");
-        if (!(canvas instanceof HTMLCanvasElement))
-          throw new Error("Canvas not found");
-
-        const ctx = canvas.getContext("2d");
-        if (!ctx)
-          throw new Error("Context not found");
-
-        const tournament = new LocalTournament(canvas, ctx, trimmedNames, () => {
-             // Tournament naturally ended
-        });
-
-        const onKeyDown = (e: KeyboardEvent) => {
-          tournament.onKeyDown(e.key);
-        };
-
-        const onKeyUp = (e: KeyboardEvent) => {
-          tournament.onKeyUp(e.key);
-        };
-
-        const onCanvasClick = () => {
-          tournament.handleClick();
-        };
-
-        tournamentCleanup = () => {
-          tournament.stop();
-          document.removeEventListener("keydown", onKeyDown);
-          document.removeEventListener("keyup", onKeyUp);
-          canvas.removeEventListener("click", onCanvasClick);
-        };
-
-        // Adding event listeners
-        document.addEventListener("keydown", onKeyDown);
-        document.addEventListener("keyup", onKeyUp);
-        canvas.addEventListener("click", onCanvasClick);
-
-        tournament.start();
-
-        container.appendChild(gameContainer);
+      const onKeyUp = (e: KeyboardEvent) => {
+        tournament.activeGame?.onKeyUp(e.key);
       };
 
-      btnGroup.appendChild(backBtn);
-      btnGroup.appendChild(startBtn);
+      const onCanvasClick = () => {
+        tournament.activeGame?.resetGame();
+      };
 
-      card.appendChild(form);
-      card.appendChild(btnGroup);
-    }
+      tournamentCleanup = () => {
+        tournament.stop();
+        document.removeEventListener("keydown", onKeyDown);
+        document.removeEventListener("keyup", onKeyUp);
+        canvas.removeEventListener("click", onCanvasClick);
+      };
+
+      // Adding event listeners
+      document.addEventListener("keydown", onKeyDown);
+      document.addEventListener("keyup", onKeyUp);
+      canvas.addEventListener("click", onCanvasClick);
+
+      tournament.start();
+
+      container.appendChild(gameContainer);
+    };
+
+    btnGroup.appendChild(backBtn);
+    btnGroup.appendChild(startBtn);
+
+    card.appendChild(form);
+    card.appendChild(btnGroup);
 
     container.appendChild(card);
   };
 
   render();
 
-  return { 
+  return {
     component: container,
     cleanup: () => {
       if (tournamentCleanup) tournamentCleanup();
