@@ -1,4 +1,4 @@
-export function TournamentView() {
+export function RemoteTournamentView() {
   const tournamentContainer = document.createElement("div");
   tournamentContainer.id = "tournament";
   tournamentContainer.innerHTML = `

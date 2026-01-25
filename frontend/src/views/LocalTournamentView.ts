@@ -86,14 +86,12 @@ export function LocalTournamentView() {
 
       console.log("Starting tournament with:", trimmedNames);
 
-      // Create game container
+      // Reset container for game view
       container.innerHTML = "";
       container.className = "flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4";
+      container.id = "local-tournament";
 
-      const gameContainer = document.createElement("div");
-      gameContainer.className = "flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4";
-      gameContainer.id = "local-tournament";
-      gameContainer.innerHTML = `
+      container.innerHTML = `
         <div class="mb-4">
           <button id="back-to-main" class="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition shadow-sm">
             ← Back to Home
@@ -102,7 +100,7 @@ export function LocalTournamentView() {
         <canvas id="board" width="800" height="600" class="shadow-2xl bg-black"></canvas>
       `;
 
-      const backButton = gameContainer.querySelector("#back-to-main");
+      const backButton = container.querySelector("#back-to-main");
       if (backButton) {
         backButton.addEventListener("click", (e) => {
           e.preventDefault();
@@ -110,7 +108,7 @@ export function LocalTournamentView() {
         });
       }
 
-      const canvas = gameContainer.querySelector<HTMLCanvasElement>("#board");
+      const canvas = container.querySelector<HTMLCanvasElement>("#board");
       if (!(canvas instanceof HTMLCanvasElement))
         throw new Error("Canvas not found");
 
@@ -118,9 +116,7 @@ export function LocalTournamentView() {
       if (!ctx)
         throw new Error("Context not found");
 
-      const tournament = new LocalTournament(canvas, ctx, trimmedNames, () => {
-            // Tournament naturally ended
-      });
+      const tournament = new LocalTournament(canvas, ctx, trimmedNames);
 
       const onKeyDown = (e: KeyboardEvent) => {
         tournament.activeGame?.onKeyDown(e.key);
@@ -147,8 +143,6 @@ export function LocalTournamentView() {
       canvas.addEventListener("click", onCanvasClick);
 
       tournament.start();
-
-      container.appendChild(gameContainer);
     };
 
     btnGroup.appendChild(backBtn);

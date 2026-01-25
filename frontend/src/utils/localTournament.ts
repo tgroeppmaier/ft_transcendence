@@ -14,12 +14,10 @@ export class LocalTournament {
   private ctx: CanvasRenderingContext2D;
   private matches: Match[];
   private currentMatchIndex: number = 0;
-  private onTournamentEnd: () => void;
 
-  constructor(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, players: string[], cb: () => void) {
+  constructor(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, players: string[]) {
     this.canvas = canvas;
     this.ctx = ctx;
-    this.onTournamentEnd = cb;
 
     // Fixed bracket for 4 players:
     // Match 0: P1 vs P2
@@ -58,28 +56,26 @@ export class LocalTournament {
   }
 
   private onMatchEnd(winner: string) {
-    console.log(`Match ${this.currentMatchIndex + 1} ended. Winner: ${winner}`);
-
     // If this was the Final (Index 2)
     if (this.currentMatchIndex === 2) {
       drawMessage(this.ctx, this.canvas, `Tournament Winner: ${winner}`);
       this.tournamentOver = true;
       this.activeGame = null;
-      this.onTournamentEnd();
       return;
     }
 
-    // Advance winner to Final (Match 2)
-    // Match 0 winner -> Final P1
-    // Match 1 winner -> Final P2
-    const finalMatch = this.matches[2];
-    if (this.currentMatchIndex === 0) {
-      finalMatch.p1 = winner;
-    } else {
-      finalMatch.p2 = winner;
-    }
+    drawMessage(this.ctx, this.canvas, `Match ${this.currentMatchIndex + 1} ended. Winner: ${winner}`);
 
-    this.currentMatchIndex++;
-    this.startNextMatch();
+    setTimeout(() => {
+      const finalMatch = this.matches[2];
+      if (this.currentMatchIndex === 0) {
+        finalMatch.p1 = winner;
+      } else {
+        finalMatch.p2 = winner;
+      }
+
+      this.currentMatchIndex++;
+      this.startNextMatch();
+    }, 2000);
   }
 }
