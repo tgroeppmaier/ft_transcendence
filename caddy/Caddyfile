@@ -16,9 +16,7 @@ localhost {
     @backend_api {
         path /api/games
         path /api/games/*
-        path /api/invite
-        path /api/invites
-        path /api/invite/*
+        path /api/tournaments
         path /api/tournament
         path /api/tournament/*
     }

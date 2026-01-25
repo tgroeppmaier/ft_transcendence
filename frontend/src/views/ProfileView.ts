@@ -1,5 +1,4 @@
 import { navigateTo } from "../router.js";
-import { checkAndShowInvites } from "../utils/inviteHandler.js";
 
 export function ProfileView() {
 	const container = document.createElement("div");
@@ -157,7 +156,6 @@ export function ProfileView() {
 			if (emailInput) emailInput.value = data.email;
 			updateGameStats(data);
 			
-			await checkAndShowInvites();
 			await loadMatchHistory(data);
 		}
 		catch (err) {

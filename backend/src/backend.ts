@@ -4,7 +4,6 @@ import cookie from "@fastify/cookie";
 import jwt from "@fastify/jwt";
 import rateLimit from "@fastify/rate-limit";
 import { gameRoutes } from "./routes/games.js";
-import { inviteRoutes } from "./routes/invites.js";
 import { tournamentRoutes } from "./routes/tournaments.js";
 import { wsRoutes } from "./routes/ws.js";
 
@@ -46,7 +45,6 @@ backend.decorate("authenticate", async (request: any, reply: any) => {
 
 // Register Routes
 backend.register(gameRoutes);
-backend.register(inviteRoutes);
 backend.register(tournamentRoutes);
 backend.register(wsRoutes);
 

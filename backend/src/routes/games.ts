@@ -1,7 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { randomUUID } from "crypto";
 import { Game } from "../game.js";
-import { games, invites } from "../state.js";
+import { games } from "../state.js";
 
 export async function gameRoutes(backend: FastifyInstance) {
   // Create Game
@@ -9,12 +9,6 @@ export async function gameRoutes(backend: FastifyInstance) {
     const gameId = randomUUID();
     const newGame = new Game(gameId, () => {
       games.delete(gameId);
-      // Cleanup invites associated with this game
-      for (const [inviteId, invite] of invites.entries()) {
-        if (invite.gameId === gameId) {
-          invites.delete(inviteId);
-        }
-      }
       backend.log.info(`Game ${gameId} deleted`);
     });
     games.set(gameId, newGame);

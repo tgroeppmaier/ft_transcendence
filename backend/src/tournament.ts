@@ -1,10 +1,9 @@
 import { randomUUID } from "crypto";
 import { Game } from "./game.js";
-import { games, invites } from "./state.js";
+import { games } from "./state.js";
 
 export interface TournamentPlayer {
     id: number;
-    status: 'invited' | 'accepted' | 'declined';
     login?: string; // Optional for display
 }
 
@@ -34,33 +33,24 @@ export class Tournament {
         this.history = [];
         
         // Add creator
-        this.players.set(creatorId, { id: creatorId, status: 'accepted' });
+        this.players.set(creatorId, { id: creatorId });
     }
 
-    public invitePlayer(playerId: number) {
+    public addPlayer(playerId: number) {
         if (!this.players.has(playerId)) {
-            this.players.set(playerId, { id: playerId, status: 'invited' });
-        }
-    }
-
-    public respondInvite(playerId: number, accepted: boolean) {
-        const player = this.players.get(playerId);
-        if (player && player.status === 'invited') {
-            player.status = accepted ? 'accepted' : 'declined';
+            this.players.set(playerId, { id: playerId });
         }
     }
 
     public start() {
         if (this.status !== 'waiting') return false;
         
-        const acceptedPlayers = Array.from(this.players.values())
-            .filter(p => p.status === 'accepted')
-            .map(p => p.id);
+        const playerIds = Array.from(this.players.keys());
             
-        if (acceptedPlayers.length < 2) return false;
+        if (playerIds.length < 2) return false;
 
         this.status = 'active';
-        this.generateRound(acceptedPlayers);
+        this.generateRound(playerIds);
         return true;
     }
 
@@ -90,15 +80,6 @@ export class Tournament {
                 this.handleMatchResult(gameId, winnerId);
             });
             games.set(gameId, game);
-            
-            // Create Invite for these players? 
-            // Or just let them join?
-            // They need to know the Game ID.
-            // We can create invites for them.
-            const inv1 = randomUUID();
-            invites.set(inv1, { id: inv1, creatorId: this.creatorId, targetId: p1, gameId, createdAt: Date.now() });
-            const inv2 = randomUUID();
-            invites.set(inv2, { id: inv2, creatorId: this.creatorId, targetId: p2, gameId, createdAt: Date.now() });
         }
         
         // If one left (Bye), they advance automatically?
