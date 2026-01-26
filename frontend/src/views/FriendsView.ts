@@ -1,4 +1,5 @@
 import { navigateTo } from "../router.js";
+import { escapeHtml } from "../utils/escapeHtml.js";
 
 export function FriendsView() {
     const container = document.createElement("div");
@@ -58,6 +59,8 @@ export function FriendsView() {
                 const isOnline = friend.onlineStatus === "online";
                 const statusColor = isOnline ? "bg-green-500" : "bg-gray-400";
                 const statusText = isOnline ? "Online" : "Offline";
+                const safeLogin = escapeHtml(friend.login ?? "");
+                const safeEmail = escapeHtml(friend.email ?? "");
 
                 card.innerHTML = `
                 <div class="flex items-center gap-3">
@@ -67,8 +70,8 @@ export function FriendsView() {
                         <div class="${statusColor} w-3 h-3 rounded-full absolute bottom-0 right-0 border-2 border-white" title="${statusText}"></div>
                     </div>
                     <div>
-                        <p class="font-semibold">${friend.login}</p>
-                        <p class="text-gray-500 text-sm">${friend.email}</p>
+                        <p class="font-semibold">${safeLogin}</p>
+                        <p class="text-gray-500 text-sm">${safeEmail}</p>
                         <p class="text-xs ${isOnline ? 'text-green-600' : 'text-gray-500'} font-medium">${statusText}</p>
                     </div>
                 </div>

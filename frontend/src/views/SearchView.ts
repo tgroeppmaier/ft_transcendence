@@ -1,4 +1,5 @@
 import { navigateTo } from "../router.js";
+import { escapeHtml } from "../utils/escapeHtml.js";
 
 export function SearchView() {
     const container = document.createElement("div");
@@ -82,10 +83,12 @@ export function SearchView() {
                 data.users.forEach((u: any) => {
                     const card = document.createElement("div");
                     card.className = "flex items-center justify-between p-3 bg-gray-100 rounded-xl";
-                    
+
                     const isOnline = u.onlineStatus === "online";
                     const statusColor = isOnline ? "bg-green-500" : "bg-gray-400";
                     const statusText = isOnline ? "Online" : "Offline";
+                    const safeLogin = escapeHtml(u.login ?? "");
+                    const safeEmail = escapeHtml(u.email ?? "");
 
                     card.innerHTML = `
                     <div class="flex items-center gap-3">
@@ -95,8 +98,8 @@ export function SearchView() {
                             <div class="${statusColor} w-3 h-3 rounded-full absolute bottom-0 right-0 border-2 border-white" title="${statusText}"></div>
                         </div>
                         <div>
-                            <p class="font-semibold">${u.login}</p>
-                            <p class="text-gray-500 text-sm">${u.email}</p>
+                            <p class="font-semibold">${safeLogin}</p>
+                            <p class="text-gray-500 text-sm">${safeEmail}</p>
                             <p class="text-xs ${isOnline ? 'text-green-600' : 'text-gray-500'} font-medium">${statusText}</p>
                         </div>
                     </div>

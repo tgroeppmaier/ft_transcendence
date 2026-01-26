@@ -1,4 +1,5 @@
 import { navigateTo } from "../router.js";
+import { escapeHtml } from "../utils/escapeHtml.js";
 
 export function ProfileView() {
 	const container = document.createElement("div");
@@ -204,6 +205,8 @@ export function ProfileView() {
 						// Regular match entry
 						let resultClass = 'bg-gray-50';
 						let resultText = '';
+						const safeP1 = escapeHtml(item.p1_login ?? '');
+						const safeP2 = escapeHtml(item.p2_login ?? '');
 
 						if (item.winner_id) {
 							if (item.winner_id === currentUser.id) {
@@ -222,7 +225,7 @@ export function ProfileView() {
 						<div class="flex justify-between items-center p-3 rounded-lg ${resultClass}">
 						<div class="text-sm text-gray-500">${date}</div>
 						<div class="font-semibold flex items-center">
-						${item.p1_login} <span class="text-blue-600 mx-1">${item.score_player1}</span> - <span class="text-blue-600 mx-1">${item.score_player2}</span> ${item.p2_login}
+						${safeP1} <span class="text-blue-600 mx-1">${item.score_player1}</span> - <span class="text-blue-600 mx-1">${item.score_player2}</span> ${safeP2}
 						${resultText}
 						</div>
 						</div>

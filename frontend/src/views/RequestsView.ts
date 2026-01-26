@@ -1,4 +1,5 @@
 import { navigateTo } from "../router.js";
+import { escapeHtml } from "../utils/escapeHtml.js";
 
 export function RequestsView() {
     const container = document.createElement("div");
@@ -54,13 +55,16 @@ export function RequestsView() {
                 const card = document.createElement("div");
                 card.className = "flex items-center justify-between p-4 bg-gray-100 rounded-xl mb-3";
 
+                const safeLogin = escapeHtml(req.login ?? "");
+                const safeEmail = escapeHtml(req.email ?? "");
+
                 card.innerHTML = `
                 <div class="flex items-center gap-3">
                     <img src="/uploads/${req.avatar ? req.avatar : 'default.png'}"
                     class="w-12 h-12 rounded-full object-cover">
                     <div>
-                        <p class="font-semibold">${req.login}</p>
-                        <p class="text-gray-500 text-sm">${req.email}</p>
+                        <p class="font-semibold">${safeLogin}</p>
+                        <p class="text-gray-500 text-sm">${safeEmail}</p>
                     </div>
                 </div>
                 <div class="flex gap-2">
