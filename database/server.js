@@ -622,6 +622,59 @@ fastify.get('/match-history', { preHandler: [fastify.authenticate] }, async (req
 	}
 })
 
+fastify.post('/tournament-result', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+	let db
+	try {
+		const userId = request.user.id
+		const { placement } = request.body
+
+		if (!placement || placement < 1 || placement > 4) {
+			return reply.code(400).send({ message: "Invalid placement. Must be between 1 and 4." })
+		}
+
+		db = await openDB()
+
+		await db.run(
+			`INSERT INTO tournaments (user_id, placement, played_at)
+			 VALUES (?, ?, datetime('now'))`,
+			[userId, placement]
+		)
+
+		await db.close()
+		return reply.code(200).send({ message: "Tournament result saved" })
+	}
+	catch (err) {
+		if (db) await db.close()
+		request.log.error(err)
+		return reply.code(500).send({ message: "Error saving tournament result" })
+	}
+})
+
+fastify.get('/tournament-history', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+	let db
+	try {
+		const userId = request.user.id
+		db = await openDB()
+
+		const tournaments = await db.all(
+			`SELECT placement, played_at
+			 FROM tournaments
+			 WHERE user_id = ?
+			 ORDER BY played_at DESC
+			 LIMIT 20`,
+			[userId]
+		)
+
+		await db.close()
+		return reply.send({ tournaments: tournaments || [] })
+	}
+	catch (err) {
+		if (db) await db.close()
+		request.log.error(err)
+		return reply.code(500).send({ message: "Error fetching tournament history" })
+	}
+})
+
 fastify.post('/avatar', { preHandler: [fastify.authenticate] }, async (request, reply) => {
 	let db
 	let id

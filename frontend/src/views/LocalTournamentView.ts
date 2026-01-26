@@ -7,6 +7,7 @@ export function LocalTournamentView() {
 
   // State
   let isLoggedIn = false;
+  let loggedUserId: number | undefined;
   let loggedUserName: string = "";
   let playerNames: string[] = ["", "", "", ""];
   let tournamentCleanup: (() => void) | null = null;
@@ -19,6 +20,7 @@ export function LocalTournamentView() {
       const res = await fetch("/db/profile", { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
+        loggedUserId = data.id;
         loggedUserName = data.login;
         isLoggedIn = true;
         // If logged in, only need 3 additional players
@@ -154,7 +156,9 @@ export function LocalTournamentView() {
       if (!ctx)
         throw new Error("Context not found");
 
-      const tournament = new LocalTournament(canvas, ctx, allPlayers);
+      const tournament = new LocalTournament(canvas, ctx, allPlayers, 
+        isLoggedIn ? { loggedUserId, loggedUserName } : undefined
+      );
 
       const onKeyDown = (e: KeyboardEvent) => {
         tournament.activeGame?.onKeyDown(e.key);

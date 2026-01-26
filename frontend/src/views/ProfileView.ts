@@ -166,42 +166,71 @@ export function ProfileView() {
 
 	async function loadMatchHistory(currentUser: any) {
 		try {
-			const res = await fetch('/db/match-history', { credentials: 'include' });
-			const data = await res.json();
+			// Fetch both match history and tournament history
+			const [matchRes, tournamentRes] = await Promise.all([
+				fetch('/db/match-history', { credentials: 'include' }),
+				fetch('/db/tournament-history', { credentials: 'include' })
+			]);
+
+			const matchData = await matchRes.json();
+			const tournamentData = await tournamentRes.json();
 			const listEl = container.querySelector('#matchHistoryList') as HTMLElement;
 
-			if (data.history && data.history.length > 0) {
-				listEl.innerHTML = data.history.map((m: any) => {
-					const date = new Date(m.played_at).toLocaleDateString();
+			const matches = matchData.history || [];
+			const tournaments = tournamentData.tournaments || [];
 
-					let resultClass = 'bg-gray-50';
-					let resultText = '';
+			// Combine and sort by date
+			const combined = [
+				...matches.map((m: any) => ({ ...m, type: 'match' })),
+				...tournaments.map((t: any) => ({ ...t, type: 'tournament' }))
+			].sort((a, b) => new Date(b.played_at).getTime() - new Date(a.played_at).getTime());
 
-					if (m.winner_id) {
-						if (m.winner_id === currentUser.id) {
-							resultClass = 'bg-green-50 border border-green-200';
-							resultText = '<span class="text-green-600 font-bold text-xs uppercase ml-2">Win</span>';
-						} else {
-							resultClass = 'bg-red-50 border border-red-200';
-							resultText = '<span class="text-red-600 font-bold text-xs uppercase ml-2">Loss</span>';
+			if (combined.length > 0) {
+				listEl.innerHTML = combined.map((item: any) => {
+					const date = new Date(item.played_at).toLocaleDateString();
+
+					if (item.type === 'tournament') {
+						// Tournament entry
+						return `
+						<div class="flex justify-between items-center p-3 rounded-lg bg-purple-50 border border-purple-200">
+						<div class="text-sm text-gray-500">${date}</div>
+						<div class="font-semibold flex items-center">
+						<span class="mr-2">Local Tournament</span>
+						<span class="text-purple-600 font-bold text-xs uppercase ml-2">Place ${item.placement}</span>
+						</div>
+						</div>
+						`;
+					} else {
+						// Regular match entry
+						let resultClass = 'bg-gray-50';
+						let resultText = '';
+
+						if (item.winner_id) {
+							if (item.winner_id === currentUser.id) {
+								resultClass = 'bg-green-50 border border-green-200';
+								resultText = '<span class="text-green-600 font-bold text-xs uppercase ml-2">Win</span>';
+							} else {
+								resultClass = 'bg-red-50 border border-red-200';
+								resultText = '<span class="text-red-600 font-bold text-xs uppercase ml-2">Loss</span>';
+							}
+						} else if (item.score_player1 === item.score_player2) {
+							resultClass = 'bg-blue-50 border border-blue-200';
+							resultText = '<span class="text-blue-600 font-bold text-xs uppercase ml-2">Draw</span>';
 						}
-					} else if (m.score_player1 === m.score_player2) {
-						resultClass = 'bg-blue-50 border border-blue-200';
-						resultText = '<span class="text-blue-600 font-bold text-xs uppercase ml-2">Draw</span>';
-					}
 
-					return `
-					<div class="flex justify-between items-center p-3 rounded-lg ${resultClass}">
-					<div class="text-sm text-gray-500">${date}</div>
-					<div class="font-semibold flex items-center">
-					${m.p1_login} <span class="text-blue-600 mx-1">${m.score_player1}</span> - <span class="text-blue-600 mx-1">${m.score_player2}</span> ${m.p2_login}
-					${resultText}
-					</div>
-					</div>
-					`;
+						return `
+						<div class="flex justify-between items-center p-3 rounded-lg ${resultClass}">
+						<div class="text-sm text-gray-500">${date}</div>
+						<div class="font-semibold flex items-center">
+						${item.p1_login} <span class="text-blue-600 mx-1">${item.score_player1}</span> - <span class="text-blue-600 mx-1">${item.score_player2}</span> ${item.p2_login}
+						${resultText}
+						</div>
+						</div>
+						`;
+					}
 				}).join('');
 			} else {
-				listEl.innerHTML = '<p class="text-gray-500 text-center">No matches played yet.</p>';
+				listEl.innerHTML = '<p class="text-gray-500 text-center">No matches or tournaments played yet.</p>';
 			}
 		} catch (e) {
 			console.error("History load error", e);

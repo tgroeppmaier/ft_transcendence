@@ -6,6 +6,11 @@ interface Match {
   p2: string;
 }
 
+interface TournamentOptions {
+  loggedUserId?: number;
+  loggedUserName?: string;
+}
+
 export class LocalTournament {
   public tournamentOver: boolean = false;
   public activeGame: LocalGame | null = null;
@@ -14,10 +19,14 @@ export class LocalTournament {
   private ctx: CanvasRenderingContext2D;
   private matches: Match[];
   private currentMatchIndex: number = 0;
+  private loggedUserId?: number;
+  private loggedUserName?: string;
 
-  constructor(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, players: string[]) {
+  constructor(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, players: string[], options?: TournamentOptions) {
     this.canvas = canvas;
     this.ctx = ctx;
+    this.loggedUserId = options?.loggedUserId;
+    this.loggedUserName = options?.loggedUserName;
 
     // Fixed bracket for 4 players:
     // Match 0: P1 vs P2
@@ -60,7 +69,7 @@ export class LocalTournament {
     this.activeGame.start();
   }
 
-  private onMatchEnd(winner: string) {
+  private async onMatchEnd(winner: string) {
     // Stop the current game
     if (this.activeGame) {
       this.activeGame.stop();
@@ -71,6 +80,9 @@ export class LocalTournament {
       drawMessage(this.ctx, this.canvas, `Tournament Winner: ${winner}`);
       this.tournamentOver = true;
       this.activeGame = null;
+      
+      // Save tournament result if user is logged in
+      await this.saveTournamentResult(winner);
       return;
     }
 
@@ -87,5 +99,63 @@ export class LocalTournament {
       this.currentMatchIndex++;
       this.startNextMatch();
     }, 2000);
+  }
+
+  private async saveTournamentResult(winner: string) {
+    // Only save if user is logged in
+    if (!this.loggedUserId || !this.loggedUserName) {
+      return;
+    }
+
+    try {
+      // Determine placement
+      let placement: number;
+      
+      if (winner === this.loggedUserName) {
+        // User won the tournament
+        placement = 1;
+      } else {
+        // User didn't win - check if they made it to finals
+        const finalMatch = this.matches[2];
+        if (finalMatch.p1 === this.loggedUserName || finalMatch.p2 === this.loggedUserName) {
+          // User was in finals but lost
+          placement = 2;
+        } else {
+          // User lost in semifinals (3rd or 4th place)
+          // Determine which semifinal winner they lost to
+          const match0 = this.matches[0];
+          const match1 = this.matches[1];
+          
+          let userWasInMatch0 = match0.p1 === this.loggedUserName || match0.p2 === this.loggedUserName;
+          
+          if (userWasInMatch0) {
+            // User was in match 0 - check if winner of match 0 won the tournament
+            let match0Winner = finalMatch.p1; // Winner of match 0 becomes finalMatch.p1
+            placement = (match0Winner === winner) ? 3 : 4;
+          } else {
+            // User was in match 1 - check if winner of match 1 won the tournament
+            let match1Winner = finalMatch.p2; // Winner of match 1 becomes finalMatch.p2
+            placement = (match1Winner === winner) ? 3 : 4;
+          }
+        }
+      }
+
+      console.log(`Saving tournament result: User ${this.loggedUserName} placed ${placement}`);
+
+      const response = await fetch('/db/tournament-result', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ placement })
+      });
+
+      if (!response.ok) {
+        console.error('Failed to save tournament result');
+      } else {
+        console.log('Tournament result saved successfully');
+      }
+    } catch (err) {
+      console.error('Error saving tournament result:', err);
+    }
   }
 }
