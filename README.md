@@ -15,15 +15,26 @@ The application is composed of **3 distinct services**, orchestrated via Docker 
   - Serves the **Frontend** static files.
   - Routes API requests to the appropriate internal services based on URL paths.
 
+**Routing**
+- `/api/*` → Backend Service
+- `/db/*` → Database Service
+- `/uploads/*` → Static avatars (served by Caddy)
+- `/db/internal/*` → blocked from public access (service-to-service only)
+
+**Ports**
+- `8443` → HTTPS (primary)
+- `8080` → HTTP (redirects to HTTPS)
+
 ### 2. **Backend Service (Game Brain & Engine)**
 - **Tech**: Node.js (Fastify + WebSockets).
 - **Role**: The "Brain" and "Heart" of the game.
 - **Functions**:
   - **Game Logic**: Pure physics simulation (Collision detection, velocity vectors) running at 60 FPS.
   - **Session Management**: Holds all active data in memory (Games, Players, Invites).
-  - **Matchmaking**: Handles creation of games and processing of invitations directly in RAM.
-  - **Real-Time**: Handles WebSocket connections (`/api/ws`) for state streaming and input.
-  - **Post-Game**: Sends final scores to the Database Service for persistence.
+- **Matchmaking**: Handles creation of games and processing of invitations directly in RAM.
+- **Real-Time**: Handles WebSocket connections (`/api/ws`) for state streaming and input.
+- **Post-Game**: Sends final scores to the Database Service for persistence.
+ - **Limits**: Global cap of 10 active remote games.
 
 **Endpoints**:
 - **Real-Time**
@@ -88,6 +99,13 @@ The application is composed of **3 distinct services**, orchestrated via Docker 
 - **Local Tournament**: 4 players on a single machine with automated bracket management.
 - **Remote Game**: Real-time 1v1 multiplayer over WebSockets.
 
+#### Gameplay Details & Controls
+- **Points to win**: 3
+- **Local Game controls**: Player 1 = `W/S`, Player 2 = `Arrow Up/Down`
+- **Remote Game controls**: `W/S` for your assigned side (left or right)
+- **Remote Game flow**: Join via **Game Lobby**, auto-returns to lobby after game over
+- **Local Tournament**: 4 players, same keyboard; results saved only if logged in
+
 
 ### AI & Algorithms
 - **AI Opponent**: Play against a server-side bot. The AI uses a periodic update system (1Hz refresh) with position prediction to simulate human reaction times and satisfy project constraints.
@@ -107,13 +125,13 @@ The application is composed of **3 distinct services**, orchestrated via Docker 
 ### 1. Authentication & Browsing
 *Flow: Frontend ↔ Caddy ↔ Database Service*
 1.  User performs an action (e.g., Login, View Profile).
-2.  **Caddy** receives the request at `/api/*` (e.g., `/api/login`).
+2.  **Caddy** receives the request at `/db/*` (e.g., `/db/login`).
 3.  It forwards the request to the **Database Service**.
 4.  The service queries the local SQLite file (`users.db`) and returns the JSON response.
 
 ### 2. Matchmaking (Starting a Game)
 *Flow: Frontend ↔ Caddy ↔ Backend Service*
-1.  **Create (Public):** User clicks "Create". Frontend calls `POST /api/games` on **Backend**. Game created in RAM.
+1.  **Create (Authenticated):** User clicks "Create". Frontend calls `POST /api/games` on **Backend**. Game created in RAM.
 
 ### 3. Game Connection
 *Flow: Frontend ↔ Caddy ↔ Backend Service*
@@ -146,7 +164,18 @@ The application is composed of **3 distinct services**, orchestrated via Docker 
    ```bash
    make setup
    ```
-   Alternatively, create a `.env` file manually in the root directory and add `JWT_SECRET=your_secret_here`.
+   Alternatively, create a `.env` file manually in the root directory:
+   ```bash
+   JWT_SECRET=your_secret_here
+   # Optional (Google OAuth)
+   GOOGLE_CLIENT_ID=your_client_id
+   GOOGLE_CLIENT_SECRET=your_client_secret
+   GOOGLE_REDIRECT_URI=https://localhost:8443/db/auth/google/callback
+   FRONTEND_URL=https://localhost:8443
+   # Optional (storage)
+   DB_PATH=/app/data/users.db
+   UPLOADS_DIR=/app/uploads
+   ```
 
 2. **Build and Run**
    ```bash
@@ -165,6 +194,13 @@ The application is composed of **3 distinct services**, orchestrated via Docker 
    ```
 
 ---
+## 🛠 Troubleshooting
+- **Browser HTTPS warning**: Accept the self-signed cert at `https://localhost:8443`.
+- **OAuth redirect errors**: Ensure `GOOGLE_REDIRECT_URI` matches `https://localhost:8443/db/auth/google/callback`.
+- **Cannot create game**: A global limit of 10 active games is enforced—join an existing game or wait.
+- **Port conflicts**: Change `8080/8443` mappings in `docker-compose.yml`.
+
+---
 
 ## 💻 CLI Interoperability
 
@@ -173,7 +209,7 @@ The project exposes a REST API that allows for monitoring and controlling games 
 ### 1. Authenticate
 Interacting with the API requires a JWT token. One can be obtained by logging in:
 ```bash
-curl -X POST https://localhost:8443/api/login \
+curl -X POST https://localhost:8443/db/login \
      -H "Content-Type: application/json" \
      -c cookies.txt -k \
      -d '{"login": "username", "password": "password"}'
