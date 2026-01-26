@@ -634,6 +634,48 @@ fastify.post('/tournament-result', { preHandler: [fastify.authenticate] }, async
 
 		db = await openDB()
 
+		// Anti-abuse measures:
+		// 1. Check time since last tournament (minimum 3 minutes between tournaments)
+		const lastTournament = await db.get(
+			`SELECT played_at FROM tournaments 
+			 WHERE user_id = ? 
+			 ORDER BY played_at DESC 
+			 LIMIT 1`,
+			[userId]
+		)
+
+		if (lastTournament) {
+			const lastTime = new Date(lastTournament.played_at).getTime()
+			const now = new Date().getTime()
+			const minutesSince = (now - lastTime) / 1000 / 60
+
+			if (minutesSince < 3) {
+				await db.close()
+				return reply.code(429).send({ 
+					message: "Please wait at least 3 minutes between tournament submissions." 
+				})
+			}
+		}
+
+		// 2. Check daily limit (max 20 tournaments per day)
+		const todayStart = new Date()
+		todayStart.setHours(0, 0, 0, 0)
+		
+		const tournamentsToday = await db.get(
+			`SELECT COUNT(*) as count FROM tournaments 
+			 WHERE user_id = ? 
+			 AND datetime(played_at) >= datetime(?)`,
+			[userId, todayStart.toISOString()]
+		)
+
+		if (tournamentsToday.count >= 20) {
+			await db.close()
+			return reply.code(429).send({ 
+				message: "Daily tournament limit reached (20 per day)." 
+			})
+		}
+
+		// 3. Save the result
 		await db.run(
 			`INSERT INTO tournaments (user_id, placement, played_at)
 			 VALUES (?, ?, datetime('now'))`,

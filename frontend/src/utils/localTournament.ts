@@ -150,12 +150,15 @@ export class LocalTournament {
       });
 
       if (!response.ok) {
-        console.error('Failed to save tournament result');
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        console.error('Failed to save tournament result:', errorData.message);
+        // Silently fail - tournament was still played, just not saved
       } else {
         console.log('Tournament result saved successfully');
       }
     } catch (err) {
       console.error('Error saving tournament result:', err);
+      // Silently fail - don't interrupt user experience
     }
   }
 }
