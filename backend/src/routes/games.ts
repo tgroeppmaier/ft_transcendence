@@ -6,6 +6,9 @@ import { games } from "../state.js";
 export async function gameRoutes(backend: FastifyInstance) {
   // Create Game
   backend.post("/api/games", { preHandler: [backend.authenticate] }, async (request, reply) => {
+    if (games.size >= 10) {
+      return reply.status(429).send({ message: "Game limit reached. Please join an existing game." });
+    }
     const gameId = randomUUID();
     const newGame = new Game(gameId, () => {
       games.delete(gameId);

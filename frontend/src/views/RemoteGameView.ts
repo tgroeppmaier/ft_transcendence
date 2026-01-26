@@ -32,6 +32,11 @@ export async function RemoteGameView(existingGameId?: string) {
   if (!gameId) {
     const response = await fetch("/api/games", { method: "POST"});
     const data = await response.json();
+    if (!response.ok) {
+      alert(data.message || "Failed to create game");
+      navigateTo("/menu");
+      return { component: document.createElement("div"), cleanup: () => {} };
+    }
     gameId = data.gameId;
     // Use replaceState to avoid history loop
     window.history.replaceState({}, "", `/remote-game?gameId=${gameId}`);

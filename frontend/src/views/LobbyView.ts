@@ -70,8 +70,12 @@ export async function gameLobby() {
   createButton.onclick = async () => {
     try {
       const response = await fetch("/api/games", { method: "POST" });
-      if (!response.ok) throw new Error("Failed to create game");
-      const { gameId } = await response.json();
+      const data = await response.json();
+      if (!response.ok) {
+        alert(data.message || "Failed to create game");
+        return;
+      }
+      const { gameId } = data;
       navigateTo(`/remote-game?gameId=${gameId}`);
     } catch (error) {
       alert("Failed to create game");
