@@ -117,14 +117,16 @@ export class LocalGame {
   private handleGameEnd() {
     this.winner = this.score.left > this.score.right ? this.player1 : this.player2
     this.gameOver = true;
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    drawScores(this.ctx, this.canvas, this.score);
-    drawMessage(this.ctx, this.canvas, `${this.winner} wins`);
+    
     if (this.isTournamentGame && this.onTournamentMatchEnd) {
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
       this.onTournamentMatchEnd(this.winner);
       return;
     }
+    
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    drawScores(this.ctx, this.canvas, this.score);
+    drawMessage(this.ctx, this.canvas, `${this.winner} wins`);
     drawMessage(this.ctx, this.canvas, "click to play again", (this.canvas.height / 3) * 2);
   }
 

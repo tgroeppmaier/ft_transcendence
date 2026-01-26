@@ -18,7 +18,9 @@ type View = {
   cleanup?: () => void;
 }
 
-const routes: Record<string, (existingGameId?: string) => View | Promise<View>> = {
+type RouteHandler = () => View | Promise<View>;
+
+const routes: Record<string, RouteHandler> = {
   "/": LandingView,
   "/login": LoginView,
   "/register": RegisterView,

@@ -41,6 +41,11 @@ export class LocalTournament {
   }
 
   private startNextMatch() {
+    // Stop the previous game if it exists
+    if (this.activeGame) {
+      this.activeGame.stop();
+    }
+
     const match = this.matches[this.currentMatchIndex];
     console.log(`Starting Match ${this.currentMatchIndex + 1}: ${match.p1} vs ${match.p2}`);
 
@@ -56,6 +61,11 @@ export class LocalTournament {
   }
 
   private onMatchEnd(winner: string) {
+    // Stop the current game
+    if (this.activeGame) {
+      this.activeGame.stop();
+    }
+
     // If this was the Final (Index 2)
     if (this.currentMatchIndex === 2) {
       drawMessage(this.ctx, this.canvas, `Tournament Winner: ${winner}`);

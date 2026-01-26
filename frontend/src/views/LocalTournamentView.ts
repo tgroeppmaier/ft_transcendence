@@ -6,12 +6,28 @@ export function LocalTournamentView() {
   container.className = "flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4";
 
   // State
-  // Default to 4 empty strings for the 4 required players
+  let isLoggedIn = false;
+  let loggedUserName: string = "";
   let playerNames: string[] = ["", "", "", ""];
   let tournamentCleanup: (() => void) | null = null;
 
-  const render = () => {
+  const render = async () => {
     container.innerHTML = "";
+
+    // Check if user is logged in
+    try {
+      const res = await fetch("/db/profile", { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        loggedUserName = data.login;
+        isLoggedIn = true;
+        // If logged in, only need 3 additional players
+        playerNames = ["", "", ""];
+      }
+    } catch (err) {
+      // User not logged in, continue with anonymous mode
+      isLoggedIn = false;
+    }
 
     const card = document.createElement("div");
     card.className = "bg-white p-8 rounded-xl shadow-md w-full max-w-md";
@@ -24,12 +40,31 @@ export function LocalTournamentView() {
     const form = document.createElement("div");
     form.className = "flex flex-col gap-3 mb-6";
 
+    // If logged in, show the logged user as Player 1
+    if (isLoggedIn) {
+      const loggedGroup = document.createElement("div");
+      
+      const loggedLabel = document.createElement("label");
+      loggedLabel.className = "block text-gray-700 text-sm font-bold mb-1";
+      loggedLabel.textContent = "Player 1 (You):";
+
+      const loggedInput = document.createElement("input");
+      loggedInput.type = "text";
+      loggedInput.value = loggedUserName;
+      loggedInput.disabled = true;
+      loggedInput.className = "shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight bg-gray-100 cursor-not-allowed";
+
+      loggedGroup.appendChild(loggedLabel);
+      loggedGroup.appendChild(loggedInput);
+      form.appendChild(loggedGroup);
+    }
+
     playerNames.forEach((name, index) => {
       const group = document.createElement("div");
 
       const label = document.createElement("label");
       label.className = "block text-gray-700 text-sm font-bold mb-1";
-      label.textContent = `Player ${index + 1} Name:`;
+      label.textContent = `Player ${isLoggedIn ? index + 2 : index + 1} Name:`;
 
       const input = document.createElement("input");
       input.type = "text";
@@ -54,7 +89,7 @@ export function LocalTournamentView() {
     backBtn.className = "flex-1 bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition";
     backBtn.textContent = "Back";
     backBtn.onclick = () => {
-      navigateTo("/");
+      navigateTo(isLoggedIn ? "/menu" : "/");
     };
 
     const startBtn = document.createElement("button");
@@ -69,9 +104,12 @@ export function LocalTournamentView() {
           return;
       }
 
+      // Combine with logged user name if logged in
+      const allPlayers = isLoggedIn ? [loggedUserName, ...trimmedNames] : trimmedNames;
+
       // Check for duplicates
-      const uniqueNames = new Set(trimmedNames);
-      if (uniqueNames.size !== trimmedNames.length) {
+      const uniqueNames = new Set(allPlayers);
+      if (uniqueNames.size !== allPlayers.length) {
           alert("Player names must be unique. Please choose different names.");
           return;
       }
@@ -84,7 +122,7 @@ export function LocalTournamentView() {
           return;
       }
 
-      console.log("Starting tournament with:", trimmedNames);
+      console.log("Starting tournament with:", allPlayers);
 
       // Reset container for game view
       container.innerHTML = "";
@@ -94,7 +132,7 @@ export function LocalTournamentView() {
       container.innerHTML = `
         <div class="mb-4">
           <button id="back-to-main" class="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition shadow-sm">
-            ← Back to Home
+            ← Back to ${isLoggedIn ? "Menu" : "Home"}
           </button>
         </div>
         <canvas id="board" width="800" height="600" class="shadow-2xl bg-black"></canvas>
@@ -104,7 +142,7 @@ export function LocalTournamentView() {
       if (backButton) {
         backButton.addEventListener("click", (e) => {
           e.preventDefault();
-          navigateTo("/");
+          navigateTo(isLoggedIn ? "/menu" : "/");
         });
       }
 
@@ -116,7 +154,7 @@ export function LocalTournamentView() {
       if (!ctx)
         throw new Error("Context not found");
 
-      const tournament = new LocalTournament(canvas, ctx, trimmedNames);
+      const tournament = new LocalTournament(canvas, ctx, allPlayers);
 
       const onKeyDown = (e: KeyboardEvent) => {
         tournament.activeGame?.onKeyDown(e.key);
