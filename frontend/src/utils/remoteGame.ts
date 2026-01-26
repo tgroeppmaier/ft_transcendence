@@ -121,7 +121,13 @@ export class RemoteGame {
     drawScores(this.ctx, this.canvas, this.score);
 
     if (this.status === "waiting") {
-      drawMessage(this.ctx, this.canvas, "Waiting for other Player");
+      drawMessage(this.ctx, this.canvas, "Waiting for other Player", this.canvas.height / 2);
+    } else if (this.status === "countdown") {
+      drawMessage(this.ctx, this.canvas, "Get Ready!", this.canvas.height / 2 - 60);
+      if (this.mySide) {
+        drawMessage(this.ctx, this.canvas, `You are ${this.mySide.toUpperCase()}`, this.canvas.height / 2);
+        drawMessage(this.ctx, this.canvas, "Use 'W' and 'S' to move", this.canvas.height / 2 + 60);
+      }
     } else if (this.status === "gameOver") {
        if (this.mySide === "left") {
         drawMessage(this.ctx, this.canvas, this.score.left > this.score.right ? "You won!" : "You lost!");

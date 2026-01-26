@@ -25,6 +25,7 @@ export class Game {
   private ball: Ball;
   private score: Score;
   private state: GameStatus;
+  private countdown: number = 3;
   private lastUpdate: number;
   private player1: Player | null = null;
   private player2: Player | null = null;
@@ -74,7 +75,8 @@ export class Game {
     this.broadcastState();
 
     if (this.player1 && this.player2 && !this.gameInterval) {
-      this.state = "gameRunning";
+      this.state = "countdown";
+      this.countdown = 3;
       this.broadcastState();
       this.start();
     }
@@ -105,7 +107,7 @@ export class Game {
       if (!isPlayer1 && !isPlayer2) return;
 
       // Only record stats if game was actually running
-      if (this.state === "gameRunning" && this.player1 && this.player2) {
+      if ((this.state === "gameRunning" || this.state === "countdown") && this.player1 && this.player2) {
         const p1Id = this.player1.userId;
         const p2Id = this.player2.userId;
         let winnerId = null;
@@ -232,6 +234,17 @@ export class Game {
 
     if (!this.player1 || !this.player2) {
       this.stop(); // Stop game if player missing
+      return;
+    }
+
+    if (this.state === "countdown") {
+      this.countdown -= dt;
+      if (this.countdown <= 0) {
+        this.state = "gameRunning";
+        this.broadcastState();
+      }
+      const snapshot = this.createGameState();
+      if (snapshot) this.broadcast(snapshot);
       return;
     }
 

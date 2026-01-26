@@ -1,4 +1,4 @@
-export type GameStatus = "connecting" | "waiting" | "gameRunning" | "gameOver" | "gameFull";
+export type GameStatus = "connecting" | "waiting" | "countdown" | "gameRunning" | "gameOver" | "gameFull";
 
 export interface Ball {
   x: number;
