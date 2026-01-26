@@ -45,6 +45,11 @@ export async function RemoteGameView(existingGameId?: string) {
   const gameContainer = document.createElement("div");
   gameContainer.className = "flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4";
   gameContainer.innerHTML = `
+  <div class="mb-4">
+    <button id="back-to-lobby" class="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition shadow-sm">
+      Back to Lobby
+    </button>
+  </div>
   <div class="relative">
     <canvas id="board" width="800" height="600" class="shadow-2xl bg-black"></canvas>
   </div>
@@ -54,7 +59,9 @@ export async function RemoteGameView(existingGameId?: string) {
     throw new Error("Canvas not found");
 
   const onStateChange = (status: GameStatus, side: "left" | "right" | null, score: Score) => {
-      // Logic for state changes can be added here (e.g., UI updates outside canvas)
+      if (status === "gameOver") {
+        setTimeout(() => navigateTo("/game-lobby"), 3000);
+      }
   };
 
   const game = new RemoteGame(gameId, canvas, onStateChange);
@@ -65,6 +72,8 @@ export async function RemoteGameView(existingGameId?: string) {
 
   window.addEventListener("keydown", handleKeyDown);
   window.addEventListener("keyup", handleKeyUp);
+  const backButton = gameContainer.querySelector("#back-to-lobby") as HTMLButtonElement;
+  backButton.addEventListener("click", () => navigateTo("/game-lobby"));
 
   return {
     component: gameContainer,
