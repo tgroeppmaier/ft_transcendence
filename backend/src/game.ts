@@ -63,6 +63,11 @@ export class Game {
   }
 
   public addPlayer(userId: number, socket: WebSocket) {
+    if (this.player1?.userId === userId || this.player2?.userId === userId) {
+      socket.send(JSON.stringify({ type: "error", message: "You cannot join the same game twice" }));
+      socket.close();
+      return;
+    }
     if (!this.player1) {
       this.player1 = new Player(userId, socket, "left");
       this.setupPlayer(this.player1);
