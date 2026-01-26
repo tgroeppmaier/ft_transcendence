@@ -76,29 +76,6 @@ async function initDatabase() {
 
 		console.log('Table "games" created')
 
-		await db.exec(`CREATE TABLE IF NOT EXISTS tournaments (id INTEGER PRIMARY KEY AUTOINCREMENT,
-		tournament_name TEXT NOT NULL,
-		tournament_code TEXT UNIQUE NOT NULL,
-		creator_id INTEGER NOT NULL,
-		status TEXT DEFAULT 'waiting',
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-		FOREIGN KEY (creator_id) REFERENCES users(id)
-		);`)
-
-		console.log('Table "tournaments" created')
-
-		// table tournament_players
-		await db.exec(`CREATE TABLE IF NOT EXISTS tournament_players (id INTEGER PRIMARY KEY AUTOINCREMENT,
-		tournament_id INTEGER NOT NULL,
-		player_id INTEGER NOT NULL,
-		status TEXT DEFAULT 'joined',
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-		FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
-		FOREIGN KEY (player_id) REFERENCES users(id) ON DELETE CASCADE
-		);
-		CREATE INDEX IF NOT EXISTS idx_tournament_players ON tournament_players(tournament_id, player_id);`)
-
-		console.log('Table "tournament_players" created')
 		await db.close()
 		process.exit(0)
 	}

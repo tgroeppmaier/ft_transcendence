@@ -4,7 +4,7 @@ import cookie from "@fastify/cookie";
 import jwt from "@fastify/jwt";
 import rateLimit from "@fastify/rate-limit";
 import { gameRoutes } from "./routes/games.js";
-import { tournamentRoutes } from "./routes/tournaments.js";
+
 import { wsRoutes } from "./routes/ws.js";
 
 declare module "fastify" {
@@ -45,7 +45,7 @@ backend.decorate("authenticate", async (request: any, reply: any) => {
 
 // Register Routes
 backend.register(gameRoutes);
-backend.register(tournamentRoutes);
+
 backend.register(wsRoutes);
 
 await backend.listen({ host: "0.0.0.0", port: 3000 });

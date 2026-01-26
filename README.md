@@ -31,10 +31,6 @@ The application is composed of **3 distinct services**, orchestrated via Docker 
 - **Game Management**
   - `POST /api/games`: Create a new in-memory game instance.
   - `GET /api/games`: List active "waiting" games (Lobby).
-- **Invite System**
-  - `POST /api/invite`: Create a pending game invite. Accepts optional `gameId` to invite to an existing session.
-  - `GET /api/invites`: List pending invites for the current user.
-  - `POST /api/invite/accept`: Accept an invite and resolve it to a Game ID.
 - **CLI / Interop**
   - `GET /api/games/:id/state`: Get snapshot of current game state (Polling).
   - `POST /api/games/:id/action`: Send paddle commands via HTTP.
@@ -44,7 +40,7 @@ The application is composed of **3 distinct services**, orchestrated via Docker 
 - **Role**: The "Vault" for long-term storage.
 - **Functions**:
   - **Auth**: User registration, Login (JWT), Google OAuth.
-  - **Persistence**: Stores Users, Friends, Match History, and Tournament configurations.
+  - **Persistence**: Stores Users, Friends, and Match History.
   - **Internal Verification**: Provides internal endpoints for the Backend to verify relationships (e.g., Friendship).
 
 **Endpoints**:
@@ -69,14 +65,7 @@ The application is composed of **3 distinct services**, orchestrated via Docker 
   - `POST /friend-reject`: Reject a friend request.
   - `DELETE /friend-remove`: Remove a friend.
   - `GET /match-history`: Retrieve past match results.
-- **Tournament**
-  - `POST /tournament/create`: Create a new tournament.
-  - `GET /tournament/invitations`: List tournament invites.
-  - `GET /tournament/:id`: Get tournament details.
-  - `POST /tournament/:id/accept`: Accept tournament invite.
-  - `POST /tournament/:id/decline`: Decline tournament invite.
-  - `POST /tournament/:id/start`: Begin a tournament.
-  - `POST /tournament/:id/finish`: Mark tournament as finished.
+
 - **Internal (Service-to-Service)**
   - `POST /internal/match-result`: Save final game scores (called by Backend).
   - `POST /internal/check-friendship`: Verify friendship status (called by Backend).
@@ -98,7 +87,7 @@ The application is composed of **3 distinct services**, orchestrated via Docker 
 - **Local Game**: Play 1v1 on the same keyboard.
 - **Local Tournament**: 3-6 players on a single machine with automated bracket management.
 - **Remote Game**: Real-time 1v1 multiplayer over WebSockets.
-- **Remote Tournament**: Online tournament system with single elimination.
+
 
 ### AI & Algorithms
 - **AI Opponent**: Play against a server-side bot. The AI uses a periodic update system (1Hz refresh) with position prediction to simulate human reaction times and satisfy project constraints.
@@ -122,14 +111,9 @@ The application is composed of **3 distinct services**, orchestrated via Docker 
 3.  It forwards the request to the **Database Service**.
 4.  The service queries the local SQLite file (`users.db`) and returns the JSON response.
 
-### 2. Matchmaking & Invites (Starting a Game)
+### 2. Matchmaking (Starting a Game)
 *Flow: Frontend ↔ Caddy ↔ Backend Service*
 1.  **Create (Public):** User clicks "Create". Frontend calls `POST /api/games` on **Backend**. Game created in RAM.
-2.  **Invite (Private):** User invites friend. Frontend calls `POST /api/invite` on **Backend**.
-    - Can invite to a new game (auto-created) or an existing active game.
-    - Backend verifies friendship via Database.
-    - Backend creates Invite record in RAM.
-3.  **Accept:** Friend calls `POST /api/invite/accept` on **Backend**. Backend returns the Game ID.
 
 ### 3. Game Connection
 *Flow: Frontend ↔ Caddy ↔ Backend Service*

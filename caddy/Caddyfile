@@ -12,13 +12,10 @@ localhost {
         reverse_proxy backend:3000
     }
 
-    # 2. Game, Invite & Tournament API
+    # 2. Game & Invite API
     @backend_api {
         path /api/games
         path /api/games/*
-        path /api/tournaments
-        path /api/tournament
-        path /api/tournament/*
     }
     handle @backend_api {
         reverse_proxy backend:3000

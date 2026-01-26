@@ -100,10 +100,6 @@ async function ensureUploadsDir() {
 fastify.post('/internal/match-result', async (request, reply) => {
 	let db
 	try {
-		// In a real scenario, check for an internal API key header
-		// const apiKey = request.headers['x-internal-secret']
-		// if (apiKey !== process.env.INTERNAL_API_KEY) return reply.code(403).send()
-
 		const { player1_id, player2_id, score1, score2, winner_id } = request.body
 
 		db = await openDB()
@@ -821,13 +817,6 @@ fastify.get('/auth/google/callback', async (req, reply) => {
 		return reply.code(500).send({ message: "Google auth error: " + err.message })
 	}
 })
-
-//GAME SESSION - Obsolete endpoints removed
-
-
-// Obsolete game endpoints removed
-
-//TOURNAMENTS - Moved to Backend
 
 
 

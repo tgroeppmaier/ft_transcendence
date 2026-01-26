@@ -1,7 +1,7 @@
 import { MainMenuView } from "./views/MainMenuView.js";
 import { LocalGameView } from "./views/LocalGameView.js";
 import { AgentGameView } from "./views/AgentGameView.js";
-import { RemoteTournamentView } from "./views/TournamentView.js";
+
 import { RemoteGameView } from "./views/RemoteGameView.js";
 import { gameLobby } from "./views/LobbyView.js";
 import { LandingView } from "./views/LandingView.js";
@@ -28,8 +28,7 @@ const routes: Record<string, (existingGameId?: string) => View | Promise<View>> 
   "/agent-game": AgentGameView,
   "/remote-game": RemoteGameView,
   "/game-lobby": gameLobby,
-  "/tournament": RemoteTournamentView,
-  "/friends": FriendsView,
+    "/friends": FriendsView,
   "/requests": RequestsView,
   "/search": SearchView,
   "/profile": ProfileView
