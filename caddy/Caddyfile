@@ -21,6 +21,15 @@ localhost {
         reverse_proxy backend:3000
     }
 
+    # 3. Block internal DB routes from public access
+    @db_internal {
+        path /db/internal
+        path /db/internal/*
+    }
+    handle @db_internal {
+        respond "Forbidden" 403
+    }
+
     # 3. Database API
     @db path /db/*
     handle @db {

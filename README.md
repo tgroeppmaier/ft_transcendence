@@ -85,7 +85,7 @@ The application is composed of **3 distinct services**, orchestrated via Docker 
 
 ### Gameplay
 - **Local Game**: Play 1v1 on the same keyboard.
-- **Local Tournament**: 3-6 players on a single machine with automated bracket management.
+- **Local Tournament**: 4 players on a single machine with automated bracket management.
 - **Remote Game**: Real-time 1v1 multiplayer over WebSockets.
 
 
