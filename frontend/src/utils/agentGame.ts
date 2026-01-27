@@ -21,6 +21,13 @@ export class AgentGame {
   private ball: Ball = { x: 0.5, y: 0.5, vx: BALL_X_SPEED, vy: BALL_Y_SPEED };
   private bounce_balls_list: ColoredBall[] = [];
   private anticipated_bounce_position: number = 0.5;
+	private are_you_sure_about_anticipated_bounce_position: boolean = false;
+	private y_defend_position: number = 0.5;
+	private attack_mode: boolean = false;
+	private y_aim: number;
+	private y_attack_position: number;
+	private move_down_in_defence: boolean = false;
+	private move_up_in_defence: boolean = false;
   private score: Score = { left: 0, right: 0 };
   private lastUpdate: number;
   private lastAgentUpdate: number;
@@ -33,7 +40,7 @@ export class AgentGame {
   private leftPaddle: Paddle;
   private rightPaddle: Paddle;
   private gameOver = false;
-  private countdown = 3;
+  private countdown = 5;
   private gameStarted = false;
   private rafID: number;
 
@@ -103,6 +110,14 @@ export class AgentGame {
         drawMessage(this.ctx, this.canvas, `rafID: ${(this.rafID/60).toFixed(5)}`, this.canvas.height* 4/5);
         drawMessage(this.ctx, this.canvas, `${this.anticipated_bounce_position}`, this.canvas.height * 0.85);
         drawMessage(this.ctx, this.canvas, `${((Date.now() - this.lastAgentUpdate)/1000).toFixed(5)}`, this.canvas.height * 0.9);
+				let msg: string;
+				if (this.attack_mode) {
+					msg = "attack";
+				} else {
+					msg = "defend";
+				}
+				drawMessage(this.ctx, this.canvas, `${msg} from ${this.y_attack_position} at ${this.y_aim}, ${this.attack_mode}`, this.canvas.height * 0.1);
+				drawMessage(this.ctx, this.canvas, `abp: ${this.anticipated_bounce_position}, sure: ${this.are_you_sure_about_anticipated_bounce_position}`, this.canvas.height * 0.2);
         for (let reference_ball of this.bounce_balls_list) {
           drawColoredBall(this.ctx, this.canvas, reference_ball);
         }
@@ -123,31 +138,72 @@ export class AgentGame {
 
   private agentMove() {
     if (Date.now() - this.lastAgentUpdate >= 1000) {
-      this.find_bounces();
       this.lastAgentUpdate = Date.now();
+      this.find_bounces();
+			if (this.are_you_sure_about_anticipated_bounce_position) {
+				this.attack_mode = true;
+				this.determine_y_aim();
+				this.compute_attack_position();
+			} else {
+				this.attack_mode = false;
+				this.compute_defend_position();
+			}
     }
-
-		let ywanted: number;
-		if (this.rightPaddle.y + PADDLE_HEIGHT / 2 < CANVAS_WIDTH / 2) {
-			ywanted = CANVAS_WIDTH - BALL_RADIUS;
+		if (this.attack_mode) {
+			this.attack();
 		} else {
-			ywanted = BALL_RADIUS;
+			this.defend();
 		}
-		let tanphi = (ywanted - this.anticipated_bounce_position) / (CANVAS_WIDTH - 2 * BALL_RADIUS);
+	}
+
+	private determine_y_aim() {
+		if (this.rightPaddle.y + PADDLE_HEIGHT / 2 < CANVAS_WIDTH / 2) {
+			this.y_aim = CANVAS_WIDTH - BALL_RADIUS;
+		} else {
+			this.y_aim = BALL_RADIUS;
+		}
+	}
+
+	private compute_attack_position() {
+		let tanphi = (this.y_aim - this.anticipated_bounce_position) / (CANVAS_WIDTH - 2 * BALL_RADIUS);
 		let phi = Math.atan(tanphi);
 		let y_to_take = this.anticipated_bounce_position - PADDLE_HEIGHT * (1/2 + 2/Math.PI*phi);
 		if (y_to_take <= 0 || y_to_take + PADDLE_HEIGHT >= CANVAS_HEIGHT) {
 			//this.keyDebugMap['p'] = true;
 		}
+		this.y_attack_position = y_to_take;
+	}
+
+	private attack() {
     this.keyAgentMap["w"] = false;
     this.keyAgentMap["s"] = false;
-    if (this.leftPaddle.y + 0.04*PADDLE_HEIGHT <= y_to_take) {
+    if (this.leftPaddle.y + 0.04*PADDLE_HEIGHT <= this.y_attack_position) {
       this.keyAgentMap["s"] = true;
     }
-    else if (this.leftPaddle.y - 0.04*PADDLE_HEIGHT >= y_to_take) {
+    else if (this.leftPaddle.y - 0.04*PADDLE_HEIGHT >= this.y_attack_position) {
       this.keyAgentMap["w"] = true;
     }
   }
+
+	private compute_defend_position() {
+		this.y_defend_position = this.anticipated_bounce_position - 0.01 * PADDLE_HEIGHT;
+		if (this.anticipated_bounce_position > CANVAS_HEIGHT / 2) {
+			this.y_defend_position = this.anticipated_bounce_position + 0.01 * PADDLE_HEIGHT - PADDLE_HEIGHT;
+		}
+	}
+
+	private defend() {
+		if (!this.are_you_sure_about_anticipated_bounce_position) {
+			this.keyAgentMap["w"] = false;
+			this.keyAgentMap["s"] = false;
+			if (this.leftPaddle.y + 0.04*PADDLE_HEIGHT <= this.y_defend_position) {
+				this.keyAgentMap["s"] = true;
+			}
+			else if (this.leftPaddle.y - 0.04*PADDLE_HEIGHT >= this.y_defend_position) {
+				this.keyAgentMap["w"] = true;
+			}
+		}
+	}
 
   private find_bounces() {
     let reference_ball: ColoredBall = { x: this.ball.x, y: this.ball.y, 
@@ -159,7 +215,7 @@ export class AgentGame {
     let keep_doing: boolean = true;
     let cnt: number = -1;
     this.bounce_balls_list = [];
-		console.log("New logic");
+		this.are_you_sure_about_anticipated_bounce_position = true;
     while (keep_doing && cnt < 10) {
       cnt += 1;
       // determine delta_time_x
@@ -190,17 +246,22 @@ export class AgentGame {
         if (reference_ball.vx < 0) {
           keep_doing = false;
           this.anticipated_bounce_position = reference_ball.y;
-					console.log("New logic hitting agent side");
         }
 				else {
 					let currentSpeed = Math.sqrt(reference_ball.vx * reference_ball.vx + reference_ball.vy * reference_ball.vy);
 					let newSpeed = currentSpeed * 1.05;
 					newSpeed =(newSpeed <= MAX_BALL_SPEED ? newSpeed : MAX_BALL_SPEED);
-        	reference_ball.vx = -newSpeed;
-					reference_ball.vy = 0;
+					// compute anticipated paddle position of an opponent. Presumably the middle position.
+					let upper_edge_opponent_paddle = Math.max(0, reference_ball.y - PADDLE_HEIGHT);
+					let lower_edge_opponent_paddle = Math.min(CANVAS_HEIGHT, reference_ball.y + PADDLE_HEIGHT);
+					let center_opponent_paddle = (upper_edge_opponent_paddle + lower_edge_opponent_paddle) / 2;
+					let normalizedImpact = (reference_ball.y - center_opponent_paddle) / (PADDLE_HEIGHT / 2);
+					normalizedImpact = Math.min(1, Math.max(-1, normalizedImpact));
+					let bounce_angle = normalizedImpact * Math.PI / 4;
+        	reference_ball.vx = -newSpeed * Math.cos(bounce_angle);
+					reference_ball.vy = newSpeed * Math.sin(bounce_angle);
           this.anticipated_bounce_position = reference_ball.y;
-          //keep_doing = false;
-					console.log("New logic hitting player side");
+					this.are_you_sure_about_anticipated_bounce_position = false;
 				}
       }
       if (delta_time_y == delta) {
