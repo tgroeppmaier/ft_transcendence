@@ -69,8 +69,11 @@ fastify.register(formbody)
 fastify.register(cors, { origin: true, credentials: true })
 fastify.register(cookie, { secret: JWT_SECRET })
 fastify.register(jwt, { secret: JWT_SECRET })
-fastify.register(multipart)
-
+fastify.register(multipart, {
+	limits: {
+		fileSize: 2 * 1024 * 1024 // 2 MB
+	}
+})
 
 
 fastify.decorate("authenticate", async (request, reply) => {
