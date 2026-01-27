@@ -125,6 +125,10 @@ To ensure system stability and protect against abuse, the following limits are e
 - **Global Baseline**: 200 requests per 15 minutes (per IP).
 - **Authentication**: Strict limit of **5 requests per 15 minutes** for `/login` and `/registration`.
 - **Spam Prevention**: **20 requests per hour** for social actions (`/friend-request`) and file uploads (`/avatar`).
+- **File Upload Security**:
+  - **Size Limit**: Maximum **2MB** per file (Enforced at both Frontend and Backend).
+  - **Content Validation**: Mandatory **Magic Byte Verification** (checks file signature) to prevent MIME-type spoofing.
+  - **Format Support**: Only JPEG, PNG, and WebP are accepted.
 - **Tournament Integrity**:
   - Minimum **3 minutes** between tournament submissions.
   - Maximum **20 tournaments** per user per day.

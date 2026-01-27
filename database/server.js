@@ -19,6 +19,9 @@ const pump = promisify(pipeline)
 const fsUnlink = promisify(fs.unlink)
 const fsAccess = promisify(fs.access)
 const fsMkdir = promisify(fs.mkdir)
+const fsOpen = promisify(fs.open)
+const fsRead = promisify(fs.read)
+const fsClose = promisify(fs.close)
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
@@ -780,6 +783,39 @@ fastify.post('/avatar', {
 	const destPath = path.join(UPLOADS_DIR, newName)
 	try {
 		await pump(data.file, fs.createWriteStream(destPath))
+
+		if (data.file.truncated) {
+			await fsUnlink(destPath)
+			return reply.code(413).send({ message: 'File too large! Max 2MB' })
+		}
+
+		// Magic Byte Verification
+		let fd
+		try {
+			fd = await fsOpen(destPath, 'r')
+			const buffer = Buffer.alloc(12)
+			await fsRead(fd, buffer, 0, 12, 0)
+			await fsClose(fd)
+
+			let isValid = false
+			// JPEG: FF D8 FF
+			if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) isValid = true
+			// PNG: 89 50 4E 47
+			else if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) isValid = true
+			// WebP: RIFF ... WEBP
+			else if (buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
+					 buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) isValid = true
+
+			if (!isValid) {
+				await fsUnlink(destPath)
+				return reply.code(400).send({ message: 'Invalid file content' })
+			}
+		} catch (err) {
+			if (fd) await fsClose(fd)
+			await fsUnlink(destPath)
+			throw err
+		}
+
 		db = await openDB()
 		const row = await db.get('SELECT avatar FROM users WHERE id = ?', [id])
 		const oldAvatar = row?.avatar || ''
