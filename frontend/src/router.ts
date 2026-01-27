@@ -30,7 +30,7 @@ const routes: Record<string, RouteHandler> = {
   "/agent-game": AgentGameView,
   "/remote-game": RemoteGameView,
   "/game-lobby": gameLobby,
-    "/friends": FriendsView,
+  "/friends": FriendsView,
   "/requests": RequestsView,
   "/search": SearchView,
   "/profile": ProfileView

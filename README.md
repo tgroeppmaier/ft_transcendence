@@ -118,6 +118,26 @@ The application is composed of **3 distinct services**, orchestrated via Docker 
 ### DevOps & Architecture
 - **Microservices Architecture**: The system is designed as a suite of loosely-coupled services (Backend, Database, Caddy). The Game Engine is completely decoupled from the User Management and Persistence layers, communicating via internal REST APIs to ensure scalability and modularity.
 
+### 🛡 Security & Rate Limiting
+To ensure system stability and protect against abuse, the following limits are enforced:
+
+#### Database Service
+- **Global Baseline**: 200 requests per 15 minutes (per IP).
+- **Authentication**: Strict limit of **5 requests per 15 minutes** for `/login` and `/registration`.
+- **Spam Prevention**: **20 requests per hour** for social actions (`/friend-request`) and file uploads (`/avatar`).
+- **Tournament Integrity**:
+  - Minimum **3 minutes** between tournament submissions.
+  - Maximum **20 tournaments** per user per day.
+
+#### Backend Service (Game Engine)
+- **API Rate Limit**: 100 requests per minute (per IP).
+- **Concurrency**: Maximum **10 active game instances** globally.
+- **WebSocket Limits**:
+  - Maximum **2 connections** per User.
+  - Maximum **20 connections** per IP.
+  - Mandatory **30s heartbeat** (Automatic disconnection on timeout).
+- **Authorization**: Strict paddle control; players can only send actions to their assigned side.
+
 ---
 
 ## 🔄 Program Flow
@@ -243,4 +263,33 @@ curl -X POST https://localhost:8443/api/games/<GAME_ID>/action \
      -H "Content-Type: application/json" \
      -b cookies.txt -k \
      -d '{"side": "left", "move": "stop", "direction": "up"}'
+```
+
+### 4. Testing Rate Limits
+To verify the rate limiting protection is active, you can use a loop to trigger a lockout:
+
+**Login / Registration (Limit: 5/15min):**
+```bash
+# This will return 429 Too Many Requests on the 6th attempt
+for i in {1..6}; do 
+  curl -ki -X POST https://localhost:8443/db/login \
+    -H "Content-Type: application/json" \
+    -d '{"login": "user", "password": "pwd"}' -k; 
+done
+```
+
+**Tournament Submissions (Limit: 1 per 3min):**
+```bash
+# After a successful login, the second submission will be blocked
+curl -k -b cookies.txt -X POST https://localhost:8443/db/tournament-result \
+     -H "Content-Type: application/json" \
+     -d '{"placement": 1}'
+```
+
+**Backend Game Engine (Limit: 100/min):**
+```bash
+# This will return 429 after 100 requests
+for i in {1..101}; do 
+  curl -k -b cookies.txt -o /dev/null -s -w "%{http_code}\n" https://localhost:8443/api/games; 
+done
 ```

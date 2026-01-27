@@ -36,6 +36,16 @@ const fastify = Fastify({
 	trustProxy: true
 })
 
+await fastify.register(rateLimit, {
+	max: 200,
+	timeWindow: '15 minutes',
+	skipOnError: true,
+	enableDraftSpec: true,
+	allowList: (req) => {
+		return req.url.startsWith('/uploads')
+	}
+})
+
 fastify.register(fastifyStatic, {
 	root: UPLOADS_DIR,
 	prefix: '/uploads/',
@@ -61,14 +71,7 @@ fastify.register(cookie, { secret: JWT_SECRET })
 fastify.register(jwt, { secret: JWT_SECRET })
 fastify.register(multipart)
 
-fastify.register(rateLimit, {
-	max: 100,
-	timeWindow: '15 minutes',
-	skipOnError: true,
-	allowList: (req) => {
-		return req.url.startsWith('/uploads')
-	}
-})
+
 
 fastify.decorate("authenticate", async (request, reply) => {
 	try {
@@ -159,7 +162,14 @@ fastify.post('/internal/check-friendship', async (request, reply) => {
 	}
 })
 
-fastify.post('/registration', async (request, reply) => {
+fastify.post('/registration', {
+	config: {
+		rateLimit: {
+			max: 5,
+			timeWindow: '15 minutes'
+		}
+	}
+}, async (request, reply) => {
 	let db
 	try {
 		const { login, email, password } = request.body
@@ -198,7 +208,14 @@ fastify.post('/registration', async (request, reply) => {
 	}
 })
 
-fastify.post('/login', async (request, reply) => {
+fastify.post('/login', {
+	config: {
+		rateLimit: {
+			max: 5,
+			timeWindow: '15 minutes'
+		}
+	}
+}, async (request, reply) => {
 	let db
 	try {
 		const { login, password } = request.body
@@ -362,7 +379,15 @@ fastify.get('/search', { preHandler: [fastify.authenticate] }, async (request, r
 	}
 })
 
-fastify.post('/friend-request', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+fastify.post('/friend-request', {
+	preHandler: [fastify.authenticate],
+	config: {
+		rateLimit: {
+			max: 20,
+			timeWindow: '1 hour'
+		}
+	}
+}, async (request, reply) => {
 	let db
 	try {
 		const { addressee_id } = request.body
@@ -717,7 +742,15 @@ fastify.get('/tournament-history', { preHandler: [fastify.authenticate] }, async
 	}
 })
 
-fastify.post('/avatar', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+fastify.post('/avatar', {
+	preHandler: [fastify.authenticate],
+	config: {
+		rateLimit: {
+			max: 20,
+			timeWindow: '1 hour'
+		}
+	}
+}, async (request, reply) => {
 	let db
 	let id
 	try {
