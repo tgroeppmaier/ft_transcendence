@@ -113,10 +113,11 @@ export class AgentGame {
 				let msg: string;
 				if (this.attack_mode) {
 					msg = "attack";
+					drawMessage(this.ctx, this.canvas, `${msg} from ${this.y_attack_position.toFixed(5)} at ${this.y_aim.toFixed(5)}, ${this.attack_mode}`, this.canvas.height * 0.1);
 				} else {
 					msg = "defend";
+					drawMessage(this.ctx, this.canvas, `${msg} from ${this.anticipated_bounce_position.toFixed(5)} at ${this.y_defend_position.toFixed(5)}, ${this.attack_mode}`, this.canvas.height * 0.1);
 				}
-				drawMessage(this.ctx, this.canvas, `${msg} from ${this.y_attack_position} at ${this.y_aim}, ${this.attack_mode}`, this.canvas.height * 0.1);
 				drawMessage(this.ctx, this.canvas, `abp: ${this.anticipated_bounce_position}, sure: ${this.are_you_sure_about_anticipated_bounce_position}`, this.canvas.height * 0.2);
         for (let reference_ball of this.bounce_balls_list) {
           drawColoredBall(this.ctx, this.canvas, reference_ball);
@@ -169,7 +170,6 @@ export class AgentGame {
 		let phi = Math.atan(tanphi);
 		let y_to_take = this.anticipated_bounce_position - PADDLE_HEIGHT * (1/2 + 2/Math.PI*phi);
 		if (y_to_take <= 0 || y_to_take + PADDLE_HEIGHT >= CANVAS_HEIGHT) {
-			//this.keyDebugMap['p'] = true;
 		}
 		this.y_attack_position = y_to_take;
 	}
