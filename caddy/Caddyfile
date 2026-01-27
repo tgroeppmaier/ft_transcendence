@@ -45,11 +45,11 @@ localhost {
     }
     # 3. Google OAuth callback
     @google_auth {
-        path /db/auth/google
-        path /db/auth/google/*
+        path /api/auth/google
+        path /api/auth/google/*
     }
     handle @google_auth {
-        uri strip_prefix /db
+        uri strip_prefix /api
         reverse_proxy database:3000
     }
 

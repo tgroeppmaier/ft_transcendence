@@ -22,7 +22,7 @@ const fsMkdir = promisify(fs.mkdir)
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
-const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || "https://localhost:8443/db/auth/google/callback"
+const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || "https://localhost:8443/api/auth/google/callback"
 const UPLOADS_DIR = process.env.UPLOADS_DIR || '/app/uploads'
 
 const JWT_SECRET = process.env.JWT_SECRET
@@ -665,9 +665,9 @@ fastify.post('/tournament-result', { preHandler: [fastify.authenticate] }, async
 		// Anti-abuse measures:
 		// 1. Check time since last tournament (minimum 3 minutes between tournaments)
 		const lastTournament = await db.get(
-			`SELECT played_at FROM tournaments 
-			 WHERE user_id = ? 
-			 ORDER BY played_at DESC 
+			`SELECT played_at FROM tournaments
+			 WHERE user_id = ?
+			 ORDER BY played_at DESC
 			 LIMIT 1`,
 			[userId]
 		)
@@ -679,8 +679,8 @@ fastify.post('/tournament-result', { preHandler: [fastify.authenticate] }, async
 
 			if (minutesSince < 3) {
 				await db.close()
-				return reply.code(429).send({ 
-					message: "Please wait at least 3 minutes between tournament submissions." 
+				return reply.code(429).send({
+					message: "Please wait at least 3 minutes between tournament submissions."
 				})
 			}
 		}
@@ -688,18 +688,18 @@ fastify.post('/tournament-result', { preHandler: [fastify.authenticate] }, async
 		// 2. Check daily limit (max 20 tournaments per day)
 		const todayStart = new Date()
 		todayStart.setHours(0, 0, 0, 0)
-		
+
 		const tournamentsToday = await db.get(
-			`SELECT COUNT(*) as count FROM tournaments 
-			 WHERE user_id = ? 
+			`SELECT COUNT(*) as count FROM tournaments
+			 WHERE user_id = ?
 			 AND datetime(played_at) >= datetime(?)`,
 			[userId, todayStart.toISOString()]
 		)
 
 		if (tournamentsToday.count >= 20) {
 			await db.close()
-			return reply.code(429).send({ 
-				message: "Daily tournament limit reached (20 per day)." 
+			return reply.code(429).send({
+				message: "Daily tournament limit reached (20 per day)."
 			})
 		}
 
@@ -915,7 +915,7 @@ fastify.get('/auth/google/callback', async (req, reply) => {
 
 		reply.setCookie('token', token, {
 			httpOnly: true,
-			sameSite: 'strict',
+			sameSite: 'lax',
 			path: '/',
 			maxAge: 60 * 60 * 6,
 			secure: true
@@ -926,7 +926,9 @@ fastify.get('/auth/google/callback', async (req, reply) => {
 		req.log.info('[DB] Database closed successfully')
 
 		req.log.info('=== Google Callback Success ===')
-		const redirectUrl = (process.env.FRONTEND_URL || 'https://localhost:8443') + '/menu'
+		const frontend = (process.env.FRONTEND_URL || 'https://localhost:8443').replace(/\/$/, '')
+		const redirectUrl = frontend + '/menu'
+		req.log.info('Redirecting to:', redirectUrl)
 		return reply.redirect(redirectUrl)
 
 	}
