@@ -160,7 +160,6 @@ export function ProfileView() {
 			await loadMatchHistory(data);
 		}
 		catch (err) {
-			console.error('Error loading profile:', err);
 			navigateTo('/login');
 		}
 	}
@@ -236,7 +235,6 @@ export function ProfileView() {
 				listEl.innerHTML = '<p class="text-gray-500 text-center">No matches or tournaments played yet.</p>';
 			}
 		} catch (e) {
-			console.error("History load error", e);
 		}
 	}
 
@@ -288,7 +286,6 @@ export function ProfileView() {
 				navigateTo('/login');
 			}
 			catch (err) {
-				console.error('Logout error:', err);
 				navigateTo('/login');
 			}
 		});
@@ -328,7 +325,6 @@ export function ProfileView() {
 				}
 			}
 			catch (err) {
-				console.error('Profile update error:', err);
 				const messageEl = container.querySelector('#editMessage');
 				if (messageEl) messageEl.textContent = 'Error updating profile';
 			}
@@ -386,7 +382,6 @@ export function ProfileView() {
 				}
 			}
 			catch (err) {
-				console.error('Avatar upload error:', err);
 				const msgEl = container.querySelector('#avatarMessage');
 				if (msgEl) msgEl.textContent = 'Error uploading avatar';
 			}
@@ -416,7 +411,6 @@ export function ProfileView() {
 				}
 			}
 			catch (err) {
-				console.error('Avatar delete error:', err);
 				const msgEl = container.querySelector('#avatarMessage');
 				if (msgEl) msgEl.textContent = 'Error deleting avatar';
 			}
@@ -443,7 +437,6 @@ export function ProfileView() {
 				}
 			}
 			catch (err) {
-				console.error('Profile delete error:', err);
 				alert('Error deleting profile');
 			}
 		});

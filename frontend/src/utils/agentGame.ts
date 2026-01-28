@@ -129,7 +129,7 @@ export class AgentGame {
   private handlePaddleMovement(dt: number) {
     if (this.keyAgentMap["w"]) this.leftPaddle.y -= PADDLE_SPEED * dt;
     if (this.keyAgentMap["s"]) this.leftPaddle.y += PADDLE_SPEED * dt;
-    
+
     if (this.keyPlayerMap["ArrowUp"]) this.rightPaddle.y -= PADDLE_SPEED * dt;
     if (this.keyPlayerMap["ArrowDown"]) this.rightPaddle.y += PADDLE_SPEED * dt;
 
@@ -206,7 +206,7 @@ export class AgentGame {
 	}
 
   private find_bounces() {
-    let reference_ball: ColoredBall = { x: this.ball.x, y: this.ball.y, 
+    let reference_ball: ColoredBall = { x: this.ball.x, y: this.ball.y,
                               vx: this.ball.vx, vy: this.ball.vy, color: "white" };
     let delta_time_x: number;
     let delta_time_y: number;
@@ -238,7 +238,7 @@ export class AgentGame {
       else {
         delta_time_y = Infinity;
       }
-      
+
       delta = (delta_time_x <= delta_time_y) ? delta_time_x : delta_time_y;
       reference_ball.x = reference_ball.x + delta * reference_ball.vx;
       reference_ball.y = reference_ball.y + delta * reference_ball.vy;
@@ -272,8 +272,8 @@ export class AgentGame {
       }  else {
         reference_ball.color = colors[colors.length-1];
       }
-      let ball_to_push: ColoredBall = { x: reference_ball.x, y: reference_ball.y, 
-                                        vx: reference_ball.vx, vy: reference_ball.vy, 
+      let ball_to_push: ColoredBall = { x: reference_ball.x, y: reference_ball.y,
+                                        vx: reference_ball.vx, vy: reference_ball.vy,
                                         color: reference_ball.color };
       this.bounce_balls_list.push(ball_to_push);
 			this.compute_position_to_send_to_ywanted(CANVAS_HEIGHT - BALL_RADIUS);
@@ -283,7 +283,6 @@ export class AgentGame {
 	private compute_position_to_send_to_ywanted(ywanted: number) {
 		let tanphi: number = (ywanted - this.anticipated_bounce_position) / (CANVAS_WIDTH - 2 * BALL_RADIUS);
 		let phi = Math.atan(tanphi);
-		console.log("tanphi: ", tanphi, "phi:", phi);
 	}
 
   private handleScore() {

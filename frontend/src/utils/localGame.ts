@@ -43,6 +43,11 @@ export class LocalGame {
     this.onTournamentMatchEnd = cb ?? null;
   }
 
+  public updateCanvas(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) {
+    this.canvas = canvas;
+    this.ctx = ctx;
+  }
+
   public start() {
     this.lastUpdate = performance.now();
     this.rafID = requestAnimationFrame(this.tick);

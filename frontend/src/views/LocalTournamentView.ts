@@ -17,14 +17,17 @@ export function LocalTournamentView() {
 
     // Check if user is logged in
     try {
-      const res = await fetch("/db/profile", { credentials: "include" });
-      if (res.ok) {
-        const data = await res.json();
-        loggedUserId = data.id;
-        loggedUserName = data.login;
+      const res = await fetch("/db/auth/status", { credentials: "include" });
+      const data = await res.json();
+      
+      if (data.user) {
+        loggedUserId = data.user.id;
+        loggedUserName = data.user.login;
         isLoggedIn = true;
         // If logged in, only need 3 additional players
         playerNames = ["", "", ""];
+      } else {
+        isLoggedIn = false;
       }
     } catch (err) {
       // User not logged in, continue with anonymous mode
@@ -123,8 +126,6 @@ export function LocalTournamentView() {
           alert(`Invalid name: "${invalidName}".\nNames can only contain letters, numbers, spaces, hyphens, and apostrophes.`);
           return;
       }
-
-      console.log("Starting tournament with:", allPlayers);
 
       // Reset container for game view
       container.innerHTML = "";

@@ -64,7 +64,6 @@ export async function gameLobby() {
     }
   } catch (error) {
     gameList.innerHTML = `<p class="text-red-500 col-span-full text-center">Error loading games.</p>`;
-    console.error(error);
   }
   
   createButton.onclick = async () => {
@@ -78,8 +77,6 @@ export async function gameLobby() {
       const { gameId } = data;
       navigateTo(`/remote-game?gameId=${gameId}`);
     } catch (error) {
-      alert("Failed to create game");
-      console.error(error);
     }
   };
   

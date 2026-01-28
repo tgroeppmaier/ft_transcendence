@@ -111,7 +111,6 @@ export function SearchView() {
 
                     if (addBtn) {
                         addBtn.addEventListener("click", async () => {
-                            console.log("Clicked Add for user:", u.id);
                             await sendFriendRequest(u.id, addBtn);
                         });
                     }
@@ -120,7 +119,6 @@ export function SearchView() {
 
         }
         catch (err) {
-            console.error("Search error:", err);
             if (!silent) message.textContent = "Error performing search.";
         }
     };
@@ -172,7 +170,6 @@ export function SearchView() {
 
         }
         catch (err) {
-            console.error("Friend request error:", err);
             alert("Error sending friend request");
             btn.disabled = false;
             btn.textContent = "Add";

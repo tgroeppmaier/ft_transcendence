@@ -1,14 +1,28 @@
 import { navigateTo } from "../router.js";
 import { AgentGame } from "../utils/agentGame.js";
 
-export function AgentGameView() {
+export async function AgentGameView() {
+  let backLink = "/";
+  let backText = "Back to Home";
+
+  try {
+    const res = await fetch("/db/auth/status", { credentials: "include" });
+    const data = await res.json();
+    if (data.user) {
+      backLink = "/menu";
+      backText = "Back to Menu";
+    }
+  } catch (e) {
+    // Ignore error, default to Home
+  }
+
   const gameContainer = document.createElement("div");
   gameContainer.className = "flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4";
   gameContainer.id = "agent-game";
   gameContainer.innerHTML = `
     <div class="mb-4">
       <button id="back-to-main" class="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition shadow-sm">
-        ← Back to Home
+        ← ${backText}
       </button>
     </div>
           <canvas id="board" width="800" height="600" class="shadow-2xl bg-black"></canvas>  `;
@@ -17,7 +31,7 @@ export function AgentGameView() {
   if (backButton) {
     backButton.addEventListener("click", (e) => {
       e.preventDefault();
-      navigateTo("/");
+      navigateTo(backLink);
     });
   }
 

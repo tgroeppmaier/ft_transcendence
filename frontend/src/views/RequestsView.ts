@@ -95,7 +95,6 @@ export function RequestsView() {
 
         }
         catch (err) {
-            console.error("Load requests error:", err);
             emptyMessage.textContent = "Error loading requests.";
         }
     }
@@ -130,7 +129,6 @@ export function RequestsView() {
 
         }
         catch (err) {
-            console.error(`${action} request error:`, err);
             alert(`Error ${action}ing request`);
         }
     }

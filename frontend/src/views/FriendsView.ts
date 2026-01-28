@@ -81,14 +81,12 @@ export function FriendsView() {
                 const removeBtn = card.querySelector(`#remove-btn-${friend.id}`) as HTMLButtonElement;
                 if (removeBtn) {
                     removeBtn.addEventListener("click", async () => {
-                        console.log("Remove friend:", friend.id);
                         await removeFriend(friend.id, card);
                     });
                 }
             });
         }
         catch (err) {
-            console.error("Load friends error:", err);
             // Don't overwrite message on poll fail
         }
     }
@@ -113,7 +111,6 @@ export function FriendsView() {
             loadFriends(); // Refresh list immediately
         }
         catch (err) {
-            console.error("Remove friend error:", err);
             alert("Error removing friend");
         }
     }

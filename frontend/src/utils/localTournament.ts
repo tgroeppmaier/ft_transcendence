@@ -21,6 +21,8 @@ export class LocalTournament {
   private currentMatchIndex: number = 0;
   private loggedUserId?: number;
   private loggedUserName?: string;
+  private timeoutId: any = null;
+  private isStopped: boolean = false;
 
   constructor(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, players: string[], options?: TournamentOptions) {
     this.canvas = canvas;
@@ -39,11 +41,24 @@ export class LocalTournament {
     ];
   }
 
+  public updateCanvas(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) {
+    this.canvas = canvas;
+    this.ctx = ctx;
+    if (this.activeGame) {
+      this.activeGame.updateCanvas(canvas, ctx);
+    }
+  }
+
   public start() {
     this.startNextMatch();
   }
 
   public stop() {
+    this.isStopped = true;
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
+    }
     if (this.activeGame) {
       this.activeGame.stop();
     }
@@ -56,7 +71,6 @@ export class LocalTournament {
     }
 
     const match = this.matches[this.currentMatchIndex];
-    console.log(`Starting Match ${this.currentMatchIndex + 1}: ${match.p1} vs ${match.p2}`);
 
     this.activeGame = new LocalGame(
       this.canvas,
@@ -70,6 +84,8 @@ export class LocalTournament {
   }
 
   private async onMatchEnd(winner: string) {
+    if (this.isStopped) return;
+
     // Stop the current game
     if (this.activeGame) {
       this.activeGame.stop();
@@ -88,7 +104,7 @@ export class LocalTournament {
 
     drawMessage(this.ctx, this.canvas, `Match ${this.currentMatchIndex + 1} ended. Winner: ${winner}`);
 
-    setTimeout(() => {
+    this.timeoutId = setTimeout(() => {
       const finalMatch = this.matches[2];
       if (this.currentMatchIndex === 0) {
         finalMatch.p1 = winner;
@@ -102,6 +118,8 @@ export class LocalTournament {
   }
 
   private async saveTournamentResult(winner: string) {
+    if (this.isStopped) return;
+
     // Only save if user is logged in
     if (!this.loggedUserId || !this.loggedUserName) {
       return;
@@ -140,8 +158,6 @@ export class LocalTournament {
         }
       }
 
-      console.log(`Saving tournament result: User ${this.loggedUserName} placed ${placement}`);
-
       const response = await fetch('/db/tournament-result', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -150,14 +166,10 @@ export class LocalTournament {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-        console.error('Failed to save tournament result:', errorData.message);
         // Silently fail - tournament was still played, just not saved
       } else {
-        console.log('Tournament result saved successfully');
       }
     } catch (err) {
-      console.error('Error saving tournament result:', err);
       // Silently fail - don't interrupt user experience
     }
   }

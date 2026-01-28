@@ -261,6 +261,26 @@ fastify.post('/login', {
 	}
 })
 
+fastify.get('/auth/status', async (request, reply) => {
+	try {
+		const token = request.cookies?.token
+		if (!token) return { user: null }
+		
+		const decoded = fastify.jwt.verify(token)
+		
+		const db = await openDB()
+		const user = await db.get('SELECT id, login FROM users WHERE id = ?', [decoded.id])
+		await db.close()
+		
+		if (!user) return { user: null }
+		
+		return { user: user }
+	}
+	catch (err) {
+		return { user: null }
+	}
+})
+
 fastify.post('/logout', { preHandler: [fastify.authenticate] }, async (request, reply) => {
 	let db
 	try {

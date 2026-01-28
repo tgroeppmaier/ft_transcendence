@@ -24,7 +24,6 @@ export async function RemoteGameView(existingGameId?: string) {
         }
       }
     } catch (error) {
-      console.log("Error fetching Snapshot:", error);
     }
   }
 

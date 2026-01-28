@@ -36,9 +36,9 @@ export class RemoteGame {
 
     this.ws = new WebSocket(`wss://${window.location.host}/api/ws/${gameId}`);
 
-    this.ws.addEventListener("open", () => console.log(`[ws] open ${gameId}`));
-    this.ws.addEventListener("close", (e) => console.log(`[ws] close ${gameId}`, e.code));
-    this.ws.addEventListener("error", (e) => console.log(`[ws] error`, e));
+    this.ws.addEventListener("open", () => {});
+    this.ws.addEventListener("close", (e) => {});
+    this.ws.addEventListener("error", (e) => {});
     this.ws.onmessage = (event) => this.handleMessage(event);
   }
 
