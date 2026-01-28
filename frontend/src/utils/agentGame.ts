@@ -26,8 +26,6 @@ export class AgentGame {
 	private attack_mode: boolean = false;
 	private y_aim: number;
 	private y_attack_position: number;
-	private move_down_in_defence: boolean = false;
-	private move_up_in_defence: boolean = false;
   private score: Score = { left: 0, right: 0 };
   private lastUpdate: number;
   private lastAgentUpdate: number;
@@ -65,7 +63,7 @@ export class AgentGame {
 
   public onKeyDown(key: string) {
     if (key in this.keyPlayerMap) this.keyPlayerMap[key] = true;
-    if (key in this.keyDebugMap) this.keyDebugMap[key] = !this.keyDebugMap[key];
+    // if (key in this.keyDebugMap) this.keyDebugMap[key] = !this.keyDebugMap[key];
   }
 
   public onKeyUp(key: string) {

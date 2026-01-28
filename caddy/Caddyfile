@@ -1,8 +1,13 @@
 {
-	local_certs
+    debug
 }
 
-localhost {
+:443 {
+    tls {
+        issuer internal
+        on_demand
+    }
+
     # 1. WebSocket
     @ws {
         path /api/ws
@@ -56,6 +61,6 @@ localhost {
 }
 
 # Redirect HTTP
-http://localhost:80 {
-    redir https://localhost:8443{uri}
+:80 {
+    redir https://{host}:8443{uri}
 }

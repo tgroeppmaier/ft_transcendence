@@ -881,11 +881,20 @@ fastify.delete('/avatar', { preHandler: [fastify.authenticate] }, async (request
 })
 
 fastify.get('/auth/google', async (req, reply) => {
+	// Dynamic Redirect URI: Use request host if configured URI is localhost/missing
+	let redirectUri = GOOGLE_REDIRECT_URI;
+	if (!process.env.GOOGLE_REDIRECT_URI || process.env.GOOGLE_REDIRECT_URI.includes('localhost')) {
+		const host = req.headers['x-forwarded-host'] || req.headers.host;
+		if (host) {
+			redirectUri = `https://${host}/api/auth/google/callback`;
+		}
+	}
+
 	const url =
 		"https://accounts.google.com/o/oauth2/v2/auth?" +
 		new URLSearchParams({
 			client_id: GOOGLE_CLIENT_ID,
-			redirect_uri: GOOGLE_REDIRECT_URI,
+			redirect_uri: redirectUri,
 			response_type: "code",
 			scope: "email profile",
 			access_type: "offline",
@@ -907,6 +916,15 @@ fastify.get('/auth/google/callback', async (req, reply) => {
 			return reply.code(400).send({ message: "No code from Google" })
 		}
 
+		// Dynamic Redirect URI: Must match the one sent in the first step
+		let redirectUri = GOOGLE_REDIRECT_URI;
+		if (!process.env.GOOGLE_REDIRECT_URI || process.env.GOOGLE_REDIRECT_URI.includes('localhost')) {
+			const host = req.headers['x-forwarded-host'] || req.headers.host;
+			if (host) {
+				redirectUri = `https://${host}/api/auth/google/callback`;
+			}
+		}
+
 		req.log.info('Getting token from Google...')
 		const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
 			method: "POST",
@@ -915,7 +933,7 @@ fastify.get('/auth/google/callback', async (req, reply) => {
 				client_id: GOOGLE_CLIENT_ID,
 				client_secret: GOOGLE_CLIENT_SECRET,
 				code,
-				redirect_uri: GOOGLE_REDIRECT_URI,
+				redirect_uri: redirectUri,
 				grant_type: "authorization_code",
 			}),
 		})
@@ -985,7 +1003,16 @@ fastify.get('/auth/google/callback', async (req, reply) => {
 		req.log.info('[DB] Database closed successfully')
 
 		req.log.info('=== Google Callback Success ===')
-		const frontend = (process.env.FRONTEND_URL || 'https://localhost:8443').replace(/\/$/, '')
+		
+		let frontend = (process.env.FRONTEND_URL || 'https://localhost:8443').replace(/\/$/, '')
+		// Dynamic Frontend URL: If default/localhost, use the actual request host
+		if (!process.env.FRONTEND_URL || process.env.FRONTEND_URL.includes('localhost')) {
+			const host = req.headers['x-forwarded-host'] || req.headers.host;
+			if (host) {
+				frontend = `https://${host}`;
+			}
+		}
+
 		const redirectUrl = frontend + '/menu'
 		req.log.info('Redirecting to:', redirectUrl)
 		return reply.redirect(redirectUrl)
