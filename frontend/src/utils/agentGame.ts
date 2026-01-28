@@ -21,6 +21,13 @@ export class AgentGame {
   private ball: Ball = { x: 0.5, y: 0.5, vx: BALL_X_SPEED, vy: BALL_Y_SPEED };
   private bounce_balls_list: ColoredBall[] = [];
   private anticipated_bounce_position: number = 0.5;
+	private are_you_sure_about_anticipated_bounce_position: boolean = false;
+	private y_defend_position: number = 0.5;
+	private attack_mode: boolean = false;
+	private y_aim: number;
+	private y_attack_position: number;
+	private move_down_in_defence: boolean = false;
+	private move_up_in_defence: boolean = false;
   private score: Score = { left: 0, right: 0 };
   private lastUpdate: number;
   private lastAgentUpdate: number;
@@ -103,6 +110,15 @@ export class AgentGame {
         drawMessage(this.ctx, this.canvas, `rafID: ${(this.rafID/60).toFixed(5)}`, this.canvas.height* 4/5);
         drawMessage(this.ctx, this.canvas, `${this.anticipated_bounce_position}`, this.canvas.height * 0.85);
         drawMessage(this.ctx, this.canvas, `${((Date.now() - this.lastAgentUpdate)/1000).toFixed(5)}`, this.canvas.height * 0.9);
+				let msg: string;
+				if (this.attack_mode) {
+					msg = "attack";
+					drawMessage(this.ctx, this.canvas, `${msg} from ${this.y_attack_position.toFixed(5)} at ${this.y_aim.toFixed(5)}, ${this.attack_mode}`, this.canvas.height * 0.1);
+				} else {
+					msg = "defend";
+					drawMessage(this.ctx, this.canvas, `${msg} from ${this.anticipated_bounce_position.toFixed(5)} at ${this.y_defend_position.toFixed(5)}, ${this.attack_mode}`, this.canvas.height * 0.1);
+				}
+				drawMessage(this.ctx, this.canvas, `abp: ${this.anticipated_bounce_position}, sure: ${this.are_you_sure_about_anticipated_bounce_position}`, this.canvas.height * 0.2);
         for (let reference_ball of this.bounce_balls_list) {
           drawColoredBall(this.ctx, this.canvas, reference_ball);
         }
@@ -123,18 +139,71 @@ export class AgentGame {
 
   private agentMove() {
     if (Date.now() - this.lastAgentUpdate >= 1000) {
-      this.find_bounces();
       this.lastAgentUpdate = Date.now();
+      this.find_bounces();
+			if (this.are_you_sure_about_anticipated_bounce_position) {
+				this.attack_mode = true;
+				this.determine_y_aim();
+				this.compute_attack_position();
+			} else {
+				this.attack_mode = false;
+				this.compute_defend_position();
+			}
     }
+		if (this.attack_mode) {
+			this.attack();
+		} else {
+			this.defend();
+		}
+	}
+
+	private determine_y_aim() {
+		if (this.rightPaddle.y + PADDLE_HEIGHT / 2 < CANVAS_WIDTH / 2) {
+			this.y_aim = CANVAS_WIDTH - BALL_RADIUS;
+		} else {
+			this.y_aim = BALL_RADIUS;
+		}
+	}
+
+	private compute_attack_position() {
+		let tanphi = (this.y_aim - this.anticipated_bounce_position) / (CANVAS_WIDTH - 2 * BALL_RADIUS);
+		let phi = Math.atan(tanphi);
+		let y_to_take = this.anticipated_bounce_position - PADDLE_HEIGHT * (1/2 + 2/Math.PI*phi);
+		if (y_to_take <= 0 || y_to_take + PADDLE_HEIGHT >= CANVAS_HEIGHT) {
+		}
+		this.y_attack_position = y_to_take;
+	}
+
+	private attack() {
     this.keyAgentMap["w"] = false;
     this.keyAgentMap["s"] = false;
-    if (this.leftPaddle.y + 0.9*PADDLE_HEIGHT <= this.anticipated_bounce_position) {
+    if (this.leftPaddle.y + 0.04*PADDLE_HEIGHT <= this.y_attack_position) {
       this.keyAgentMap["s"] = true;
     }
-    else if (this.leftPaddle.y + 0.1*PADDLE_HEIGHT >= this.anticipated_bounce_position) {
+    else if (this.leftPaddle.y - 0.04*PADDLE_HEIGHT >= this.y_attack_position) {
       this.keyAgentMap["w"] = true;
     }
   }
+
+	private compute_defend_position() {
+		this.y_defend_position = this.anticipated_bounce_position - 0.01 * PADDLE_HEIGHT;
+		if (this.anticipated_bounce_position > CANVAS_HEIGHT / 2) {
+			this.y_defend_position = this.anticipated_bounce_position + 0.01 * PADDLE_HEIGHT - PADDLE_HEIGHT;
+		}
+	}
+
+	private defend() {
+		if (!this.are_you_sure_about_anticipated_bounce_position) {
+			this.keyAgentMap["w"] = false;
+			this.keyAgentMap["s"] = false;
+			if (this.leftPaddle.y + 0.04*PADDLE_HEIGHT <= this.y_defend_position) {
+				this.keyAgentMap["s"] = true;
+			}
+			else if (this.leftPaddle.y - 0.04*PADDLE_HEIGHT >= this.y_defend_position) {
+				this.keyAgentMap["w"] = true;
+			}
+		}
+	}
 
   private find_bounces() {
     let reference_ball: ColoredBall = { x: this.ball.x, y: this.ball.y, 
@@ -146,6 +215,7 @@ export class AgentGame {
     let keep_doing: boolean = true;
     let cnt: number = -1;
     this.bounce_balls_list = [];
+		this.are_you_sure_about_anticipated_bounce_position = true;
     while (keep_doing && cnt < 10) {
       cnt += 1;
       // determine delta_time_x
@@ -173,11 +243,26 @@ export class AgentGame {
       reference_ball.x = reference_ball.x + delta * reference_ball.vx;
       reference_ball.y = reference_ball.y + delta * reference_ball.vy;
       if (delta_time_x == delta) {
-        reference_ball.vx *= -1.05;
-        if (reference_ball.vx > 0) {
+        if (reference_ball.vx < 0) {
           keep_doing = false;
           this.anticipated_bounce_position = reference_ball.y;
         }
+				else {
+					let currentSpeed = Math.sqrt(reference_ball.vx * reference_ball.vx + reference_ball.vy * reference_ball.vy);
+					let newSpeed = currentSpeed * 1.05;
+					newSpeed =(newSpeed <= MAX_BALL_SPEED ? newSpeed : MAX_BALL_SPEED);
+					// compute anticipated paddle position of an opponent. Presumably the middle position.
+					let upper_edge_opponent_paddle = Math.max(0, reference_ball.y - PADDLE_HEIGHT);
+					let lower_edge_opponent_paddle = Math.min(CANVAS_HEIGHT, reference_ball.y + PADDLE_HEIGHT);
+					let center_opponent_paddle = (upper_edge_opponent_paddle + lower_edge_opponent_paddle) / 2;
+					let normalizedImpact = (reference_ball.y - center_opponent_paddle) / (PADDLE_HEIGHT / 2);
+					normalizedImpact = Math.min(1, Math.max(-1, normalizedImpact));
+					let bounce_angle = normalizedImpact * Math.PI / 4;
+        	reference_ball.vx = -newSpeed * Math.cos(bounce_angle);
+					reference_ball.vy = newSpeed * Math.sin(bounce_angle);
+          this.anticipated_bounce_position = reference_ball.y;
+					this.are_you_sure_about_anticipated_bounce_position = false;
+				}
       }
       if (delta_time_y == delta) {
         reference_ball.vy *= -1;
@@ -191,8 +276,15 @@ export class AgentGame {
                                         vx: reference_ball.vx, vy: reference_ball.vy, 
                                         color: reference_ball.color };
       this.bounce_balls_list.push(ball_to_push);
+			this.compute_position_to_send_to_ywanted(CANVAS_HEIGHT - BALL_RADIUS);
     }
   }
+
+	private compute_position_to_send_to_ywanted(ywanted: number) {
+		let tanphi: number = (ywanted - this.anticipated_bounce_position) / (CANVAS_WIDTH - 2 * BALL_RADIUS);
+		let phi = Math.atan(tanphi);
+		console.log("tanphi: ", tanphi, "phi:", phi);
+	}
 
   private handleScore() {
     if (this.ball.x < 0) {
