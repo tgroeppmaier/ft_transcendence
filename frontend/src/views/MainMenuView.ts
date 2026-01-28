@@ -22,6 +22,10 @@ export function MainMenuView() {
         <button id="logged-tournament" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-xl transition shadow-sm flex items-center justify-center gap-2">
           <span>🏆</span> Local Tournament
         </button>
+
+        <button id="agent-game" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-xl transition shadow-sm flex items-center justify-center gap-2">
+          <span>🤖</span> Play vs AI
+        </button>
       </div>
 
       <!-- Social & Profile Column -->
@@ -50,6 +54,7 @@ export function MainMenuView() {
 
   mainMenu.querySelector("#remote-game")?.addEventListener("click", () => navigateTo("/remote-game"));
   mainMenu.querySelector("#logged-tournament")?.addEventListener("click", () => navigateTo("/local-tournament"));
+  mainMenu.querySelector("#agent-game")?.addEventListener("click", () => navigateTo("/agent-game"));
   mainMenu.querySelector("#friends-menu")?.addEventListener("click", () => navigateTo("/friends"));
   mainMenu.querySelector("#requests-menu")?.addEventListener("click", () => navigateTo("/requests"));
   mainMenu.querySelector("#search-menu")?.addEventListener("click", () => navigateTo("/search"));

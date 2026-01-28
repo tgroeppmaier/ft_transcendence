@@ -1,7 +1,34 @@
+# Dependencies
 **/node_modules
 **/dist
+
+# Version Control
 .git
 .gitignore
+
+# Environment and Secrets
 .env
-data/*.db
-uploads/*
+.env.*
+
+# Logs and Debug
+**/*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS Files
+**/.DS_Store
+Thumbs.db
+
+# Project Data (Persisted via Volumes)
+database/data/*.db
+database/data/uploads/*
+database/uploads/*
+
+# Miscellaneous
+README.md
+*.pdf
+LICENSE
+.vscode/
+.idea/
+coverage/

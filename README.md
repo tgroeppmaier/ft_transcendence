@@ -108,7 +108,7 @@ The application is composed of **3 distinct services**, orchestrated via Docker 
 
 
 ### AI & Algorithms
-- **AI Opponent**: Play against a server-side bot. The AI uses a periodic update system (1Hz refresh) with position prediction to simulate human reaction times and satisfy project constraints.
+- **AI Opponent**: Play against a client-side bot. The AI uses a periodic update system (1Hz refresh) with position prediction to simulate human reaction times and satisfy project constraints.
 - **Stats**: Detailed user statistics and match history dashboards.
 
 ### Server-Side Pong
