@@ -29,6 +29,7 @@ The application is composed of **3 distinct services**, orchestrated via Docker 
 - **Tech**: Node.js (Fastify + WebSockets).
 - **Role**: The "Brain" and "Heart" of the game.
 - **Functions**:
+  - **Logging**: Uses Fastify's native Pino logger for structured, high-performance logging.
   - **Game Logic**: Pure physics simulation (Collision detection, velocity vectors) running at 60 FPS.
   - **Session Management**: Holds all active data in memory (Games, Players, Invites).
 - **Matchmaking**: Handles creation of games and processing of invitations directly in RAM.
@@ -45,6 +46,7 @@ The application is composed of **3 distinct services**, orchestrated via Docker 
 - **CLI / Interop**
   - `GET /api/games/:id/state`: Get snapshot of current game state (Polling).
   - `POST /api/games/:id/action`: Send paddle commands via HTTP.
+  - `GET /db/auth/status`: Check authentication status (returns user info or null).
 
 ### 3. **Database Service (Persistence Layer)**
 - **Tech**: Node.js (Fastify), SQLite.
@@ -125,6 +127,7 @@ To ensure system stability and protect against abuse, the following limits are e
 - **Global Baseline**: 200 requests per 15 minutes (per IP).
 - **Authentication**: Strict limit of **5 requests per 15 minutes** for `/login` and `/registration`.
 - **Spam Prevention**: **20 requests per hour** for social actions (`/friend-request`) and file uploads (`/avatar`).
+- **Privacy**: User email addresses are strictly private and never exposed via public API endpoints (Search, Friends, etc.).
 - **File Upload Security**:
   - **Size Limit**: Maximum **2MB** per file (Enforced at both Frontend and Backend).
   - **Content Validation**: Mandatory **Magic Byte Verification** (checks file signature) to prevent MIME-type spoofing.
