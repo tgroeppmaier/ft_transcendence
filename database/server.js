@@ -188,6 +188,8 @@ fastify.post('/registration', {
 			return reply.code(400).send({ message: 'Invalid email format!' })
 		if (password.length < 6)
 			return reply.code(400).send({ message: 'Password must be at least 6 characters!' })
+		if (password.length > 10)
+			return reply.code(400).send({ message: 'Password must be no longer than 10 characters!' })
 
 		db = await openDB()
 		const existingLogin = await db.get(`SELECT id FROM users WHERE login = ?`, [login])
@@ -323,6 +325,7 @@ fastify.put('/profile', { preHandler: [fastify.authenticate] }, async (request, 
 		if (!/^[a-zA-Z0-9_]+$/.test(login)) return reply.code(400).send({ message: 'Invalid login characters' })
 		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return reply.code(400).send({ message: 'Invalid email' })
 		if (password && password.length < 6) return reply.code(400).send({ message: 'Password too short' })
+		if (password && password.length > 10) return reply.code(400).send({ message: 'Password too long' })
 
 		db = await openDB()
 		const existingLogin = await db.get('SELECT id FROM users WHERE login = ? AND id != ?', [login, id])

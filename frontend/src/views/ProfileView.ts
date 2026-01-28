@@ -102,7 +102,7 @@ export function ProfileView() {
 
 	<label class="flex flex-col text-left">
 	<span class="mb-1">New password:</span>
-	<input id="passwordInput" name="password" type="password" minlength="6" placeholder="Leave empty to keep current"
+	<input id="passwordInput" name="password" type="password" minlength="6" maxlength="10" placeholder="Leave empty to keep current"
 	class="p-2 rounded-lg border border-gray-400 w-full outline-none" />
 	</label>
 
