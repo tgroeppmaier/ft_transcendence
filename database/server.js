@@ -171,7 +171,7 @@ fastify.post('/internal/check-friendship', async (request, reply) => {
 fastify.post('/registration', {
 	config: {
 		rateLimit: {
-			max: 5,
+			max: 30,
 			timeWindow: '15 minutes'
 		}
 	}
@@ -219,7 +219,7 @@ fastify.post('/registration', {
 fastify.post('/login', {
 	config: {
 		rateLimit: {
-			max: 5,
+			max: 30,
 			timeWindow: '15 minutes'
 		}
 	}
@@ -413,7 +413,7 @@ fastify.post('/friend-request', {
 	preHandler: [fastify.authenticate],
 	config: {
 		rateLimit: {
-			max: 20,
+			max: 40,
 			timeWindow: '1 hour'
 		}
 	}
@@ -775,7 +775,7 @@ fastify.post('/avatar', {
 	preHandler: [fastify.authenticate],
 	config: {
 		rateLimit: {
-			max: 20,
+			max: 30,
 			timeWindow: '1 hour'
 		}
 	}
@@ -1024,6 +1024,18 @@ const start = async () => {
 			port: 3000,
 			host: '0.0.0.0'
 		})
+		setInterval(async () => {
+			try {
+				const db = await openDB()
+				await db.run("UPDATE users SET onlineStatus = 'offline' WHERE onlineStatus = 'online'")
+				await db.close()
+				fastify.log.info('Cleaned up online status')
+			}
+			catch (err) {
+				fastify.log.error('Error cleaning up online status:', err)
+			}
+		}, 10 * 60 * 1000)
+		fastify.log.info('Periodic cleanup started')
 	}
 	catch (err) {
 		fastify.log.error(err)
