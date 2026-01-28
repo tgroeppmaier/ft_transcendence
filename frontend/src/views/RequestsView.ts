@@ -56,7 +56,6 @@ export function RequestsView() {
                 card.className = "flex items-center justify-between p-4 bg-gray-100 rounded-xl mb-3";
 
                 const safeLogin = escapeHtml(req.login ?? "");
-                const safeEmail = escapeHtml(req.email ?? "");
 
                 card.innerHTML = `
                 <div class="flex items-center gap-3">
@@ -64,7 +63,6 @@ export function RequestsView() {
                     class="w-12 h-12 rounded-full object-cover">
                     <div>
                         <p class="font-semibold">${safeLogin}</p>
-                        <p class="text-gray-500 text-sm">${safeEmail}</p>
                     </div>
                 </div>
                 <div class="flex gap-2">

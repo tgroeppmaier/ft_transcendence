@@ -364,6 +364,7 @@ fastify.delete('/profile', { preHandler: [fastify.authenticate] }, async (reques
 fastify.get('/search', { preHandler: [fastify.authenticate] }, async (request, reply) => {
 	let db
 	try {
+		const { id } = request.user
 		const { query } = request.query
 
 		if (!query || query.trim() === "") {
@@ -372,8 +373,8 @@ fastify.get('/search', { preHandler: [fastify.authenticate] }, async (request, r
 
 		db = await openDB()
 		const users = await db.all(
-			`SELECT id, login, email, avatar, onlineStatus FROM users WHERE login LIKE ? LIMIT 30`,
-			[`%${query}%`]
+			`SELECT id, login, avatar, onlineStatus FROM users WHERE login LIKE ? AND id != ? LIMIT 30`,
+			[`%${query}%`, id]
 		)
 		await db.close()
 		return reply.send({ users })
@@ -492,7 +493,7 @@ fastify.get('/friends', { preHandler: [fastify.authenticate] }, async (request, 
 		db = await openDB()
 
 		const friends = await db.all(
-			`SELECT u.id, u.login, u.email, u.avatar, u.onlineStatus
+			`SELECT u.id, u.login, u.avatar, u.onlineStatus
 			 FROM users u
 			 WHERE (
 				(SELECT status FROM friends WHERE requester_id = ? AND addressee_id = u.id) = 'accepted'
@@ -600,7 +601,6 @@ fastify.get('/friend-requests', { preHandler: [fastify.authenticate] }, async (r
 				f.requester_id,
 				u.id as user_id,
 				u.login,
-				u.email,
 				u.avatar,
 				u.onlineStatus
 			FROM friends f
