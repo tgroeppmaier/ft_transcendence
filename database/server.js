@@ -40,7 +40,7 @@ const fastify = Fastify({
 })
 
 await fastify.register(rateLimit, {
-	max: 200,
+	max: 500,
 	timeWindow: '15 minutes',
 	skipOnError: true,
 	enableDraftSpec: true,
@@ -171,7 +171,7 @@ fastify.post('/internal/check-friendship', async (request, reply) => {
 fastify.post('/registration', {
 	config: {
 		rateLimit: {
-			max: 30,
+			max: 50,
 			timeWindow: '15 minutes'
 		}
 	}
@@ -219,7 +219,7 @@ fastify.post('/registration', {
 fastify.post('/login', {
 	config: {
 		rateLimit: {
-			max: 30,
+			max: 100,
 			timeWindow: '15 minutes'
 		}
 	}
@@ -413,7 +413,7 @@ fastify.post('/friend-request', {
 	preHandler: [fastify.authenticate],
 	config: {
 		rateLimit: {
-			max: 40,
+			max: 80,
 			timeWindow: '1 hour'
 		}
 	}
