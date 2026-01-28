@@ -14,6 +14,7 @@ COPY frontend ./frontend
 
 # Compile TS + build CSS
 WORKDIR /app/frontend
+ENV BROWSERSLIST_IGNORE_OLD_DATA=true
 RUN npm run build
 RUN npm run build:css
 
