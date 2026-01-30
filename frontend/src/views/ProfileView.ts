@@ -134,11 +134,18 @@ export function ProfileView() {
 	async function loadProfile() {
 		try {
 			const res = await fetch('/db/profile', { credentials: 'include' });
-			if (!res.ok) {
+			let data;
+			try {
+				data = await res.json();
+			} catch {
 				navigateTo('/login');
 				return;
 			}
-			const data = await res.json();
+
+			if (!data.success) {
+				navigateTo('/login');
+				return;
+			}
 
 			const welcomeEl = container.querySelector('#Welcome');
 			if (welcomeEl) welcomeEl.textContent = "Welcome, " + data.login + "!";
@@ -156,7 +163,7 @@ export function ProfileView() {
 			if (loginInput) loginInput.value = data.login;
 			if (emailInput) emailInput.value = data.email;
 			updateGameStats(data);
-			
+
 			await loadMatchHistory(data);
 		}
 		catch (err) {
@@ -172,8 +179,26 @@ export function ProfileView() {
 				fetch('/db/tournament-history', { credentials: 'include' })
 			]);
 
-			const matchData = await matchRes.json();
-			const tournamentData = await tournamentRes.json();
+			let matchData, tournamentData;
+			try {
+				matchData = await matchRes.json();
+				tournamentData = await tournamentRes.json();
+			} catch {
+				const listEl = container.querySelector('#matchHistoryList') as HTMLElement;
+				if (listEl) {
+					listEl.innerHTML = '<p class="text-gray-500 text-center">No matches or tournaments played yet.</p>';
+				}
+				return;
+			}
+
+			if (!matchData.success || !tournamentData.success) {
+				const listEl = container.querySelector('#matchHistoryList') as HTMLElement;
+				if (listEl) {
+					listEl.innerHTML = '<p class="text-gray-500 text-center">No matches or tournaments played yet.</p>';
+				}
+				return;
+			}
+
 			const listEl = container.querySelector('#matchHistoryList') as HTMLElement;
 
 			const matches = matchData.history || [];
@@ -182,7 +207,7 @@ export function ProfileView() {
 			// Combine and sort by date
 			const combined = [
 				...matches.map((m: any) => ({ ...m, type: 'match' })),
-				...tournaments.map((t: any) => ({ ...t, type: 'tournament' }))
+					...tournaments.map((t: any) => ({ ...t, type: 'tournament' }))
 			].sort((a, b) => new Date(b.played_at).getTime() - new Date(a.played_at).getTime());
 
 			if (combined.length > 0) {
@@ -234,7 +259,13 @@ export function ProfileView() {
 			} else {
 				listEl.innerHTML = '<p class="text-gray-500 text-center">No matches or tournaments played yet.</p>';
 			}
-		} catch (e) {
+		}
+		catch (err) {
+			// Silently handle error - just show empty state
+			const listEl = container.querySelector('#matchHistoryList') as HTMLElement;
+			if (listEl) {
+				listEl.innerHTML = '<p class="text-gray-500 text-center">No matches or tournaments played yet.</p>';
+			}
 		}
 	}
 
@@ -316,11 +347,18 @@ export function ProfileView() {
 					credentials: 'include'
 				});
 
-				const msg = await res.json();
 				const messageEl = container.querySelector('#editMessage');
+
+				let msg;
+				try {
+					msg = await res.json();
+				} catch {
+					msg = { success: false, message: 'Failed to update profile' };
+				}
+
 				if (messageEl) messageEl.textContent = msg.message || 'Update failed';
 
-				if (res.ok) {
+				if (msg.success) {
 					await loadProfile();
 				}
 			}
@@ -347,12 +385,14 @@ export function ProfileView() {
 				if (!file) {
 					const msgEl = container.querySelector('#avatarMessage');
 					if (msgEl) msgEl.textContent = 'Please select a file';
+					isSubmitting = false;
 					return;
 				}
 
 				if (file.size > 2 * 1024 * 1024) {
 					const msgEl = container.querySelector('#avatarMessage');
 					if (msgEl) msgEl.textContent = 'File too large! Max 2MB';
+					isSubmitting = false;
 					return;
 				}
 
@@ -360,6 +400,7 @@ export function ProfileView() {
 				if (!allowedTypes.includes(file.type)) {
 					const msgEl = container.querySelector('#avatarMessage');
 					if (msgEl) msgEl.textContent = 'Invalid file type! Only JPEG, PNG, WebP allowed';
+					isSubmitting = false;
 					return;
 				}
 
@@ -372,11 +413,18 @@ export function ProfileView() {
 					credentials: 'include'
 				});
 
-				const msg = await res.json();
 				const msgEl = container.querySelector('#avatarMessage');
+
+				let msg;
+				try {
+					msg = await res.json();
+				} catch {
+					msg = { success: false, message: 'Failed to upload avatar' };
+				}
+
 				if (msgEl) msgEl.textContent = msg.message || 'Upload failed';
 
-				if (res.ok) {
+				if (msg.success) {
 					await loadProfile();
 					fileInput.value = '';
 				}
@@ -402,11 +450,18 @@ export function ProfileView() {
 					credentials: 'include'
 				});
 
-				const msg = await res.json();
 				const msgEl = container.querySelector('#avatarMessage');
+
+				let msg;
+				try {
+					msg = await res.json();
+				} catch {
+					msg = { success: false, message: 'Failed to delete avatar' };
+				}
+
 				if (msgEl) msgEl.textContent = msg.message || 'Delete failed';
 
-				if (res.ok) {
+				if (msg.success) {
 					await loadProfile();
 				}
 			}
@@ -430,7 +485,14 @@ export function ProfileView() {
 					credentials: 'include'
 				});
 
-				if (res.ok) {
+				let msg;
+				try {
+					msg = await res.json();
+				} catch {
+					msg = { success: false };
+				}
+
+				if (msg.success) {
 					navigateTo('/');
 				} else {
 					alert('Failed to delete profile');

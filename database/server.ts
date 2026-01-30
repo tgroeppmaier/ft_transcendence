@@ -82,7 +82,7 @@ fastify.register(multipart, {
 fastify.decorate("authenticate", async (request, reply) => {
 	try {
 		const token = request.cookies?.token
-		if (!token) return reply.code(401).send({ message: 'Not authenticated' })
+		if (!token) return reply.code(200).send({ success: false, message: 'Not authenticated' })
 		const decoded = fastify.jwt.verify(token)
 		request.user = decoded
 
@@ -92,7 +92,7 @@ fastify.decorate("authenticate", async (request, reply) => {
 		await db.close()
 	}
 	catch (err) {
-		return reply.code(401).send({ message: 'Authentication error' })
+		return reply.code(200).send({ success: false, message: 'Authentication error' })
 	}
 })
 
@@ -116,33 +116,33 @@ fastify.post('/internal/match-result', async (request, reply) => {
 		// 1. Insert into match_history
 		await db.run(
 			`INSERT INTO match_history (player1_id, player2_id, winner_id, score_player1, score_player2, played_at)
-			 VALUES (?, ?, ?, ?, ?, datetime('now'))`,
+			VALUES (?, ?, ?, ?, ?, datetime('now'))`,
 			[player1_id, player2_id, winner_id, score1, score2]
 		)
 
 		// 2. Update User Stats (Player 1)
 		let p1Update = 'UPDATE users SET total_games = total_games + 1'
 		if (player1_id === winner_id) p1Update += ', wins = wins + 1'
-		else if (score1 === score2) p1Update += ', draws = draws + 1'
-		else p1Update += ', losses = losses + 1'
-		p1Update += ' WHERE id = ?'
+			else if (score1 === score2) p1Update += ', draws = draws + 1'
+				else p1Update += ', losses = losses + 1'
+					p1Update += ' WHERE id = ?'
 		await db.run(p1Update, [player1_id])
 
 		// 3. Update User Stats (Player 2)
 		let p2Update = 'UPDATE users SET total_games = total_games + 1'
 		if (player2_id === winner_id) p2Update += ', wins = wins + 1'
-		else if (score1 === score2) p2Update += ', draws = draws + 1'
-		else p2Update += ', losses = losses + 1'
-		p2Update += ' WHERE id = ?'
+			else if (score1 === score2) p2Update += ', draws = draws + 1'
+				else p2Update += ', losses = losses + 1'
+					p2Update += ' WHERE id = ?'
 		await db.run(p2Update, [player2_id])
 
 		await db.close()
-		return reply.code(200).send({ message: "Match recorded" })
+		return reply.code(200).send({ success: true, message: "Match recorded" })
 	}
 	catch (err) {
 		if (db) await db.close()
-		request.log.error(err)
-		return reply.code(500).send({ message: "Error recording match" })
+			request.log.error(err)
+		return reply.code(200).send({ success: false, message: "Error recording match" })
 	}
 })
 
@@ -153,18 +153,18 @@ fastify.post('/internal/check-friendship', async (request, reply) => {
 		db = await openDB()
 		const friendship = await db.get(
 			`SELECT id FROM friends WHERE
-			 ((requester_id = ? AND addressee_id = ?) OR
-			  (requester_id = ? AND addressee_id = ?))
+			((requester_id = ? AND addressee_id = ?) OR
+			 (requester_id = ? AND addressee_id = ?))
 			 AND status = 'accepted'`,
-			[user1_id, user2_id, user2_id, user1_id]
+				 [user1_id, user2_id, user2_id, user1_id]
 		)
 		await db.close()
-		return { areFriends: !!friendship }
+		return reply.code(200).send({ success: true, areFriends: !!friendship })
 	}
 	catch (err) {
 		if (db) await db.close()
-		request.log.error(err)
-		return reply.code(500).send({ message: "Error checking friendship" })
+			request.log.error(err)
+		return reply.code(200).send({ success: false, message: "Error checking friendship" })
 	}
 })
 
@@ -181,38 +181,38 @@ fastify.post('/registration', {
 		const { login, email, password } = request.body
 		const onlineStatus = 'offline'
 		if (!login || !email || !password)
-			return reply.code(400).send({ message: 'All fields are mandatory!' })
+			return reply.code(200).send({ success: false, message: 'All fields are mandatory!' })
 		if (!/^[a-zA-Z0-9_]+$/.test(login))
-			return reply.code(400).send({ message: 'Invalid login format!' })
+			return reply.code(200).send({ success: false, message: 'Invalid login format!' })
 		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-			return reply.code(400).send({ message: 'Invalid email format!' })
+			return reply.code(200).send({ success: false, message: 'Invalid email format!' })
 		if (password.length < 6)
-			return reply.code(400).send({ message: 'Password must be at least 6 characters!' })
+			return reply.code(200).send({ success: false, message: 'Password must be at least 6 characters!' })
 		if (password.length > 10)
-			return reply.code(400).send({ message: 'Password must be no longer than 10 characters!' })
+			return reply.code(200).send({ success: false, message: 'Password must be no longer than 10 characters!' })
 
 		db = await openDB()
 		const existingLogin = await db.get(`SELECT id FROM users WHERE login = ?`, [login])
 		if (existingLogin) {
 			await db.close()
-			return reply.code(400).send({ message: 'This login is already taken!' })
+			return reply.code(200).send({ success: false, message: 'This login is already taken!' })
 		}
 		const existingEmail = await db.get(`SELECT id FROM users WHERE email = ?`, [email])
 		if (existingEmail) {
 			await db.close()
-			return reply.code(400).send({ message: 'This email is already taken!' })
+			return reply.code(200).send({ success: false, message: 'This email is already taken!' })
 		}
 		request.log.info('Starting password hashing...')
 		const hashedPassword = await bcrypt.hash(password, 10)
 		request.log.info('Hashing successful.')
 		await db.run('INSERT INTO users (login, email, password, onlineStatus, avatar) VALUES (?, ?, ?, ?, ?)', [login, email, hashedPassword, onlineStatus, 'default.png'])
 		await db.close()
-		return reply.code(200).send({ message: 'Registration successful!' })
+		return reply.code(200).send({ success: true, message: 'Registration successful!' })
 	}
 	catch (err) {
 		if (db) await db.close()
-		request.log.error(err)
-		return reply.code(500).send({ message: 'Registration error: ' + err.message })
+			request.log.error(err)
+		return reply.code(200).send({ success: false, message: 'Registration error: ' + err.message })
 	}
 })
 
@@ -228,18 +228,18 @@ fastify.post('/login', {
 	try {
 		const { login, password } = request.body
 		if (!login || !password)
-			return reply.code(400).send({ message: 'Login and password required' })
+			return reply.code(200).send({ success: false, message: 'Login and password required' })
 
 		db = await openDB()
 		const user = await db.get('SELECT * FROM users WHERE login = ?', [login])
 		if (!user) {
 			await db.close()
-			return reply.code(401).send({ message: 'User not found' })
+			return reply.code(200).send({ success: false, message: 'User not found' })
 		}
 		const match = await bcrypt.compare(password, user.password)
 		if (!match) {
 			await db.close()
-			return reply.code(401).send({ message: 'Incorrect password' })
+			return reply.code(200).send({ success: false, message: 'Incorrect password' })
 		}
 		const token = fastify.jwt.sign(
 			{ id: user.id, login: user.login },
@@ -254,32 +254,32 @@ fastify.post('/login', {
 		})
 		await db.run('UPDATE users SET onlineStatus = ? WHERE id = ?', ['online', user.id])
 		await db.close()
-		return reply.code(200).send({ message: 'Login successful' })
+		return reply.code(200).send({ success: true, message: 'Login successful' })
 	}
 	catch (err) {
 		if (db) await db.close()
-		request.log.error(err)
-		return reply.code(500).send({ message: 'Login error: ' + err.message })
+			request.log.error(err)
+		return reply.code(200).send({ success: false, message: 'Login error: ' + err.message })
 	}
 })
 
 fastify.get('/auth/status', async (request, reply) => {
 	try {
 		const token = request.cookies?.token
-		if (!token) return { user: null }
-		
+		if (!token) return reply.code(200).send({ success: true, user: null })
+
 		const decoded = fastify.jwt.verify(token)
-		
+
 		const db = await openDB()
 		const user = await db.get('SELECT id, login FROM users WHERE id = ?', [decoded.id])
 		await db.close()
-		
-		if (!user) return { user: null }
-		
-		return { user: user }
+
+		if (!user) return reply.code(200).send({ success: true, user: null })
+
+		return reply.code(200).send({ success: true, user: user })
 	}
 	catch (err) {
-		return { user: null }
+		return reply.code(200).send({ success: true, user: null })
 	}
 })
 
@@ -290,12 +290,13 @@ fastify.post('/logout', { preHandler: [fastify.authenticate] }, async (request, 
 		db = await openDB()
 		await db.run('UPDATE users SET onlineStatus = ? WHERE id = ?', ['offline', id])
 		await db.close()
-		reply.clearCookie('token', { path: '/' }).code(200).send({ message: 'Logged out' })
+		reply.clearCookie('token', { path: '/' })
+		return reply.code(200).send({ success: true, message: 'Logged out' })
 	}
 	catch (err) {
 		if (db) await db.close()
-		request.log.error(err)
-		return reply.code(500).send({ message: 'Logout error' })
+			request.log.error(err)
+		return reply.code(200).send({ success: false, message: 'Logout error' })
 	}
 })
 
@@ -306,13 +307,13 @@ fastify.get('/profile', { preHandler: [fastify.authenticate] }, async (request, 
 		db = await openDB()
 		const u = await db.get('SELECT id, login, email, avatar, onlineStatus, wins, losses, draws, total_games FROM users WHERE id = ?', [id])
 		await db.close()
-		if (!u) return reply.code(404).send({ message: 'User not found' })
-		return reply.send(u)
+		if (!u) return reply.code(200).send({ success: false, message: 'User not found' })
+		return reply.code(200).send({ success: true, ...u })
 	}
 	catch (err) {
 		if (db) await db.close()
-		request.log.error(err)
-		return reply.code(500).send({ message: 'Error fetching profile' })
+			request.log.error(err)
+		return reply.code(200).send({ success: false, message: 'Error fetching profile' })
 	}
 })
 
@@ -321,22 +322,22 @@ fastify.put('/profile', { preHandler: [fastify.authenticate] }, async (request, 
 	try {
 		const { login, email, password } = request.body || {}
 		const { id } = request.user
-		if (!login || !email) return reply.code(400).send({ message: 'Login and email required' })
-		if (!/^[a-zA-Z0-9_]+$/.test(login)) return reply.code(400).send({ message: 'Invalid login characters' })
-		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return reply.code(400).send({ message: 'Invalid email' })
-		if (password && password.length < 6) return reply.code(400).send({ message: 'Password too short' })
-		if (password && password.length > 10) return reply.code(400).send({ message: 'Password too long' })
+		if (!login || !email) return reply.code(200).send({ success: false, message: 'Login and email required' })
+		if (!/^[a-zA-Z0-9_]+$/.test(login)) return reply.code(200).send({ success: false, message: 'Invalid login characters' })
+		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return reply.code(200).send({ success: false, message: 'Invalid email' })
+		if (password && password.length < 6) return reply.code(200).send({ success: false, message: 'Password too short' })
+		if (password && password.length > 10) return reply.code(200).send({ success: false, message: 'Password too long' })
 
 		db = await openDB()
 		const existingLogin = await db.get('SELECT id FROM users WHERE login = ? AND id != ?', [login, id])
 		if (existingLogin) {
 			await db.close()
-			return reply.code(400).send({ message: 'Login is already taken' })
+			return reply.code(200).send({ success: false, message: 'Login is already taken' })
 		}
 		const existingEmail = await db.get('SELECT id FROM users WHERE email = ? AND id != ?', [email, id])
 		if (existingEmail) {
 			await db.close()
-			return reply.code(400).send({ message: 'Email is already taken' })
+			return reply.code(200).send({ success: false, message: 'Email is already taken' })
 		}
 		let sql, params
 		if (password && password !== '') {
@@ -350,12 +351,12 @@ fastify.put('/profile', { preHandler: [fastify.authenticate] }, async (request, 
 		}
 		await db.run(sql, params)
 		await db.close()
-		return reply.code(200).send({ message: 'Profile updated' })
+		return reply.code(200).send({ success: true, message: 'Profile updated' })
 	}
 	catch (err) {
 		if (db) await db.close()
-		request.log.error(err)
-		return reply.code(500).send({ message: 'Update error' })
+			request.log.error(err)
+		return reply.code(200).send({ success: false, message: 'Update error' })
 	}
 })
 
@@ -369,18 +370,18 @@ fastify.delete('/profile', { preHandler: [fastify.authenticate] }, async (reques
 		if (oldAvatar && oldAvatar !== 'default.png') {
 			const fp = path.join(UPLOADS_DIR, oldAvatar)
 			try {
-				 await fsUnlink(fp)
+				await fsUnlink(fp)
 			} catch (e) { /* ignore */ }
 		}
 		await db.run('DELETE FROM users WHERE id = ?', [id])
 		await db.close()
 		reply.clearCookie('token', { path: '/' })
-		return reply.code(200).send({ message: 'Profile deleted' })
+		return reply.code(200).send({ success: true, message: 'Profile deleted' })
 	}
 	catch (err) {
 		if (db) await db.close()
-		request.log.error(err)
-		return reply.code(500).send({ message: 'Delete error' })
+			request.log.error(err)
+		return reply.code(200).send({ success: false, message: 'Delete error' })
 	}
 })
 
@@ -391,21 +392,21 @@ fastify.get('/search', { preHandler: [fastify.authenticate] }, async (request, r
 		const { query } = request.query
 
 		if (!query || query.trim() === "") {
-			return reply.code(400).send({ message: "Query is required", users: [] })
+			return reply.code(200).send({ success: false, message: "Query is required", users: [] })
 		}
 
 		db = await openDB()
 		const users = await db.all(
 			`SELECT id, login, avatar, onlineStatus FROM users WHERE login LIKE ? AND id != ? LIMIT 30`,
-			[`%${query}%`, id]
+				[`%${query}%`, id]
 		)
 		await db.close()
-		return reply.send({ users })
+		return reply.code(200).send({ success: true, users })
 	}
 	catch (err) {
 		if (db) await db.close()
-		request.log.error(err)
-		return reply.code(500).send({ message: "Search error" })
+			request.log.error(err)
+		return reply.code(200).send({ success: false, message: "Search error" })
 	}
 })
 
@@ -427,12 +428,12 @@ fastify.post('/friend-request', {
 
 		if (!addressee_id) {
 			request.log.warn('[Friend Request] Missing addressee_id')
-			return reply.code(400).send({ message: "Addressee ID is required" })
+			return reply.code(200).send({ success: false, message: "Addressee ID is required" })
 		}
 
 		if (requester_id === addressee_id) {
 			request.log.warn('[Friend Request] User tried to add themselves')
-			return reply.code(400).send({ message: "You cannot add yourself" })
+			return reply.code(200).send({ success: false, message: "You cannot add yourself" })
 		}
 
 		db = await openDB()
@@ -440,23 +441,23 @@ fastify.post('/friend-request', {
 		const addressee = await db.get('SELECT id FROM users WHERE id = ?', [addressee_id])
 		if (!addressee) {
 			await db.close()
-			return reply.code(404).send({ message: "User not found" })
+			return reply.code(200).send({ success: false, message: "User not found" })
 		}
 
 		const existingRequest = await db.get(
 			`SELECT id, status FROM friends
-			 WHERE (requester_id = ? AND addressee_id = ?)
-			 OR (requester_id = ? AND addressee_id = ?)`,
-			[requester_id, addressee_id, addressee_id, requester_id]
+			WHERE (requester_id = ? AND addressee_id = ?)
+			OR (requester_id = ? AND addressee_id = ?)`,
+				[requester_id, addressee_id, addressee_id, requester_id]
 		)
 
 		if (existingRequest) {
 			await db.close()
 			request.log.warn(`[Friend Request] Existing request found: ${JSON.stringify(existingRequest)}`)
 			if (existingRequest.status === 'pending') {
-				return reply.code(400).send({ message: "Friend request already sent" })
+				return reply.code(200).send({ success: false, message: "Friend request already sent" })
 			} else if (existingRequest.status === 'accepted') {
-				return reply.code(400).send({ message: "You are already friends" })
+				return reply.code(200).send({ success: false, message: "You are already friends" })
 			}
 		}
 
@@ -466,12 +467,12 @@ fastify.post('/friend-request', {
 		)
 
 		await db.close()
-		return reply.code(200).send({ message: "Friend request sent" })
+		return reply.code(200).send({ success: true, message: "Friend request sent" })
 	}
 	catch (err) {
 		if (db) await db.close()
-		request.log.error(err)
-		return reply.code(500).send({ message: "Error sending friend request" })
+			request.log.error(err)
+		return reply.code(200).send({ success: false, message: "Error sending friend request" })
 	}
 })
 
@@ -482,30 +483,30 @@ fastify.delete('/friend-remove', { preHandler: [fastify.authenticate] }, async (
 		const { friend_id } = request.body
 
 		if (!friend_id) {
-			return reply.code(400).send({ message: "Friend ID is required" })
+			return reply.code(200).send({ success: false, message: "Friend ID is required" })
 		}
 
 		db = await openDB()
 
 		const result = await db.run(
 			`DELETE FROM friends
-			 WHERE (requester_id = ? AND addressee_id = ?)
-			 OR (requester_id = ? AND addressee_id = ?)`,
-			[userId, friend_id, friend_id, userId]
+			WHERE (requester_id = ? AND addressee_id = ?)
+			OR (requester_id = ? AND addressee_id = ?)`,
+				[userId, friend_id, friend_id, userId]
 		)
 
 		await db.close()
 
 		if (result.changes === 0) {
-			return reply.code(404).send({ message: "Friend record not found" })
+			return reply.code(200).send({ success: false, message: "Friend record not found" })
 		}
 
-		return reply.code(200).send({ message: "Friend removed" })
+		return reply.code(200).send({ success: true, message: "Friend removed" })
 	}
 	catch (err) {
 		if (db) await db.close()
-		request.log.error(err)
-		return reply.code(500).send({ message: "Error removing friend" })
+			request.log.error(err)
+		return reply.code(200).send({ success: false, message: "Error removing friend" })
 	}
 })
 
@@ -517,22 +518,22 @@ fastify.get('/friends', { preHandler: [fastify.authenticate] }, async (request, 
 
 		const friends = await db.all(
 			`SELECT u.id, u.login, u.avatar, u.onlineStatus
-			 FROM users u
-			 WHERE (
+			FROM users u
+			WHERE (
 				(SELECT status FROM friends WHERE requester_id = ? AND addressee_id = u.id) = 'accepted'
 				OR
 				(SELECT status FROM friends WHERE requester_id = u.id AND addressee_id = ?) = 'accepted'
-			 )`,
+			)`,
 			[userId, userId]
 		)
 
 		await db.close()
-		return reply.code(200).send({ friends: friends || [] })
+		return reply.code(200).send({ success: true, friends: friends || [] })
 	}
 	catch (err) {
 		if (db) await db.close()
-		request.log.error(err)
-		return reply.code(500).send({ message: "Error loading friends" })
+			request.log.error(err)
+		return reply.code(200).send({ success: false, message: "Error loading friends" })
 	}
 })
 
@@ -543,7 +544,7 @@ fastify.post('/friend-accept', { preHandler: [fastify.authenticate] }, async (re
 		const user_id = request.user.id
 
 		if (!request_id) {
-			return reply.code(400).send({ message: "Request ID is required" })
+			return reply.code(200).send({ success: false, message: "Request ID is required" })
 		}
 
 		db = await openDB()
@@ -555,7 +556,7 @@ fastify.post('/friend-accept', { preHandler: [fastify.authenticate] }, async (re
 
 		if (!friendRequest) {
 			await db.close()
-			return reply.code(404).send({ message: "Friend request not found" })
+			return reply.code(200).send({ success: false, message: "Friend request not found" })
 		}
 
 		await db.run(
@@ -569,12 +570,12 @@ fastify.post('/friend-accept', { preHandler: [fastify.authenticate] }, async (re
 		)
 
 		await db.close()
-		return reply.code(200).send({ message: "Friend request accepted", friend })
+		return reply.code(200).send({ success: true, message: "Friend request accepted", friend })
 	}
 	catch (err) {
 		if (db) await db.close()
-		request.log.error(err)
-		return reply.code(500).send({ message: "Error accepting friend request" })
+			request.log.error(err)
+		return reply.code(200).send({ success: false, message: "Error accepting friend request" })
 	}
 })
 
@@ -585,7 +586,7 @@ fastify.post('/friend-reject', { preHandler: [fastify.authenticate] }, async (re
 		const user_id = request.user.id
 
 		if (!request_id) {
-			return reply.code(400).send({ message: "Request ID is required" })
+			return reply.code(200).send({ success: false, message: "Request ID is required" })
 		}
 
 		db = await openDB()
@@ -597,18 +598,18 @@ fastify.post('/friend-reject', { preHandler: [fastify.authenticate] }, async (re
 
 		if (!friendRequest) {
 			await db.close()
-			return reply.code(404).send({ message: "Friend request not found" })
+			return reply.code(200).send({ success: false, message: "Friend request not found" })
 		}
 
 		await db.run('DELETE FROM friends WHERE id = ?', [request_id])
 
 		await db.close()
-		return reply.code(200).send({ message: "Friend request rejected" })
+		return reply.code(200).send({ success: true, message: "Friend request rejected" })
 	}
 	catch (err) {
 		if (db) await db.close()
-		request.log.error(err)
-		return reply.code(500).send({ message: "Error rejecting friend request" })
+			request.log.error(err)
+		return reply.code(200).send({ success: false, message: "Error rejecting friend request" })
 	}
 })
 
@@ -620,12 +621,12 @@ fastify.get('/friend-requests', { preHandler: [fastify.authenticate] }, async (r
 
 		const requests = await db.all(
 			`SELECT
-				f.id,
-				f.requester_id,
-				u.id as user_id,
-				u.login,
-				u.avatar,
-				u.onlineStatus
+			f.id,
+			f.requester_id,
+			u.id as user_id,
+			u.login,
+			u.avatar,
+			u.onlineStatus
 			FROM friends f
 			JOIN users u ON f.requester_id = u.id
 			WHERE f.addressee_id = ? AND f.status = 'pending'
@@ -634,12 +635,12 @@ fastify.get('/friend-requests', { preHandler: [fastify.authenticate] }, async (r
 		)
 
 		await db.close()
-		return reply.send({ requests: requests || [] })
+		return reply.code(200).send({ success: true, requests: requests || [] })
 	}
 	catch (err) {
 		if (db) await db.close()
-		request.log.error(err)
-		return reply.code(500).send({ message: "Error fetching friend requests" })
+			request.log.error(err)
+		return reply.code(200).send({ success: false, message: "Error fetching friend requests" })
 	}
 })
 
@@ -651,28 +652,28 @@ fastify.get('/match-history', { preHandler: [fastify.authenticate] }, async (req
 
 		const history = await db.all(
 			`SELECT
-				mh.played_at,
-				mh.score_player1,
-				mh.score_player2,
-				mh.winner_id,
-				u1.login as p1_login,
-				u2.login as p2_login
-			 FROM match_history mh
-			 JOIN users u1 ON mh.player1_id = u1.id
-			 JOIN users u2 ON mh.player2_id = u2.id
-			 WHERE mh.player1_id = ? OR mh.player2_id = ?
-			 ORDER BY mh.played_at DESC
-			 LIMIT 20`,
+			mh.played_at,
+			mh.score_player1,
+			mh.score_player2,
+			mh.winner_id,
+			u1.login as p1_login,
+			u2.login as p2_login
+			FROM match_history mh
+			JOIN users u1 ON mh.player1_id = u1.id
+			JOIN users u2 ON mh.player2_id = u2.id
+			WHERE mh.player1_id = ? OR mh.player2_id = ?
+				ORDER BY mh.played_at DESC
+			LIMIT 20`,
 			[userId, userId]
 		)
 
 		await db.close()
-		return reply.send({ history: history || [] })
+		return reply.code(200).send({ success: true, history: history || [] })
 	}
 	catch (err) {
 		if (db) await db.close()
-		request.log.error(err)
-		return reply.code(500).send({ message: "Error fetching history" })
+			request.log.error(err)
+		return reply.code(200).send({ success: false, message: "Error fetching history" })
 	}
 })
 
@@ -683,7 +684,7 @@ fastify.post('/tournament-result', { preHandler: [fastify.authenticate] }, async
 		const { placement } = request.body
 
 		if (!placement || placement < 1 || placement > 4) {
-			return reply.code(400).send({ message: "Invalid placement. Must be between 1 and 4." })
+			return reply.code(200).send({ success: false, message: "Invalid placement. Must be between 1 and 4." })
 		}
 
 		db = await openDB()
@@ -692,9 +693,9 @@ fastify.post('/tournament-result', { preHandler: [fastify.authenticate] }, async
 		// 1. Check time since last tournament (minimum 3 minutes between tournaments)
 		const lastTournament = await db.get(
 			`SELECT played_at FROM tournaments
-			 WHERE user_id = ?
-			 ORDER BY played_at DESC
-			 LIMIT 1`,
+			WHERE user_id = ?
+				ORDER BY played_at DESC
+			LIMIT 1`,
 			[userId]
 		)
 
@@ -705,7 +706,8 @@ fastify.post('/tournament-result', { preHandler: [fastify.authenticate] }, async
 
 			if (minutesSince < 3) {
 				await db.close()
-				return reply.code(429).send({
+				return reply.code(200).send({
+					success: false,
 					message: "Please wait at least 3 minutes between tournament submissions."
 				})
 			}
@@ -717,14 +719,15 @@ fastify.post('/tournament-result', { preHandler: [fastify.authenticate] }, async
 
 		const tournamentsToday = await db.get(
 			`SELECT COUNT(*) as count FROM tournaments
-			 WHERE user_id = ?
-			 AND datetime(played_at) >= datetime(?)`,
-			[userId, todayStart.toISOString()]
+			WHERE user_id = ?
+				AND datetime(played_at) >= datetime(?)`,
+				[userId, todayStart.toISOString()]
 		)
 
 		if (tournamentsToday.count >= 20) {
 			await db.close()
-			return reply.code(429).send({
+			return reply.code(200).send({
+				success: false,
 				message: "Daily tournament limit reached (20 per day)."
 			})
 		}
@@ -732,17 +735,17 @@ fastify.post('/tournament-result', { preHandler: [fastify.authenticate] }, async
 		// 3. Save the result
 		await db.run(
 			`INSERT INTO tournaments (user_id, placement, played_at)
-			 VALUES (?, ?, datetime('now'))`,
+			VALUES (?, ?, datetime('now'))`,
 			[userId, placement]
 		)
 
 		await db.close()
-		return reply.code(200).send({ message: "Tournament result saved" })
+		return reply.code(200).send({ success: true, message: "Tournament result saved" })
 	}
 	catch (err) {
 		if (db) await db.close()
-		request.log.error(err)
-		return reply.code(500).send({ message: "Error saving tournament result" })
+			request.log.error(err)
+		return reply.code(200).send({ success: false, message: "Error saving tournament result" })
 	}
 })
 
@@ -754,20 +757,20 @@ fastify.get('/tournament-history', { preHandler: [fastify.authenticate] }, async
 
 		const tournaments = await db.all(
 			`SELECT placement, played_at
-			 FROM tournaments
-			 WHERE user_id = ?
-			 ORDER BY played_at DESC
-			 LIMIT 20`,
+			FROM tournaments
+			WHERE user_id = ?
+				ORDER BY played_at DESC
+			LIMIT 20`,
 			[userId]
 		)
 
 		await db.close()
-		return reply.send({ tournaments: tournaments || [] })
+		return reply.code(200).send({ success: true, tournaments: tournaments || [] })
 	}
 	catch (err) {
 		if (db) await db.close()
-		request.log.error(err)
-		return reply.code(500).send({ message: "Error fetching tournament history" })
+			request.log.error(err)
+		return reply.code(200).send({ success: false, message: "Error fetching tournament history" })
 	}
 })
 
@@ -787,19 +790,19 @@ fastify.post('/avatar', {
 	}
 	catch (err) {
 		request.log.error(err)
-		return reply.code(401).send({ message: 'Authentication error' })
+		return reply.code(200).send({ success: false, message: 'Authentication error' })
 	}
 	await ensureUploadsDir()
 	const data = await request.file()
 	if (!data) {
-		return reply.code(400).send({ message: 'No file uploaded' })
+		return reply.code(200).send({ success: false, message: 'No file uploaded' })
 	}
 	if (!data.filename) {
-		return reply.code(400).send({ message: 'No file' })
+		return reply.code(200).send({ success: false, message: 'No file' })
 	}
 	const allowed = ['image/jpeg', 'image/png', 'image/webp']
 	if (!allowed.includes(data.mimetype)) {
-		return reply.code(400).send({ message: 'Invalid image format' })
+		return reply.code(200).send({ success: false, message: 'Invalid image format' })
 	}
 	const ext = path.extname(data.filename).toLowerCase()
 	const newName = Date.now() + '-' + Math.random().toString(36).slice(2, 9) + ext
@@ -809,7 +812,7 @@ fastify.post('/avatar', {
 
 		if (data.file.truncated) {
 			await fsUnlink(destPath)
-			return reply.code(413).send({ message: 'File too large! Max 2MB' })
+			return reply.code(200).send({ success: false, message: 'File too large! Max 2MB' })
 		}
 
 		// Magic Byte Verification
@@ -823,19 +826,19 @@ fastify.post('/avatar', {
 			let isValid = false
 			// JPEG: FF D8 FF
 			if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) isValid = true
-			// PNG: 89 50 4E 47
-			else if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) isValid = true
-			// WebP: RIFF ... WEBP
-			else if (buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
-					 buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) isValid = true
+				// PNG: 89 50 4E 47
+				else if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) isValid = true
+					// WebP: RIFF ... WEBP
+					else if (buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
+						 buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) isValid = true
 
-			if (!isValid) {
-				await fsUnlink(destPath)
-				return reply.code(400).send({ message: 'Invalid file content' })
-			}
+						if (!isValid) {
+							await fsUnlink(destPath)
+							return reply.code(200).send({ success: false, message: 'Invalid file content' })
+						}
 		} catch (err) {
 			if (fd) await fsClose(fd)
-			await fsUnlink(destPath)
+				await fsUnlink(destPath)
 			throw err
 		}
 
@@ -850,12 +853,12 @@ fastify.post('/avatar', {
 		}
 		await db.run('UPDATE users SET avatar = ? WHERE id = ?', [newName, id])
 		await db.close()
-		return reply.code(200).send({ message: 'Avatar uploaded', avatar: newName })
+		return reply.code(200).send({ success: true, message: 'Avatar uploaded', avatar: newName })
 	}
 	catch (err) {
 		if (db) await db.close()
-		request.log.error(err)
-		return reply.code(500).send({ message: 'Upload error' })
+			request.log.error(err)
+		return reply.code(200).send({ success: false, message: 'Upload error' })
 	}
 })
 
@@ -871,12 +874,12 @@ fastify.delete('/avatar', { preHandler: [fastify.authenticate] }, async (request
 		}
 		await db.run('UPDATE users SET avatar = ? WHERE id = ?', ['', id])
 		await db.close()
-		return reply.code(200).send({ message: 'Avatar deleted' })
+		return reply.code(200).send({ success: true, message: 'Avatar deleted' })
 	}
 	catch (err) {
 		if (db) await db.close()
-		request.log.error(err)
-		return reply.code(500).send({ message: 'Delete avatar error' })
+			request.log.error(err)
+		return reply.code(200).send({ success: false, message: 'Delete avatar error' })
 	}
 })
 
@@ -892,14 +895,14 @@ fastify.get('/auth/google', async (req, reply) => {
 
 	const url =
 		"https://accounts.google.com/o/oauth2/v2/auth?" +
-		new URLSearchParams({
-			client_id: GOOGLE_CLIENT_ID,
-			redirect_uri: redirectUri,
-			response_type: "code",
-			scope: "email profile",
-			access_type: "offline",
-			prompt: "consent"
-		})
+	new URLSearchParams({
+		client_id: GOOGLE_CLIENT_ID,
+		redirect_uri: redirectUri,
+		response_type: "code",
+		scope: "email profile",
+		access_type: "offline",
+		prompt: "consent"
+	})
 
 	reply.redirect(url)
 })
@@ -913,7 +916,7 @@ fastify.get('/auth/google/callback', async (req, reply) => {
 
 		if (!code) {
 			req.log.error('No code from Google')
-			return reply.code(400).send({ message: "No code from Google" })
+			return reply.code(200).send({ success: false, message: "No code from Google" })
 		}
 
 		// Dynamic Redirect URI: Must match the one sent in the first step
@@ -943,7 +946,7 @@ fastify.get('/auth/google/callback', async (req, reply) => {
 
 		if (!tokenData.access_token) {
 			req.log.error('Token error:', JSON.stringify(tokenData))
-			return reply.code(400).send({ message: "Failed to get Google token" })
+			return reply.code(200).send({ success: false, message: "Failed to get Google token" })
 		}
 
 		req.log.info('Getting user profile...')
@@ -969,7 +972,7 @@ fastify.get('/auth/google/callback', async (req, reply) => {
 			req.log.info('[DB] Creating new user with login:', login)
 			await db.run(
 				`INSERT INTO users (login, email, password, onlineStatus, avatar)
-				 VALUES (?, ?, ?, 'online', 'default.png')`,
+				VALUES (?, ?, ?, 'online', 'default.png')`,
 				[login, email, null]
 			)
 			req.log.info('[DB] Insert completed, fetching user...')
@@ -1003,7 +1006,7 @@ fastify.get('/auth/google/callback', async (req, reply) => {
 		req.log.info('[DB] Database closed successfully')
 
 		req.log.info('=== Google Callback Success ===')
-		
+
 		let frontend = (process.env.FRONTEND_URL || 'https://localhost:8443').replace(/\/$/, '')
 		// Dynamic Frontend URL: If default/localhost, use the actual request host
 		if (!process.env.FRONTEND_URL || process.env.FRONTEND_URL.includes('localhost')) {
@@ -1033,7 +1036,7 @@ fastify.get('/auth/google/callback', async (req, reply) => {
 			}
 		}
 
-		return reply.code(500).send({ message: "Google auth error: " + err.message })
+		return reply.code(200).send({ success: false, message: "Google auth error: " + err.message })
 	}
 })
 

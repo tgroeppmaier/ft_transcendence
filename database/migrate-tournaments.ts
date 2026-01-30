@@ -36,11 +36,11 @@ async function migrateTournaments() {
 
 		// Create tournaments table
 		await db.exec(`CREATE TABLE IF NOT EXISTS tournaments (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		user_id INTEGER NOT NULL,
-		placement INTEGER NOT NULL,
-		played_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id INTEGER NOT NULL,
+			placement INTEGER NOT NULL,
+			played_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 		);
 		CREATE INDEX IF NOT EXISTS idx_tournaments_user ON tournaments(user_id);`)
 

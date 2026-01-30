@@ -2,207 +2,212 @@ import { navigateTo } from "../router.js";
 import { LocalTournament } from "../utils/localTournament.js";
 
 export function LocalTournamentView() {
-  const container = document.createElement("div");
-  container.className = "flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4";
+	const container = document.createElement("div");
+	container.className = "flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4";
 
-  // State
-  let isLoggedIn = false;
-  let loggedUserId: number | undefined;
-  let loggedUserName: string = "";
-  let playerNames: string[] = ["", "", "", ""];
-  let tournamentCleanup: (() => void) | null = null;
+	// State
+	let isLoggedIn = false;
+	let loggedUserId: number | undefined;
+	let loggedUserName: string = "";
+	let playerNames: string[] = ["", "", "", ""];
+	let tournamentCleanup: (() => void) | null = null;
 
-  const render = async () => {
-    container.innerHTML = "";
+	const render = async () => {
+		container.innerHTML = "";
 
-    // Check if user is logged in
-    try {
-      const res = await fetch("/db/auth/status", { credentials: "include" });
-      const data = await res.json();
-      
-      if (data.user) {
-        loggedUserId = data.user.id;
-        loggedUserName = data.user.login;
-        isLoggedIn = true;
-        // If logged in, only need 3 additional players
-        playerNames = ["", "", ""];
-      } else {
-        isLoggedIn = false;
-      }
-    } catch (err) {
-      // User not logged in, continue with anonymous mode
-      isLoggedIn = false;
-    }
+		// Check if user is logged in
+		try {
+			const res = await fetch("/db/auth/status", { credentials: "include" });
+			let data;
+			try {
+				data = await res.json();
+			} catch {
+				data = { success: true, user: null };
+			}
 
-    const card = document.createElement("div");
-    card.className = "bg-white p-8 rounded-xl shadow-md w-full max-w-md";
+			if (data.user) {
+				loggedUserId = data.user.id;
+				loggedUserName = data.user.login;
+				isLoggedIn = true;
+				// If logged in, only need 3 additional players
+				playerNames = ["", "", ""];
+			} else {
+				isLoggedIn = false;
+			}
+		} catch (err) {
+			// User not logged in, continue with anonymous mode
+			isLoggedIn = false;
+		}
 
-    const title = document.createElement("h2");
-    title.className = "text-2xl font-bold mb-6 text-center text-gray-800"
-    title.textContent = "Local Tournament (4 Players)";
-    card.appendChild(title);
+		const card = document.createElement("div");
+		card.className = "bg-white p-8 rounded-xl shadow-md w-full max-w-md";
 
-    const form = document.createElement("div");
-    form.className = "flex flex-col gap-3 mb-6";
+		const title = document.createElement("h2");
+		title.className = "text-2xl font-bold mb-6 text-center text-gray-800"
+		title.textContent = "Local Tournament (4 Players)";
+		card.appendChild(title);
 
-    // If logged in, show the logged user as Player 1
-    if (isLoggedIn) {
-      const loggedGroup = document.createElement("div");
-      
-      const loggedLabel = document.createElement("label");
-      loggedLabel.className = "block text-gray-700 text-sm font-bold mb-1";
-      loggedLabel.textContent = "Player 1 (You):";
+		const form = document.createElement("div");
+		form.className = "flex flex-col gap-3 mb-6";
 
-      const loggedInput = document.createElement("input");
-      loggedInput.type = "text";
-      loggedInput.value = loggedUserName;
-      loggedInput.disabled = true;
-      loggedInput.className = "shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight bg-gray-100 cursor-not-allowed";
+		// If logged in, show the logged user as Player 1
+		if (isLoggedIn) {
+			const loggedGroup = document.createElement("div");
 
-      loggedGroup.appendChild(loggedLabel);
-      loggedGroup.appendChild(loggedInput);
-      form.appendChild(loggedGroup);
-    }
+			const loggedLabel = document.createElement("label");
+			loggedLabel.className = "block text-gray-700 text-sm font-bold mb-1";
+			loggedLabel.textContent = "Player 1 (You):";
 
-    playerNames.forEach((name, index) => {
-      const group = document.createElement("div");
+			const loggedInput = document.createElement("input");
+			loggedInput.type = "text";
+			loggedInput.value = loggedUserName;
+			loggedInput.disabled = true;
+			loggedInput.className = "shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight bg-gray-100 cursor-not-allowed";
 
-      const label = document.createElement("label");
-      label.className = "block text-gray-700 text-sm font-bold mb-1";
-      label.textContent = `Player ${isLoggedIn ? index + 2 : index + 1} Name:`;
+			loggedGroup.appendChild(loggedLabel);
+			loggedGroup.appendChild(loggedInput);
+			form.appendChild(loggedGroup);
+		}
 
-      const input = document.createElement("input");
-      input.type = "text";
-      input.value = name;
-      input.maxLength = 15;
-      input.placeholder = "Max 15 characters";
-      input.autocomplete = "off";
-      input.className = "shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline";
-      input.oninput = (e) => {
-        playerNames[index] = (e.target as HTMLInputElement).value;
-      };
+		playerNames.forEach((name, index) => {
+			const group = document.createElement("div");
 
-      group.appendChild(label);
-      group.appendChild(input);
-      form.appendChild(group);
-    });
+			const label = document.createElement("label");
+			label.className = "block text-gray-700 text-sm font-bold mb-1";
+			label.textContent = `Player ${isLoggedIn ? index + 2 : index + 1} Name:`;
 
-    const btnGroup = document.createElement("div");
-    btnGroup.className = "flex gap-4";
+			const input = document.createElement("input");
+			input.type = "text";
+			input.value = name;
+			input.maxLength = 15;
+			input.placeholder = "Max 15 characters";
+			input.autocomplete = "off";
+			input.className = "shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline";
+			input.oninput = (e) => {
+				playerNames[index] = (e.target as HTMLInputElement).value;
+			};
 
-    const backBtn = document.createElement("button");
-    backBtn.className = "flex-1 bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition";
-    backBtn.textContent = "Back";
-    backBtn.onclick = () => {
-      navigateTo(isLoggedIn ? "/menu" : "/");
-    };
+			group.appendChild(label);
+			group.appendChild(input);
+			form.appendChild(group);
+		});
 
-    const startBtn = document.createElement("button");
-    startBtn.className = "flex-1 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition";
-    startBtn.textContent = "Start Tournament";
-    startBtn.onclick = () => {
-      const trimmedNames = playerNames.map(name => name.trim());
+		const btnGroup = document.createElement("div");
+		btnGroup.className = "flex gap-4";
 
-      // Check for empty names
-      if (trimmedNames.some(name => !name)) {
-          alert("Please ensure all player names are filled out.");
-          return;
-      }
+		const backBtn = document.createElement("button");
+		backBtn.className = "flex-1 bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition";
+		backBtn.textContent = "Back";
+		backBtn.onclick = () => {
+			navigateTo(isLoggedIn ? "/menu" : "/");
+		};
 
-      // Combine with logged user name if logged in
-      const allPlayers = isLoggedIn ? [loggedUserName, ...trimmedNames] : trimmedNames;
+		const startBtn = document.createElement("button");
+		startBtn.className = "flex-1 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition";
+		startBtn.textContent = "Start Tournament";
+		startBtn.onclick = () => {
+			const trimmedNames = playerNames.map(name => name.trim());
 
-      // Check for duplicates
-      const uniqueNames = new Set(allPlayers);
-      if (uniqueNames.size !== allPlayers.length) {
-          alert("Player names must be unique. Please choose different names.");
-          return;
-      }
+			// Check for empty names
+			if (trimmedNames.some(name => !name)) {
+				alert("Please ensure all player names are filled out.");
+				return;
+			}
 
-      // Check for allowed characters
-      const nameRegex = /^[a-zA-Z0-9\s-']+$/;
-      const invalidName = trimmedNames.find(name => !nameRegex.test(name));
-      if (invalidName) {
-          alert(`Invalid name: "${invalidName}".\nNames can only contain letters, numbers, spaces, hyphens, and apostrophes.`);
-          return;
-      }
+			// Combine with logged user name if logged in
+			const allPlayers = isLoggedIn ? [loggedUserName, ...trimmedNames] : trimmedNames;
 
-      // Reset container for game view
-      container.innerHTML = "";
-      container.className = "flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4";
-      container.id = "local-tournament";
+			// Check for duplicates
+			const uniqueNames = new Set(allPlayers);
+			if (uniqueNames.size !== allPlayers.length) {
+				alert("Player names must be unique. Please choose different names.");
+				return;
+			}
 
-      container.innerHTML = `
-        <div class="mb-4">
-          <button id="back-to-main" class="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition shadow-sm">
-            ← Back to ${isLoggedIn ? "Menu" : "Home"}
-          </button>
-        </div>
-        <canvas id="board" width="800" height="600" class="shadow-2xl bg-black"></canvas>
-      `;
+			// Check for allowed characters
+			const nameRegex = /^[a-zA-Z0-9\s-']+$/;
+			const invalidName = trimmedNames.find(name => !nameRegex.test(name));
+			if (invalidName) {
+				alert(`Invalid name: "${invalidName}".\nNames can only contain letters, numbers, spaces, hyphens, and apostrophes.`);
+				return;
+			}
 
-      const backButton = container.querySelector("#back-to-main");
-      if (backButton) {
-        backButton.addEventListener("click", (e) => {
-          e.preventDefault();
-          navigateTo(isLoggedIn ? "/menu" : "/");
-        });
-      }
+			// Reset container for game view
+			container.innerHTML = "";
+			container.className = "flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4";
+			container.id = "local-tournament";
 
-      const canvas = container.querySelector<HTMLCanvasElement>("#board");
-      if (!(canvas instanceof HTMLCanvasElement))
-        throw new Error("Canvas not found");
+			container.innerHTML = `
+			<div class="mb-4">
+			<button id="back-to-main" class="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition shadow-sm">
+			← Back to ${isLoggedIn ? "Menu" : "Home"}
+			</button>
+			</div>
+			<canvas id="board" width="800" height="600" class="shadow-2xl bg-black"></canvas>
+			`;
 
-      const ctx = canvas.getContext("2d");
-      if (!ctx)
-        throw new Error("Context not found");
+			const backButton = container.querySelector("#back-to-main");
+			if (backButton) {
+				backButton.addEventListener("click", (e) => {
+					e.preventDefault();
+					navigateTo(isLoggedIn ? "/menu" : "/");
+				});
+			}
 
-      const tournament = new LocalTournament(canvas, ctx, allPlayers, 
-        isLoggedIn ? { loggedUserId, loggedUserName } : undefined
-      );
+			const canvas = container.querySelector<HTMLCanvasElement>("#board");
+			if (!(canvas instanceof HTMLCanvasElement))
+				throw new Error("Canvas not found");
 
-      const onKeyDown = (e: KeyboardEvent) => {
-        tournament.activeGame?.onKeyDown(e.key);
-      };
+			const ctx = canvas.getContext("2d");
+			if (!ctx)
+				throw new Error("Context not found");
 
-      const onKeyUp = (e: KeyboardEvent) => {
-        tournament.activeGame?.onKeyUp(e.key);
-      };
+			const tournament = new LocalTournament(canvas, ctx, allPlayers,
+							       isLoggedIn ? { loggedUserId, loggedUserName } : undefined
+							      );
 
-      const onCanvasClick = () => {
-        tournament.activeGame?.resetGame();
-      };
+							      const onKeyDown = (e: KeyboardEvent) => {
+								      tournament.activeGame?.onKeyDown(e.key);
+							      };
 
-      tournamentCleanup = () => {
-        tournament.stop();
-        document.removeEventListener("keydown", onKeyDown);
-        document.removeEventListener("keyup", onKeyUp);
-        canvas.removeEventListener("click", onCanvasClick);
-      };
+							      const onKeyUp = (e: KeyboardEvent) => {
+								      tournament.activeGame?.onKeyUp(e.key);
+							      };
 
-      // Adding event listeners
-      document.addEventListener("keydown", onKeyDown);
-      document.addEventListener("keyup", onKeyUp);
-      canvas.addEventListener("click", onCanvasClick);
+							      const onCanvasClick = () => {
+								      tournament.activeGame?.resetGame();
+							      };
 
-      tournament.start();
-    };
+							      tournamentCleanup = () => {
+								      tournament.stop();
+								      document.removeEventListener("keydown", onKeyDown);
+								      document.removeEventListener("keyup", onKeyUp);
+								      canvas.removeEventListener("click", onCanvasClick);
+							      };
 
-    btnGroup.appendChild(backBtn);
-    btnGroup.appendChild(startBtn);
+							      // Adding event listeners
+							      document.addEventListener("keydown", onKeyDown);
+							      document.addEventListener("keyup", onKeyUp);
+							      canvas.addEventListener("click", onCanvasClick);
 
-    card.appendChild(form);
-    card.appendChild(btnGroup);
+							      tournament.start();
+		};
 
-    container.appendChild(card);
-  };
+		btnGroup.appendChild(backBtn);
+		btnGroup.appendChild(startBtn);
 
-  render();
+		card.appendChild(form);
+		card.appendChild(btnGroup);
 
-  return {
-    component: container,
-    cleanup: () => {
-      if (tournamentCleanup) tournamentCleanup();
-    }
-  };
+		container.appendChild(card);
+	};
+
+	render();
+
+	return {
+		component: container,
+		cleanup: () => {
+			if (tournamentCleanup) tournamentCleanup();
+		}
+	};
 }
