@@ -397,8 +397,7 @@ fastify.get('/search', { preHandler: [fastify.authenticate] }, async (request, r
 
 		db = await openDB()
 		const users = await db.all(
-			`SELECT id, login, avatar, onlineStatus FROM users WHERE login LIKE ? AND id != ? LIMIT 30`,
-				[`%${query}%`, id]
+			`SELECT id, login, avatar, onlineStatus FROM users WHERE login LIKE ? ESCAPE '\\' AND id != ? LIMIT 30`, [`%${sanitizedQuery}%`, id]
 		)
 		await db.close()
 		return reply.code(200).send({ success: true, users })

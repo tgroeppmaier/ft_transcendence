@@ -13,7 +13,10 @@ export function RegisterView() {
 	</div>
 	<div>
 	<label class="block text-sm font-medium text-gray-700">Email</label>
-	<input type="email" name="email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+	<input type="email" name="email" required 
+	pattern="[^\s@]+@[^\s@]+\.[^\s@]+" 
+	title="Please enter a valid email address"
+	class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
 	</div>
 	<div>
 	<label class="block text-sm font-medium text-gray-700">Password</label>
