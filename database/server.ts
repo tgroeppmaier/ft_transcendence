@@ -395,11 +395,16 @@ fastify.get('/search', { preHandler: [fastify.authenticate] }, async (request, r
 			return reply.code(200).send({ success: false, message: "Query is required", users: [] })
 		}
 
+		// Sanitize special LIKE characters
+		const sanitizedQuery = query.replace(/[_%\\]/g, '\\$&');
+
 		db = await openDB()
 		const users = await db.all(
-			`SELECT id, login, avatar, onlineStatus FROM users WHERE login LIKE ? ESCAPE '\\' AND id != ? LIMIT 30`, [`%${sanitizedQuery}%`, id]
+			`SELECT id, login, avatar, onlineStatus FROM users WHERE login LIKE ? ESCAPE '\\' AND id != ? LIMIT 30`,
+				[`%${sanitizedQuery}%`, id]
 		)
 		await db.close()
+
 		return reply.code(200).send({ success: true, users })
 	}
 	catch (err) {
