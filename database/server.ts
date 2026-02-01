@@ -25,7 +25,7 @@ const fsClose = promisify(fs.close)
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
-const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || "https://localhost:8443/api/auth/google/callback"
+const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || "https://localhost:8443/db/auth/google/callback"
 const UPLOADS_DIR = process.env.UPLOADS_DIR || '/app/uploads'
 
 const JWT_SECRET = process.env.JWT_SECRET
@@ -893,7 +893,7 @@ fastify.get('/auth/google', async (req, reply) => {
 	if (!process.env.GOOGLE_REDIRECT_URI || process.env.GOOGLE_REDIRECT_URI.includes('localhost')) {
 		const host = req.headers['x-forwarded-host'] || req.headers.host;
 		if (host) {
-			redirectUri = `https://${host}/api/auth/google/callback`;
+			redirectUri = `https://${host}/db/auth/google/callback`;
 		}
 	}
 
@@ -928,7 +928,7 @@ fastify.get('/auth/google/callback', async (req, reply) => {
 		if (!process.env.GOOGLE_REDIRECT_URI || process.env.GOOGLE_REDIRECT_URI.includes('localhost')) {
 			const host = req.headers['x-forwarded-host'] || req.headers.host;
 			if (host) {
-				redirectUri = `https://${host}/api/auth/google/callback`;
+				redirectUri = `https://${host}/db/auth/google/callback`;
 			}
 		}
 
