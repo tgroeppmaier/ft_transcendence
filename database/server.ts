@@ -165,28 +165,6 @@ fastify.post('/internal/match-result', async (request, reply) => {
 	}
 })
 
-fastify.post('/internal/check-friendship', async (request, reply) => {
-	let db
-	try {
-		const { user1_id, user2_id } = request.body
-		db = await openDB()
-		const friendship = await db.get(
-			`SELECT id FROM friends WHERE
-			((requester_id = ? AND addressee_id = ?) OR
-			 (requester_id = ? AND addressee_id = ?))
-			 AND status = 'accepted'`,
-				 [user1_id, user2_id, user2_id, user1_id]
-		)
-		await db.close()
-		return reply.code(200).send({ success: true, areFriends: !!friendship })
-	}
-	catch (err) {
-		if (db) await db.close()
-			request.log.error(err)
-		return reply.code(200).send({ success: false, message: "Error checking friendship" })
-	}
-})
-
 fastify.post('/registration', {
 	config: {
 		rateLimit: {
