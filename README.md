@@ -81,7 +81,6 @@ The application is composed of **3 distinct services**, orchestrated via Docker 
 
 - **Internal (Service-to-Service)**
   - `POST /internal/match-result`: Save final game scores (called by Backend).
-  - `POST /internal/check-friendship`: Verify friendship status (called by Backend).
 
 ## 🌟 Features & Modules
 

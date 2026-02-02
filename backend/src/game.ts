@@ -270,7 +270,6 @@ export class Game {
 
         if (this.onResult && winnerId) this.onResult(winnerId);
 
-        // Use the docker service name "database" to reach the container
         fetch("http://database:3000/internal/match-result", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
