@@ -89,14 +89,14 @@ export function ProfileView() {
 	<form id="editForm" class="flex flex-col gap-3">
 	<label class="flex flex-col text-left">
 	<span class="mb-1">Login:</span>
-	<input id="loginInput" name="login" type="text" required pattern="[a-zA-Z0-9_]+"
+	<input id="loginInput" name="login" type="text" required pattern="[a-zA-Z0-9_]+" minlength="3" maxlength="20"
 	title="Only letters, numbers and underscore"
 	class="p-2 rounded-lg border border-gray-400 w-full outline-none" />
 	</label>
 
 	<label class="flex flex-col text-left">
 	<span class="mb-1">Email:</span>
-	<input id="emailInput" name="email" type="text" required
+	<input id="emailInput" name="email" type="text" required minlength="3" maxlength="20"
 	class="p-2 rounded-lg border border-gray-400 w-full outline-none" />
 	</label>
 

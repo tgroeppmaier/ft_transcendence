@@ -7,11 +7,11 @@ export function LoginView() {
 	<form id="login-form" class="space-y-4 text-left">
 	<div>
 	<label class="block text-sm font-medium text-gray-700">Login</label>
-	<input type="text" name="login" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+	<input type="text" name="login" minlength="3" maxlength="20" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
 	</div>
 	<div>
 	<label class="block text-sm font-medium text-gray-700">Password</label>
-	<input type="password" name="password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+	<input type="password" name="password" required minlength="6" maxlength="10" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
 	</div>
 	<button type="submit" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-800 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition">
 	Sign In
