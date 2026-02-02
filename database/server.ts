@@ -14,6 +14,7 @@ import { pipeline } from 'stream'
 import { promisify } from 'util'
 import fs from 'fs'
 import bcrypt from 'bcryptjs'
+import sharp from 'sharp'
 
 const pump = promisify(pipeline)
 const fsUnlink = promisify(fs.unlink)
@@ -58,10 +59,10 @@ fastify.register(helmet, {
 	contentSecurityPolicy: {
 		directives: {
 			defaultSrc: ["'self'"],
-			styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+			styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],  // оставили для Tailwind
 			fontSrc: ["'self'", "https://fonts.gstatic.com"],
 			imgSrc: ["'self'", "data:", "blob:"],
-			scriptSrc: ["'self'", "'unsafe-inline'"],
+			scriptSrc: ["'self'"],  // ← УБРАЛИ 'unsafe-inline' (это главное!)
 			connectSrc: ["'self'", "https://accounts.google.com", "https://oauth2.googleapis.com", "https://www.googleapis.com"]
 		}
 	},
@@ -69,7 +70,25 @@ fastify.register(helmet, {
 })
 
 fastify.register(formbody)
-fastify.register(cors, { origin: true, credentials: true })
+fastify.register(cors, {
+	origin: (origin, callback) => {
+		const allowedOrigins = [
+			process.env.FRONTEND_URL || 'https://10.11.6.4.nip.io:8443', 
+			'http://localhost:8443',            
+			'https://localhost:8443'  
+		]
+		if (!origin) {
+			return callback(null, true)
+		}
+		if (allowedOrigins.includes(origin)) {
+			callback(null, true)
+		} else {
+			callback(new Error('Not allowed by CORS'))
+		}
+	},
+	credentials: true
+})
+
 fastify.register(cookie, { secret: JWT_SECRET })
 fastify.register(jwt, { secret: JWT_SECRET })
 fastify.register(multipart, {
@@ -186,6 +205,12 @@ fastify.post('/registration', {
 			return reply.code(200).send({ success: false, message: 'Invalid login format!' })
 		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
 			return reply.code(200).send({ success: false, message: 'Invalid email format!' })
+		if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+			return reply.code(200).send({ success: false, message: 'Invalid email format!' })
+		}
+		if (/<|>|script|javascript|onerror|onload/i.test(email)) {
+			return reply.code(200).send({ success: false, message: 'Email contains invalid characters!' })
+		}
 		if (password.length < 6)
 			return reply.code(200).send({ success: false, message: 'Password must be at least 6 characters!' })
 		if (password.length > 10)
@@ -230,6 +255,8 @@ fastify.post('/login', {
 		if (!login || !password)
 			return reply.code(200).send({ success: false, message: 'Login and password required' })
 
+		if (!/^[a-zA-Z0-9_]+$/.test(login))
+			return reply.code(200).send({ success: false, message: 'Invalid login format!' })
 		db = await openDB()
 		const user = await db.get('SELECT * FROM users WHERE login = ?', [login])
 		if (!user) {
@@ -325,6 +352,12 @@ fastify.put('/profile', { preHandler: [fastify.authenticate] }, async (request, 
 		if (!login || !email) return reply.code(200).send({ success: false, message: 'Login and email required' })
 		if (!/^[a-zA-Z0-9_]+$/.test(login)) return reply.code(200).send({ success: false, message: 'Invalid login characters' })
 		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return reply.code(200).send({ success: false, message: 'Invalid email' })
+		if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+			return reply.code(200).send({ success: false, message: 'Invalid email format!' })
+		}
+		if (/<|>|script|javascript|onerror|onload/i.test(email)) {
+			return reply.code(200).send({ success: false, message: 'Email contains invalid characters!' })
+		}
 		if (password && password.length < 6) return reply.code(200).send({ success: false, message: 'Password too short' })
 		if (password && password.length > 10) return reply.code(200).send({ success: false, message: 'Password too long' })
 
@@ -393,6 +426,9 @@ fastify.get('/search', { preHandler: [fastify.authenticate] }, async (request, r
 
 		if (!query || query.trim() === "") {
 			return reply.code(200).send({ success: false, message: "Query is required", users: [] })
+		}
+		if (/<|>|script|javascript|onerror|onload/i.test(query)) {
+			return reply.code(200).send({ success: false, message: "Invalid characters in search query", users: [] })
 		}
 
 		// Sanitize special LIKE characters
@@ -791,78 +827,63 @@ fastify.post('/avatar', {
 	let id
 	try {
 		id = request.user.id
-	}
-	catch (err) {
-		request.log.error(err)
+	} catch (err) {
 		return reply.code(200).send({ success: false, message: 'Authentication error' })
 	}
+
 	await ensureUploadsDir()
+
 	const data = await request.file()
-	if (!data) {
-		return reply.code(200).send({ success: false, message: 'No file uploaded' })
-	}
-	if (!data.filename) {
-		return reply.code(200).send({ success: false, message: 'No file' })
-	}
-	const allowed = ['image/jpeg', 'image/png', 'image/webp']
-	if (!allowed.includes(data.mimetype)) {
+	if (!data) return reply.code(200).send({ success: false, message: 'No file uploaded' })
+
+	const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp']
+	if (!allowedMimeTypes.includes(data.mimetype)) {
 		return reply.code(200).send({ success: false, message: 'Invalid image format' })
 	}
-	const ext = path.extname(data.filename).toLowerCase()
-	const newName = Date.now() + '-' + Math.random().toString(36).slice(2, 9) + ext
+
+	const newName = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}.webp`
 	const destPath = path.join(UPLOADS_DIR, newName)
+
 	try {
-		await pump(data.file, fs.createWriteStream(destPath))
+		const fileBuffer = await data.toBuffer()
 
 		if (data.file.truncated) {
-			await fsUnlink(destPath)
 			return reply.code(200).send({ success: false, message: 'File too large! Max 2MB' })
 		}
 
-		// Magic Byte Verification
-		let fd
-		try {
-			fd = await fsOpen(destPath, 'r')
-			const buffer = Buffer.alloc(12)
-			await fsRead(fd, buffer, 0, 12, 0)
-			await fsClose(fd)
-
-			let isValid = false
-			// JPEG: FF D8 FF
-			if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) isValid = true
-				// PNG: 89 50 4E 47
-				else if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) isValid = true
-					// WebP: RIFF ... WEBP
-					else if (buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
-						 buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) isValid = true
-
-						if (!isValid) {
-							await fsUnlink(destPath)
-							return reply.code(200).send({ success: false, message: 'Invalid file content' })
-						}
-		} catch (err) {
-			if (fd) await fsClose(fd)
-				await fsUnlink(destPath)
-			throw err
-		}
+		await sharp(fileBuffer)
+		.resize(500, 500, { fit: 'cover' })
+		.webp({ quality: 80 })       
+		.rotate()                          
+		.timeout({ seconds: 10 })          
+		.toFile(destPath)           
 
 		db = await openDB()
 		const row = await db.get('SELECT avatar FROM users WHERE id = ?', [id])
 		const oldAvatar = row?.avatar || ''
+
 		if (oldAvatar && oldAvatar !== 'default.png') {
 			try {
 				await fsUnlink(path.join(UPLOADS_DIR, oldAvatar))
-			}
-			catch(e) { /* ignore */ }
+			} catch (e) { }
 		}
+
 		await db.run('UPDATE users SET avatar = ? WHERE id = ?', [newName, id])
 		await db.close()
-		return reply.code(200).send({ success: true, message: 'Avatar uploaded', avatar: newName })
-	}
-	catch (err) {
+
+		return reply.code(200).send({ 
+			success: true, 
+			message: 'Avatar uploaded and sanitized', 
+			avatar: newName 
+		})
+
+	} catch (err) {
 		if (db) await db.close()
 			request.log.error(err)
-		return reply.code(200).send({ success: false, message: 'Upload error' })
+		return reply.code(200).send({ 
+			success: false, 
+			message: 'Invalid image content or processing error' 
+		})
 	}
 })
 

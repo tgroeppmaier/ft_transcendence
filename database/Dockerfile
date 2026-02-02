@@ -1,6 +1,6 @@
 FROM alpine:3.18
 WORKDIR /app
-RUN apk add --no-cache nodejs npm sqlite sqlite-dev bash
+RUN apk add --no-cache nodejs npm sqlite sqlite-dev bash vips-dev build-base
 
 COPY package*.json ./
 RUN npm install --omit=dev

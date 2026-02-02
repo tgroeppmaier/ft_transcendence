@@ -16,7 +16,8 @@
 		"node-fetch": "^3.3.2",
 		"sqlite": "^5.1.1",
 		"sqlite3": "^5.1.7",
-		"tsx": "^4.7.0"
+		"tsx": "^4.7.0",
+		"sharp": "^0.33.0"
 	},
 	"scripts": {
 		"start": "npx tsx server.ts",
