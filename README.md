@@ -123,9 +123,9 @@ The application is composed of **3 distinct services**, orchestrated via Docker 
 To ensure system stability and protect against abuse, the following limits are enforced:
 
 #### Database Service
-- **Global Baseline**: 200 requests per 15 minutes (per IP).
-- **Authentication**: Strict limit of **5 requests per 15 minutes** for `/login` and `/registration`.
-- **Spam Prevention**: **20 requests per hour** for social actions (`/friend-request`) and file uploads (`/avatar`).
+- **Global Baseline**: 500 requests per 15 minutes (per IP).
+- **Authentication**: **100 requests per 15 minutes** for `/login`, **50 requests per 15 minutes** for `/registration` (per IP).
+- **Spam Prevention**: **80 requests per hour** for `/friend-request`, **30 requests per hour** for `/avatar` (per IP).
 - **Privacy**: User email addresses are strictly private and never exposed via public API endpoints (Search, Friends, etc.).
 - **File Upload Security**:
   - **Size Limit**: Maximum **2MB** per file (Enforced at both Frontend and Backend).
@@ -274,13 +274,23 @@ curl -X POST https://localhost:8443/api/games/<GAME_ID>/action \
 ### 4. Testing Rate Limits
 To verify the rate limiting protection is active, you can use a loop to trigger a lockout:
 
-**Login / Registration (Limit: 5/15min):**
+**Login (Limit: 100/15min):**
 ```bash
-# This will return 429 Too Many Requests on the 6th attempt
-for i in {1..6}; do 
+# This will return 429 Too Many Requests on the 101st attempt
+for i in {1..101}; do 
   curl -ki -X POST https://localhost:8443/db/login \
     -H "Content-Type: application/json" \
     -d '{"login": "user", "password": "pwd"}' -k; 
+done
+```
+
+**Registration (Limit: 50/15min):**
+```bash
+# This will return 429 Too Many Requests on the 51st attempt
+for i in {1..51}; do 
+  curl -ki -X POST https://localhost:8443/db/registration \
+    -H "Content-Type: application/json" \
+    -d '{"login": "user", "email": "user@example.com", "password": "pwd"}' -k; 
 done
 ```
 
