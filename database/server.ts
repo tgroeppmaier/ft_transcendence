@@ -181,8 +181,6 @@ fastify.post('/registration', {
 			return reply.code(200).send({ success: false, message: 'All fields are mandatory!' })
 		if (!/^[a-zA-Z0-9_]+$/.test(login))
 			return reply.code(200).send({ success: false, message: 'Invalid login format!' })
-		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-			return reply.code(200).send({ success: false, message: 'Invalid email format!' })
 		if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
 			return reply.code(200).send({ success: false, message: 'Invalid email format!' })
 		}
@@ -195,12 +193,12 @@ fastify.post('/registration', {
 			return reply.code(200).send({ success: false, message: 'Password must be no longer than 10 characters!' })
 
 		db = await openDB()
-		const existingLogin = await db.get(`SELECT id FROM users WHERE login = ?`, [login])
+		const existingLogin = await db.get('SELECT id FROM users WHERE login = ?', [login])
 		if (existingLogin) {
 			await db.close()
 			return reply.code(200).send({ success: false, message: 'This login is already taken!' })
 		}
-		const existingEmail = await db.get(`SELECT id FROM users WHERE email = ?`, [email])
+		const existingEmail = await db.get('SELECT id FROM users WHERE email = ?', [email])
 		if (existingEmail) {
 			await db.close()
 			return reply.code(200).send({ success: false, message: 'This email is already taken!' })
@@ -329,7 +327,6 @@ fastify.put('/profile', { preHandler: [fastify.authenticate] }, async (request, 
 		const { id } = request.user
 		if (!login || !email) return reply.code(200).send({ success: false, message: 'Login and email required' })
 		if (!/^[a-zA-Z0-9_]+$/.test(login)) return reply.code(200).send({ success: false, message: 'Invalid login characters' })
-		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return reply.code(200).send({ success: false, message: 'Invalid email' })
 		if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
 			return reply.code(200).send({ success: false, message: 'Invalid email format!' })
 		}
@@ -414,7 +411,8 @@ fastify.get('/search', { preHandler: [fastify.authenticate] }, async (request, r
 
 		db = await openDB()
 		const users = await db.all(
-			`SELECT id, login, avatar, onlineStatus FROM users WHERE login LIKE ? ESCAPE '\\' AND id != ? LIMIT 30`,
+			`SELECT id, login, avatar, onlineStatus FROM users 
+			WHERE login LIKE ? ESCAPE '\\' AND id != ? LIMIT 30`,
 				[`%${sanitizedQuery}%`, id]
 		)
 		await db.close()
