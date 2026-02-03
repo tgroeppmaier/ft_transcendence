@@ -919,7 +919,7 @@ fastify.get('/auth/google/callback', async (req, reply) => {
 
 		if (!code) {
 			req.log.error('No code from Google')
-			return reply.code(200).send({ success: false, message: "No code from Google" })
+			return reply.redirect('/login')
 		}
 
 		// Dynamic Redirect URI: Must match the one sent in the first step
