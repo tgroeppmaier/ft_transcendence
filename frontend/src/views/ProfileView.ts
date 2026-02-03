@@ -96,7 +96,7 @@ export function ProfileView() {
 
 	<label class="flex flex-col text-left">
 	<span class="mb-1">Email:</span>
-	<input id="emailInput" name="email" type="text" required minlength="3" maxlength="20"
+	<input id="emailInput" name="email" type="email" required minlength="3" maxlength="20"
 	class="p-2 rounded-lg border border-gray-400 w-full outline-none" />
 	</label>
 
