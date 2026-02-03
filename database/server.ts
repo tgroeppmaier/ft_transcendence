@@ -186,7 +186,7 @@ fastify.post('/registration', {
 		if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
 			return reply.code(200).send({ success: false, message: 'Invalid email format!' })
 		}
-		if (/<|>|script|javascript|onerror|onload/i.test(email)) {
+		if (/<|>/.test(email)) {
 			return reply.code(200).send({ success: false, message: 'Email contains invalid characters!' })
 		}
 		if (password.length < 6)
@@ -333,7 +333,7 @@ fastify.put('/profile', { preHandler: [fastify.authenticate] }, async (request, 
 		if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
 			return reply.code(200).send({ success: false, message: 'Invalid email format!' })
 		}
-		if (/<|>|script|javascript|onerror|onload/i.test(email)) {
+		if (/<|>/.test(email)) {
 			return reply.code(200).send({ success: false, message: 'Email contains invalid characters!' })
 		}
 		if (password && password.length < 6) return reply.code(200).send({ success: false, message: 'Password too short' })
@@ -405,7 +405,7 @@ fastify.get('/search', { preHandler: [fastify.authenticate] }, async (request, r
 		if (!query || query.trim() === "") {
 			return reply.code(200).send({ success: false, message: "Query is required", users: [] })
 		}
-		if (/<|>|script|javascript|onerror|onload/i.test(query)) {
+		if (/<|>/i.test(query)) {
 			return reply.code(200).send({ success: false, message: "Invalid characters in search query", users: [] })
 		}
 
