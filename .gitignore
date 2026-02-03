@@ -18,8 +18,6 @@ Thumbs.db
 # Databases and Local Data
 *.db
 *.sqlite
-database/data/
-frontend/uploads/
 
 # Debug logs
 npm-debug.log*
